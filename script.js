@@ -363,11 +363,24 @@ async function fazerLogin(loginInformado, senhaInformada) {
   if (loginErro) loginErro.textContent = "";
 
   try {
-    const resultado = await api(
-      `usuarios?select=id,nome,login,senha,tipo,setor_id&login=eq.${encodeURIComponent(loginInformado)}&senha=eq.${encodeURIComponent(senhaInformada)}&limit=1`
-    );
+    const usuarios = await api("usuarios?select=*");
 
-    const usuario = resultado?.[0];
+    const usuario = (usuarios || []).find((u) => {
+      const loginBanco =
+        u.login ||
+        u.conecte_se ||
+        u.conectese ||
+        u["Conecte-se"] ||
+        u["conecte-se"] ||
+        "";
+
+      const senhaBanco = u.senha || "";
+
+      return (
+        String(loginBanco).trim().toLowerCase() === String(loginInformado).trim().toLowerCase() &&
+        String(senhaBanco).trim() === String(senhaInformada).trim()
+      );
+    });
 
     if (!usuario) {
       if (loginErro) loginErro.textContent = "Login ou senha inválidos.";
@@ -379,7 +392,7 @@ async function fazerLogin(loginInformado, senhaInformada) {
     if (tipoBanco === "admin" || tipoBanco === "administrador") {
       sessao = {
         tipo: "admin",
-        nome: usuario.nome,
+        nome: usuario.nome || "Administrador",
         id: usuario.id,
       };
     } else {
@@ -388,7 +401,7 @@ async function fazerLogin(loginInformado, senhaInformada) {
       sessao = {
         tipo: "setor",
         id: usuario.id,
-        nome: usuario.nome,
+        nome: usuario.nome || "Líder de setor",
         setor_id: usuario.setor_id,
         setor_nome: setor?.nome || "Setor",
       };
@@ -401,6 +414,7 @@ async function fazerLogin(loginInformado, senhaInformada) {
     console.error(error);
     if (loginErro) loginErro.textContent = "Não foi possível fazer login.";
   }
+}
 }
 
 async function adicionarPedido() {
