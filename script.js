@@ -96,12 +96,9 @@ async function carregarDadosBase() {
   congregacoes = congregacoesData || [];
   campanhaAtual = campanhasData?.[0] || null;
 
-  const totalSetores = setores.length || 0;
-  const totalIgrejas = congregacoes.length || 0;
-
   const statSpans = document.querySelectorAll(".stat span");
-  if (statSpans[0]) statSpans[0].textContent = totalSetores;
-  if (statSpans[1]) statSpans[1].textContent = totalIgrejas;
+  if (statSpans[0]) statSpans[0].textContent = setores.length || 0;
+  if (statSpans[1]) statSpans[1].textContent = congregacoes.length || 0;
 }
 
 function preencherCongregacoesSetor() {
@@ -160,34 +157,13 @@ async function carregarPedidos() {
   });
 }
 
-function renderSession() {
-  const app = el("app");
-  const loginCard = el("login-card");
+function ativarTab(nome) {
+  document.querySelectorAll(".tab").forEach((tab) => {
+    tab.classList.toggle("active", tab.dataset.tab === nome);
+  });
 
-  if (!app || !loginCard) return;
-
-  if (!sessao) {
-    app.classList.add("hidden");
-    loginCard.classList.remove("hidden");
-    return;
-  }
-
-  loginCard.classList.add("hidden");
-  app.classList.remove("hidden");
-
-  if (sessao.tipo === "admin") {
-    el("welcomeTitle").textContent = "Administrador Geral";
-    el("welcomeText").textContent =
-      "Acompanhe todos os pedidos e exporte os relatórios para a fábrica.";
-  } else {
-    el("welcomeTitle").textContent = sessao.setor_nome || "Setor";
-    el("welcomeText").textContent = `${sessao.nome} • Lance os pedidos das congregações do seu setor.`;
-  }
-
-  preencherCongregacoesSetor();
-  renderSetor();
-  renderAdmin();
-  atualizarPermissoesTabs();
+  el("tab-setor")?.classList.toggle("active", nome === "setor");
+  el("tab-admin")?.classList.toggle("active", nome === "admin");
 }
 
 function atualizarPermissoesTabs() {
@@ -205,15 +181,6 @@ function atualizarPermissoesTabs() {
     btnSetor.style.opacity = "1";
     btnAdmin.style.opacity = "0.5";
   }
-}
-
-function ativarTab(nome) {
-  document.querySelectorAll(".tab").forEach((tab) => {
-    tab.classList.toggle("active", tab.dataset.tab === nome);
-  });
-
-  el("tab-setor")?.classList.toggle("active", nome === "setor");
-  el("tab-admin")?.classList.toggle("active", nome === "admin");
 }
 
 function renderSetor() {
@@ -382,25 +349,29 @@ function renderAdmin() {
   });
 }
 
+function detectarCampoLogin(usuario) {
+  if ("login" in usuario) return usuario.login;
+  if ("conecte_se" in usuario) return usuario.conecte_se;
+  if ("conectese" in usuario) return usuario.conectese;
+  if ("Conecte-se" in usuario) return usuario["Conecte-se"];
+  if ("conecte-se" in usuario) return usuario["conecte-se"];
+  return "";
+}
+
 async function fazerLogin(loginInformado, senhaInformada) {
   const loginErro = el("loginErro");
   if (loginErro) loginErro.textContent = "";
 
   try {
     const usuarios = await api("usuarios?select=*");
+
     const usuario = (usuarios || []).find((u) => {
-      const loginBanco =
-        u.login ??
-        u.conecte_se ??
-        u.conectese ??
-        u["Conecte-se"] ??
-        u["conecte-se"] ??
-        "";
+      const loginBanco = detectarCampoLogin(u);
 
       return (
         String(loginBanco).trim().toLowerCase() ===
           String(loginInformado).trim().toLowerCase() &&
-        String(u.senha).trim() === String(senhaInformada).trim()
+        String(u.senha || "").trim() === String(senhaInformada).trim()
       );
     });
 
@@ -502,6 +473,36 @@ async function adicionarPedido() {
     console.error(error);
     alert("Não foi possível salvar o pedido.");
   }
+}
+
+function renderSession() {
+  const app = el("app");
+  const loginCard = el("login-card");
+
+  if (!app || !loginCard) return;
+
+  if (!sessao) {
+    app.classList.add("hidden");
+    loginCard.classList.remove("hidden");
+    return;
+  }
+
+  loginCard.classList.add("hidden");
+  app.classList.remove("hidden");
+
+  if (sessao.tipo === "admin") {
+    el("welcomeTitle").textContent = "Administrador Geral";
+    el("welcomeText").textContent =
+      "Acompanhe todos os pedidos e exporte os relatórios para a fábrica.";
+  } else {
+    el("welcomeTitle").textContent = sessao.setor_nome || "Setor";
+    el("welcomeText").textContent = `${sessao.nome} • Lance os pedidos das congregações do seu setor.`;
+  }
+
+  preencherCongregacoesSetor();
+  renderSetor();
+  renderAdmin();
+  atualizarPermissoesTabs();
 }
 
 async function iniciar() {
