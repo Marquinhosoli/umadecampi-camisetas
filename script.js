@@ -415,7 +415,6 @@ async function fazerLogin(loginInformado, senhaInformada) {
     if (loginErro) loginErro.textContent = "Não foi possível fazer login.";
   }
 }
-}
 
 async function adicionarPedido() {
   if (!sessao || sessao.tipo !== "setor") return;
