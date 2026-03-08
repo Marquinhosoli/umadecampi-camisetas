@@ -1,4 +1,6 @@
-const SUPABASE_URL = "https://dqwlhouwoxbwkcaytja.supabase.co";
+from pathlib import Path
+
+content = r'''const SUPABASE_URL = "https://dqwlhouwoxbwkcaytja.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_b_tuFrU9PhG3VKYLupMVhg_pWPF6Spj";
 const SESSION_KEY = "umadecampi_sessao_supabase_v1";
 
@@ -47,11 +49,8 @@ function getCongregacaoNome(id) {
 }
 
 function salvarSessao() {
-  if (sessao) {
-    localStorage.setItem(SESSION_KEY, JSON.stringify(sessao));
-  } else {
-    localStorage.removeItem(SESSION_KEY);
-  }
+  if (sessao) localStorage.setItem(SESSION_KEY, JSON.stringify(sessao));
+  else localStorage.removeItem(SESSION_KEY);
 }
 
 function exportarCSV(nomeArquivo, linhas) {
@@ -103,11 +102,9 @@ async function carregarDadosBase() {
 
 function preencherCongregacoesSetor() {
   const lista = el("listaCongregacoes");
-  if (!lista) return;
+  if (!lista || !sessao || sessao.tipo !== "setor") return;
 
   lista.innerHTML = "";
-
-  if (!sessao || sessao.tipo !== "setor") return;
 
   congregacoes
     .filter((c) => c.setor_id === sessao.setor_id)
@@ -128,19 +125,14 @@ async function carregarPedidos() {
   );
 
   const itensPorPedido = new Map();
-
   (itens || []).forEach((item) => {
-    if (!itensPorPedido.has(item.pedido_id)) {
-      itensPorPedido.set(item.pedido_id, []);
-    }
+    if (!itensPorPedido.has(item.pedido_id)) itensPorPedido.set(item.pedido_id, []);
     itensPorPedido.get(item.pedido_id).push(item);
   });
 
   pedidosCache = [];
-
   (pedidos || []).forEach((pedido) => {
     const lista = itensPorPedido.get(pedido.id) || [];
-
     lista.forEach((item) => {
       pedidosCache.push({
         id: pedido.id,
@@ -161,7 +153,6 @@ function ativarTab(nome) {
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.classList.toggle("active", tab.dataset.tab === nome);
   });
-
   el("tab-setor")?.classList.toggle("active", nome === "setor");
   el("tab-admin")?.classList.toggle("active", nome === "admin");
 }
@@ -169,7 +160,6 @@ function ativarTab(nome) {
 function atualizarPermissoesTabs() {
   const btnSetor = document.querySelector('[data-tab="setor"]');
   const btnAdmin = document.querySelector('[data-tab="admin"]');
-
   if (!btnSetor || !btnAdmin) return;
 
   if (sessao?.tipo === "admin") {
@@ -190,16 +180,13 @@ function renderSetor() {
   lista.innerHTML = "";
 
   if (!sessao || sessao.tipo !== "setor") {
-    lista.innerHTML =
-      '<div class="pedido-card">Entre com um login de setor para visualizar e cadastrar pedidos.</div>';
+    lista.innerHTML = '<div class="pedido-card">Entre com um login de setor para visualizar e cadastrar pedidos.</div>';
     return;
   }
 
   const pedidosSetor = pedidosCache.filter((p) => p.setorId === sessao.setor_id);
-
   if (!pedidosSetor.length) {
-    lista.innerHTML =
-      '<div class="pedido-card">Ainda não há pedidos cadastrados neste setor.</div>';
+    lista.innerHTML = '<div class="pedido-card">Ainda não há pedidos cadastrados neste setor.</div>';
     return;
   }
 
@@ -253,17 +240,14 @@ function renderSetor() {
 function renderAdmin() {
   const resumoContainer = el("resumoCards");
   const tbody = el("tbodyPedidos");
-
   if (!resumoContainer || !tbody) return;
 
   resumoContainer.innerHTML = "";
   tbody.innerHTML = "";
 
   if (!sessao || sessao.tipo !== "admin") {
-    resumoContainer.innerHTML =
-      '<div class="pedido-card">Entre como administrador para visualizar a consolidação geral.</div>';
-    tbody.innerHTML =
-      '<tr><td colspan="6">Somente o administrador pode visualizar esta área.</td></tr>';
+    resumoContainer.innerHTML = '<div class="pedido-card">Entre como administrador para visualizar a consolidação geral.</div>';
+    tbody.innerHTML = '<tr><td colspan="6">Somente o administrador pode visualizar esta área.</td></tr>';
     return;
   }
 
@@ -289,10 +273,8 @@ function renderAdmin() {
   });
 
   const busca = (el("busca")?.value || "").trim().toLowerCase();
-
   const filtrados = pedidosCache.filter((p) => {
     if (!busca) return true;
-
     return (
       p.congregacao.toLowerCase().includes(busca) ||
       getSetorNome(p.setorId).toLowerCase().includes(busca) ||
@@ -318,44 +300,6 @@ function renderAdmin() {
     `;
     tbody.appendChild(tr);
   });
-
-  tbody.querySelectorAll("[data-remove-admin-item]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      try {
-        await api(`itens_pedido?id=eq.${btn.dataset.removeAdminItem}`, {
-          method: "DELETE",
-          prefer: "return=minimal",
-        });
-
-        const restantes = await api(
-          `itens_pedido?select=id&pedido_id=eq.${btn.dataset.removeAdminPedido}`
-        );
-
-        if (!restantes || restantes.length === 0) {
-          await api(`pedidos?id=eq.${btn.dataset.removeAdminPedido}`, {
-            method: "DELETE",
-            prefer: "return=minimal",
-          });
-        }
-
-        await carregarPedidos();
-        renderSetor();
-        renderAdmin();
-      } catch (error) {
-        console.error(error);
-        alert("Não foi possível remover o pedido.");
-      }
-    });
-  });
-}
-
-function detectarCampoLogin(usuario) {
-  if ("login" in usuario) return usuario.login;
-  if ("conecte_se" in usuario) return usuario.conecte_se;
-  if ("conectese" in usuario) return usuario.conectese;
-  if ("Conecte-se" in usuario) return usuario["Conecte-se"];
-  if ("conecte-se" in usuario) return usuario["conecte-se"];
-  return "";
 }
 
 async function fazerLogin(loginInformado, senhaInformada) {
@@ -364,18 +308,9 @@ async function fazerLogin(loginInformado, senhaInformada) {
 
   try {
     const usuarios = await api("usuarios?select=*");
-
     const usuario = (usuarios || []).find((u) => {
-      const loginBanco =
-        u.login ||
-        u.conecte_se ||
-        u.conectese ||
-        u["Conecte-se"] ||
-        u["conecte-se"] ||
-        "";
-
+      const loginBanco = u.login || "";
       const senhaBanco = u.senha || "";
-
       return (
         String(loginBanco).trim().toLowerCase() === String(loginInformado).trim().toLowerCase() &&
         String(senhaBanco).trim() === String(senhaInformada).trim()
@@ -388,7 +323,6 @@ async function fazerLogin(loginInformado, senhaInformada) {
     }
 
     const tipoBanco = String(usuario.tipo || "").toLowerCase();
-
     if (tipoBanco === "admin" || tipoBanco === "administrador") {
       sessao = {
         tipo: "admin",
@@ -397,7 +331,6 @@ async function fazerLogin(loginInformado, senhaInformada) {
       };
     } else {
       const setor = setores.find((s) => s.id === usuario.setor_id);
-
       sessao = {
         tipo: "setor",
         id: usuario.id,
@@ -485,7 +418,6 @@ async function adicionarPedido() {
 function renderSession() {
   const app = el("app");
   const loginCard = el("login-card");
-
   if (!app || !loginCard) return;
 
   if (!sessao) {
@@ -499,8 +431,7 @@ function renderSession() {
 
   if (sessao.tipo === "admin") {
     el("welcomeTitle").textContent = "Administrador Geral";
-    el("welcomeText").textContent =
-      "Acompanhe todos os pedidos e exporte os relatórios para a fábrica.";
+    el("welcomeText").textContent = "Acompanhe todos os pedidos e exporte os relatórios para a fábrica.";
   } else {
     el("welcomeTitle").textContent = sessao.setor_nome || "Setor";
     el("welcomeText").textContent = `${sessao.nome} • Lance os pedidos das congregações do seu setor.`;
@@ -566,7 +497,6 @@ async function iniciar() {
     if (sessao?.tipo !== "admin") return;
 
     const linhas = [["Setor", "Congregação", "Modelo", "Tamanho", "Quantidade"]];
-
     pedidosCache.forEach((p) => {
       linhas.push([
         getSetorNome(p.setorId),
@@ -585,7 +515,6 @@ async function iniciar() {
 
     const resumo = resumoGeral();
     const linhas = [["Modelo", "Tamanho", "Quantidade"]];
-
     Object.entries(resumo).forEach(([modelo, tamanhosObj]) => {
       Object.entries(tamanhosObj).forEach(([tamanho, qtd]) => {
         linhas.push([modelos[modelo], tamanho, qtd]);
