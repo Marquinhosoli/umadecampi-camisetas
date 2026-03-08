@@ -1,6 +1,4 @@
-
-
-const SUPABASE_URL = "https://dqwlhouwoxbwxkcaytja.supabase.co";
+const SUPABASE_URL = "https://dqwlhouwoxbwkcaytja.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_b_tuFrU9PhG3VKYLupMVhg_pWPF6Spj";
 const SESSION_KEY = "umadecampi_sessao_supabase_v1";
 
@@ -8,6 +6,10 @@ const tamanhos = ["PP", "P", "M", "G", "GG", "XG", "XXG"];
 const modelos = {
   masculino: "Masculino",
   babylook: "Baby Look Feminina",
+};
+
+const CONFIG = {
+  bloquearPedidosApos: "", // ex: "2026-08-10"
 };
 
 let sessao = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
@@ -69,6 +71,13 @@ function exportarCSV(nomeArquivo, linhas) {
   URL.revokeObjectURL(url);
 }
 
+function pedidosBloqueados() {
+  if (!CONFIG.bloquearPedidosApos) return false;
+  const hoje = new Date();
+  const limite = new Date(`${CONFIG.bloquearPedidosApos}T23:59:59`);
+  return hoje > limite;
+}
+
 function resumoGeral() {
   const mapa = {
     masculino: Object.fromEntries(tamanhos.map((t) => [t, 0])),
@@ -81,6 +90,16 @@ function resumoGeral() {
     }
   });
 
+  return mapa;
+}
+
+function resumoPorSetor() {
+  const mapa = {};
+  pedidosCache.forEach((p) => {
+    const nomeSetor = getSetorNome(p.setorId);
+    if (!mapa[nomeSetor]) mapa[nomeSetor] = 0;
+    mapa[nomeSetor] += Number(p.quantidade || 0);
+  });
   return mapa;
 }
 
@@ -162,14 +181,85 @@ function atualizarPermissoesTabs() {
   const btnAdmin = document.querySelector('[data-tab="admin"]');
   if (!btnSetor || !btnAdmin) return;
 
+  btnSetor.style.opacity = "1";
+  btnAdmin.style.opacity = "1";
+
   if (sessao?.tipo === "admin") {
     ativarTab("admin");
-    btnSetor.style.opacity = "0.5";
-    btnAdmin.style.opacity = "1";
   } else {
     ativarTab("setor");
-    btnSetor.style.opacity = "1";
-    btnAdmin.style.opacity = "0.5";
+  }
+}
+
+async function editarPedidoAdmin(itemId) {
+  const pedido = pedidosCache.find((p) => p.itemId === itemId);
+  if (!pedido) return;
+
+  const novaQuantidade = prompt("Nova quantidade:", String(pedido.quantidade));
+  if (novaQuantidade === null) return;
+
+  const qtd = Number(novaQuantidade);
+  if (!Number.isFinite(qtd) || qtd < 1) {
+    alert("Quantidade inválida.");
+    return;
+  }
+
+  const novoModelo = prompt(
+    "Modelo: masculino ou babylook",
+    pedido.modelo
+  );
+  if (novoModelo === null) return;
+
+  const novoTamanho = prompt(
+    "Tamanho: PP, P, M, G, GG, XG, XXG",
+    pedido.tamanho
+  );
+  if (novoTamanho === null) return;
+
+  try {
+    await api(`itens_pedido?id=eq.${itemId}`, {
+      method: "PATCH",
+      prefer: "return=minimal",
+      body: {
+        quantidade: qtd,
+        modelo: String(novoModelo).trim().toLowerCase(),
+        tamanho: String(novoTamanho).trim().toUpperCase(),
+      },
+    });
+
+    await carregarPedidos();
+    renderSetor();
+    renderAdmin();
+  } catch (error) {
+    console.error(error);
+    alert("Não foi possível editar o pedido.");
+  }
+}
+
+async function removerPedido(itemId, pedidoId) {
+  try {
+    await api(`itens_pedido?id=eq.${itemId}`, {
+      method: "DELETE",
+      prefer: "return=minimal",
+    });
+
+    const restantes = await api(
+      `itens_pedido?select=id&pedido_id=eq.${pedidoId}`
+    );
+
+    if (!restantes || restantes.length === 0) {
+      await api(`pedidos?id=eq.${pedidoId}`, {
+        method: "DELETE",
+        prefer: "return=minimal",
+      });
+    }
+
+    await carregarPedidos();
+    renderSetor();
+    renderAdmin();
+  } catch (error) {
+    console.error(error);
+    alert("Não foi possível remover o pedido.");
   }
 }
 
@@ -179,14 +269,20 @@ function renderSetor() {
 
   lista.innerHTML = "";
 
-  if (!sessao || sessao.tipo !== "setor") {
-    lista.innerHTML = '<div class="pedido-card">Entre com um login de setor para visualizar e cadastrar pedidos.</div>';
+  if (!sessao || (sessao.tipo !== "setor" && sessao.tipo !== "admin")) {
+    lista.innerHTML =
+      '<div class="pedido-card">Entre com um login de setor para visualizar e cadastrar pedidos.</div>';
     return;
   }
 
-  const pedidosSetor = pedidosCache.filter((p) => p.setorId === sessao.setor_id);
+  const pedidosSetor =
+    sessao.tipo === "admin"
+      ? pedidosCache
+      : pedidosCache.filter((p) => p.setorId === sessao.setor_id);
+
   if (!pedidosSetor.length) {
-    lista.innerHTML = '<div class="pedido-card">Ainda não há pedidos cadastrados neste setor.</div>';
+    lista.innerHTML =
+      '<div class="pedido-card">Ainda não há pedidos cadastrados neste setor.</div>';
     return;
   }
 
@@ -194,13 +290,18 @@ function renderSetor() {
     const div = document.createElement("div");
     div.className = "pedido-card";
     div.innerHTML = `
-      <strong>${pedido.congregacao}</strong>
+      <strong>${getSetorNome(pedido.setorId)} • ${pedido.congregacao}</strong>
       <div>
         <span class="pill">${modelos[pedido.modelo] || pedido.modelo}</span>
         <span class="pill">${pedido.tamanho}</span>
         <span class="pill">Qtd. ${pedido.quantidade}</span>
       </div>
-      <div style="margin-top:12px;">
+      <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
+        ${
+          sessao.tipo === "admin"
+            ? `<button class="secondary" data-edit-item="${pedido.itemId}">Editar</button>`
+            : ""
+        }
         <button class="secondary" data-remove-item="${pedido.itemId}" data-remove-pedido="${pedido.id}">Remover</button>
       </div>
     `;
@@ -209,30 +310,13 @@ function renderSetor() {
 
   lista.querySelectorAll("[data-remove-item]").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      try {
-        await api(`itens_pedido?id=eq.${btn.dataset.removeItem}`, {
-          method: "DELETE",
-          prefer: "return=minimal",
-        });
+      await removerPedido(btn.dataset.removeItem, btn.dataset.removePedido);
+    });
+  });
 
-        const restantes = await api(
-          `itens_pedido?select=id&pedido_id=eq.${btn.dataset.removePedido}`
-        );
-
-        if (!restantes || restantes.length === 0) {
-          await api(`pedidos?id=eq.${btn.dataset.removePedido}`, {
-            method: "DELETE",
-            prefer: "return=minimal",
-          });
-        }
-
-        await carregarPedidos();
-        renderSetor();
-        renderAdmin();
-      } catch (error) {
-        console.error(error);
-        alert("Não foi possível remover o pedido.");
-      }
+  lista.querySelectorAll("[data-edit-item]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      await editarPedidoAdmin(btn.dataset.editItem);
     });
   });
 }
@@ -246,13 +330,14 @@ function renderAdmin() {
   tbody.innerHTML = "";
 
   if (!sessao || sessao.tipo !== "admin") {
-    resumoContainer.innerHTML = '<div class="pedido-card">Entre como administrador para visualizar a consolidação geral.</div>';
-    tbody.innerHTML = '<tr><td colspan="6">Somente o administrador pode visualizar esta área.</td></tr>';
+    resumoContainer.innerHTML =
+      '<div class="pedido-card">Entre como administrador para visualizar a consolidação geral.</div>';
+    tbody.innerHTML =
+      '<tr><td colspan="7">Somente o administrador pode visualizar esta área.</td></tr>';
     return;
   }
 
   const resumo = resumoGeral();
-
   Object.entries(resumo).forEach(([modelo, tamanhosObj]) => {
     const bloco = document.createElement("div");
     bloco.className = "resumo-bloco";
@@ -272,6 +357,23 @@ function renderAdmin() {
     resumoContainer.appendChild(bloco);
   });
 
+  const setoresResumo = resumoPorSetor();
+  const blocoSetores = document.createElement("div");
+  blocoSetores.className = "resumo-bloco";
+  blocoSetores.innerHTML = "<h4>Total por setor</h4>";
+  const gridSetor = document.createElement("div");
+  gridSetor.className = "grid-3";
+
+  Object.entries(setoresResumo).forEach(([setor, qtd]) => {
+    const item = document.createElement("div");
+    item.className = "summary-stat";
+    item.innerHTML = `<span>${qtd}</span><small>${setor}</small>`;
+    gridSetor.appendChild(item);
+  });
+
+  blocoSetores.appendChild(gridSetor);
+  resumoContainer.appendChild(blocoSetores);
+
   const busca = (el("busca")?.value || "").trim().toLowerCase();
   const filtrados = pedidosCache.filter((p) => {
     if (!busca) return true;
@@ -284,7 +386,7 @@ function renderAdmin() {
   });
 
   if (!filtrados.length) {
-    tbody.innerHTML = '<tr><td colspan="6">Nenhum pedido encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7">Nenhum pedido encontrado.</td></tr>';
     return;
   }
 
@@ -296,9 +398,22 @@ function renderAdmin() {
       <td>${modelos[p.modelo] || p.modelo}</td>
       <td>${p.tamanho}</td>
       <td>${p.quantidade}</td>
+      <td><button class="secondary" data-edit-admin-item="${p.itemId}">Editar</button></td>
       <td><button class="secondary" data-remove-admin-item="${p.itemId}" data-remove-admin-pedido="${p.id}">Remover</button></td>
     `;
     tbody.appendChild(tr);
+  });
+
+  tbody.querySelectorAll("[data-remove-admin-item]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      await removerPedido(btn.dataset.removeAdminItem, btn.dataset.removeAdminPedido);
+    });
+  });
+
+  tbody.querySelectorAll("[data-edit-admin-item]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      await editarPedidoAdmin(btn.dataset.editAdminItem);
+    });
   });
 }
 
@@ -351,6 +466,11 @@ async function fazerLogin(loginInformado, senhaInformada) {
 
 async function adicionarPedido() {
   if (!sessao || sessao.tipo !== "setor") return;
+
+  if (pedidosBloqueados()) {
+    alert("O período de pedidos foi encerrado.");
+    return;
+  }
 
   const nomeCongregacao = el("congregacao")?.value.trim() || "";
   const modelo = el("modelo")?.value;
@@ -431,7 +551,7 @@ function renderSession() {
 
   if (sessao.tipo === "admin") {
     el("welcomeTitle").textContent = "Administrador Geral";
-    el("welcomeText").textContent = "Acompanhe todos os pedidos e exporte os relatórios para a fábrica.";
+    el("welcomeText").textContent = "Acompanhe todos os pedidos, edite lançamentos e exporte relatórios.";
   } else {
     el("welcomeTitle").textContent = sessao.setor_nome || "Setor";
     el("welcomeText").textContent = `${sessao.nome} • Lance os pedidos das congregações do seu setor.`;
@@ -484,8 +604,8 @@ async function iniciar() {
 
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.addEventListener("click", () => {
+      if (!sessao) return;
       if (tab.dataset.tab === "admin" && sessao?.tipo !== "admin") return;
-      if (tab.dataset.tab === "setor" && sessao?.tipo !== "setor") return;
       ativarTab(tab.dataset.tab);
     });
   });
@@ -519,6 +639,12 @@ async function iniciar() {
       Object.entries(tamanhosObj).forEach(([tamanho, qtd]) => {
         linhas.push([modelos[modelo], tamanho, qtd]);
       });
+    });
+
+    linhas.push([]);
+    linhas.push(["Setor", "Total"]);
+    Object.entries(resumoPorSetor()).forEach(([setor, qtd]) => {
+      linhas.push([setor, qtd]);
     });
 
     exportarCSV("resumo_fabrica_umadecampi.csv", linhas);
