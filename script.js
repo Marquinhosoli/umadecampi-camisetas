@@ -356,24 +356,16 @@ function detectarCampoLogin(usuario) {
   if ("Conecte-se" in usuario) return usuario["Conecte-se"];
   if ("conecte-se" in usuario) return usuario["conecte-se"];
   return "";
-}
-
-async function fazerLogin(loginInformado, senhaInformada) {
+  async function fazerLogin(loginInformado, senhaInformada) {
   const loginErro = el("loginErro");
   if (loginErro) loginErro.textContent = "";
 
   try {
-    const usuarios = await api("usuarios?select=*");
+    const resultado = await api(
+      `usuarios?select=id,nome,login,senha,tipo,setor_id&login=eq.${encodeURIComponent(loginInformado)}&senha=eq.${encodeURIComponent(senhaInformada)}&limit=1`
+    );
 
-    const usuario = (usuarios || []).find((u) => {
-      const loginBanco = detectarCampoLogin(u);
-
-      return (
-        String(loginBanco).trim().toLowerCase() ===
-          String(loginInformado).trim().toLowerCase() &&
-        String(u.senha || "").trim() === String(senhaInformada).trim()
-      );
-    });
+    const usuario = resultado?.[0];
 
     if (!usuario) {
       if (loginErro) loginErro.textContent = "Login ou senha inválidos.";
@@ -407,188 +399,187 @@ async function fazerLogin(loginInformado, senhaInformada) {
     console.error(error);
     if (loginErro) loginErro.textContent = "Não foi possível fazer login.";
   }
-}
-
-async function adicionarPedido() {
-  if (!sessao || sessao.tipo !== "setor") return;
-
-  const nomeCongregacao = el("congregacao")?.value.trim() || "";
-  const modelo = el("modelo")?.value;
-  const tamanho = el("tamanho")?.value;
-  const quantidade = Number(el("quantidade")?.value || 0);
-
-  if (!nomeCongregacao) {
-    alert("Selecione uma congregação.");
-    return;
-  }
-
-  const congregacao = congregacoes.find(
-    (c) =>
-      c.setor_id === sessao.setor_id &&
-      c.nome.toLowerCase() === nomeCongregacao.toLowerCase()
-  );
-
-  if (!congregacao) {
-    alert("Escolha uma congregação válida da lista do seu setor.");
-    return;
-  }
-
-  if (quantidade < 1) {
-    alert("Informe uma quantidade válida.");
-    return;
-  }
-
-  try {
-    const pedidosCriados = await api("pedidos", {
-      method: "POST",
-      body: {
-        campanha_id: campanhaAtual?.id || null,
-        setor_id: sessao.setor_id,
-        congregacao_id: congregacao.id,
-        usuario_id: sessao.id,
-        data: new Date().toISOString(),
-      },
-    });
-
-    const pedidoCriado = pedidosCriados?.[0];
-    if (!pedidoCriado?.id) throw new Error("Falha ao criar pedido.");
-
-    await api("itens_pedido", {
-      method: "POST",
-      body: {
-        pedido_id: pedidoCriado.id,
-        modelo,
-        tamanho,
-        quantidade,
-      },
-    });
-
-    if (el("congregacao")) el("congregacao").value = "";
-    if (el("quantidade")) el("quantidade").value = 1;
-
-    await carregarPedidos();
-    renderSetor();
-    renderAdmin();
-  } catch (error) {
-    console.error(error);
-    alert("Não foi possível salvar o pedido.");
-  }
-}
-
-function renderSession() {
-  const app = el("app");
-  const loginCard = el("login-card");
-
-  if (!app || !loginCard) return;
-
-  if (!sessao) {
-    app.classList.add("hidden");
-    loginCard.classList.remove("hidden");
-    return;
-  }
-
-  loginCard.classList.add("hidden");
-  app.classList.remove("hidden");
-
-  if (sessao.tipo === "admin") {
-    el("welcomeTitle").textContent = "Administrador Geral";
-    el("welcomeText").textContent =
-      "Acompanhe todos os pedidos e exporte os relatórios para a fábrica.";
-  } else {
-    el("welcomeTitle").textContent = sessao.setor_nome || "Setor";
-    el("welcomeText").textContent = `${sessao.nome} • Lance os pedidos das congregações do seu setor.`;
-  }
-
-  preencherCongregacoesSetor();
-  renderSetor();
-  renderAdmin();
-  atualizarPermissoesTabs();
-}
-
-async function iniciar() {
-  const tamanhoSelect = el("tamanho");
-  if (tamanhoSelect && tamanhoSelect.options.length === 0) {
-    tamanhos.forEach((t) => {
-      const option = document.createElement("option");
-      option.value = t;
-      option.textContent = t;
-      tamanhoSelect.appendChild(option);
-    });
-  }
-
-  try {
-    await carregarDadosBase();
-    await carregarPedidos();
-  } catch (error) {
-    console.error(error);
-    if (el("loginErro")) {
-      el("loginErro").textContent = "Não foi possível conectar ao banco de dados.";
-    }
-  }
-
-  el("btnEntrar")?.addEventListener("click", async () => {
-    const login = el("login")?.value.trim() || "";
-    const senha = el("senha")?.value.trim() || "";
-
-    if (!login || !senha) {
-      if (el("loginErro")) el("loginErro").textContent = "Preencha login e senha.";
+}  
+  async function adicionarPedido() {
+    if (!sessao || sessao.tipo !== "setor") return;
+  
+    const nomeCongregacao = el("congregacao")?.value.trim() || "";
+    const modelo = el("modelo")?.value;
+    const tamanho = el("tamanho")?.value;
+    const quantidade = Number(el("quantidade")?.value || 0);
+  
+    if (!nomeCongregacao) {
+      alert("Selecione uma congregação.");
       return;
     }
-
-    await fazerLogin(login, senha);
-  });
-
-  el("btnSair")?.addEventListener("click", () => {
-    sessao = null;
-    salvarSessao();
-    renderSession();
-  });
-
-  document.querySelectorAll(".tab").forEach((tab) => {
-    tab.addEventListener("click", () => {
-      if (tab.dataset.tab === "admin" && sessao?.tipo !== "admin") return;
-      if (tab.dataset.tab === "setor" && sessao?.tipo !== "setor") return;
-      ativarTab(tab.dataset.tab);
+  
+    const congregacao = congregacoes.find(
+      (c) =>
+        c.setor_id === sessao.setor_id &&
+        c.nome.toLowerCase() === nomeCongregacao.toLowerCase()
+    );
+  
+    if (!congregacao) {
+      alert("Escolha uma congregação válida da lista do seu setor.");
+      return;
+    }
+  
+    if (quantidade < 1) {
+      alert("Informe uma quantidade válida.");
+      return;
+    }
+  
+    try {
+      const pedidosCriados = await api("pedidos", {
+        method: "POST",
+        body: {
+          campanha_id: campanhaAtual?.id || null,
+          setor_id: sessao.setor_id,
+          congregacao_id: congregacao.id,
+          usuario_id: sessao.id,
+          data: new Date().toISOString(),
+        },
+      });
+  
+      const pedidoCriado = pedidosCriados?.[0];
+      if (!pedidoCriado?.id) throw new Error("Falha ao criar pedido.");
+  
+      await api("itens_pedido", {
+        method: "POST",
+        body: {
+          pedido_id: pedidoCriado.id,
+          modelo,
+          tamanho,
+          quantidade,
+        },
+      });
+  
+      if (el("congregacao")) el("congregacao").value = "";
+      if (el("quantidade")) el("quantidade").value = 1;
+  
+      await carregarPedidos();
+      renderSetor();
+      renderAdmin();
+    } catch (error) {
+      console.error(error);
+      alert("Não foi possível salvar o pedido.");
+    }
+  }
+  
+  function renderSession() {
+    const app = el("app");
+    const loginCard = el("login-card");
+  
+    if (!app || !loginCard) return;
+  
+    if (!sessao) {
+      app.classList.add("hidden");
+      loginCard.classList.remove("hidden");
+      return;
+    }
+  
+    loginCard.classList.add("hidden");
+    app.classList.remove("hidden");
+  
+    if (sessao.tipo === "admin") {
+      el("welcomeTitle").textContent = "Administrador Geral";
+      el("welcomeText").textContent =
+        "Acompanhe todos os pedidos e exporte os relatórios para a fábrica.";
+    } else {
+      el("welcomeTitle").textContent = sessao.setor_nome || "Setor";
+      el("welcomeText").textContent = `${sessao.nome} • Lance os pedidos das congregações do seu setor.`;
+    }
+  
+    preencherCongregacoesSetor();
+    renderSetor();
+    renderAdmin();
+    atualizarPermissoesTabs();
+  }
+  
+  async function iniciar() {
+    const tamanhoSelect = el("tamanho");
+    if (tamanhoSelect && tamanhoSelect.options.length === 0) {
+      tamanhos.forEach((t) => {
+        const option = document.createElement("option");
+        option.value = t;
+        option.textContent = t;
+        tamanhoSelect.appendChild(option);
+      });
+    }
+  
+    try {
+      await carregarDadosBase();
+      await carregarPedidos();
+    } catch (error) {
+      console.error(error);
+      if (el("loginErro")) {
+        el("loginErro").textContent = "Não foi possível conectar ao banco de dados.";
+      }
+    }
+  
+    el("btnEntrar")?.addEventListener("click", async () => {
+      const login = el("login")?.value.trim() || "";
+      const senha = el("senha")?.value.trim() || "";
+  
+      if (!login || !senha) {
+        if (el("loginErro")) el("loginErro").textContent = "Preencha login e senha.";
+        return;
+      }
+  
+      await fazerLogin(login, senha);
     });
-  });
-
-  el("btnAdicionar")?.addEventListener("click", adicionarPedido);
-  el("busca")?.addEventListener("input", renderAdmin);
-
-  el("btnExportarPedidos")?.addEventListener("click", () => {
-    if (sessao?.tipo !== "admin") return;
-
-    const linhas = [["Setor", "Congregação", "Modelo", "Tamanho", "Quantidade"]];
-
-    pedidosCache.forEach((p) => {
-      linhas.push([
-        getSetorNome(p.setorId),
-        p.congregacao,
-        modelos[p.modelo] || p.modelo,
-        p.tamanho,
-        p.quantidade,
-      ]);
+  
+    el("btnSair")?.addEventListener("click", () => {
+      sessao = null;
+      salvarSessao();
+      renderSession();
     });
-
-    exportarCSV("pedidos_umadecampi.csv", linhas);
-  });
-
-  el("btnExportarResumo")?.addEventListener("click", () => {
-    if (sessao?.tipo !== "admin") return;
-
-    const resumo = resumoGeral();
-    const linhas = [["Modelo", "Tamanho", "Quantidade"]];
-
-    Object.entries(resumo).forEach(([modelo, tamanhosObj]) => {
-      Object.entries(tamanhosObj).forEach(([tamanho, qtd]) => {
-        linhas.push([modelos[modelo], tamanho, qtd]);
+  
+    document.querySelectorAll(".tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        if (tab.dataset.tab === "admin" && sessao?.tipo !== "admin") return;
+        if (tab.dataset.tab === "setor" && sessao?.tipo !== "setor") return;
+        ativarTab(tab.dataset.tab);
       });
     });
-
-    exportarCSV("resumo_fabrica_umadecampi.csv", linhas);
-  });
-
-  renderSession();
-}
-
-iniciar();
+  
+    el("btnAdicionar")?.addEventListener("click", adicionarPedido);
+    el("busca")?.addEventListener("input", renderAdmin);
+  
+    el("btnExportarPedidos")?.addEventListener("click", () => {
+      if (sessao?.tipo !== "admin") return;
+  
+      const linhas = [["Setor", "Congregação", "Modelo", "Tamanho", "Quantidade"]];
+  
+      pedidosCache.forEach((p) => {
+        linhas.push([
+          getSetorNome(p.setorId),
+          p.congregacao,
+          modelos[p.modelo] || p.modelo,
+          p.tamanho,
+          p.quantidade,
+        ]);
+      });
+  
+      exportarCSV("pedidos_umadecampi.csv", linhas);
+    });
+  
+    el("btnExportarResumo")?.addEventListener("click", () => {
+      if (sessao?.tipo !== "admin") return;
+  
+      const resumo = resumoGeral();
+      const linhas = [["Modelo", "Tamanho", "Quantidade"]];
+  
+      Object.entries(resumo).forEach(([modelo, tamanhosObj]) => {
+        Object.entries(tamanhosObj).forEach(([tamanho, qtd]) => {
+          linhas.push([modelos[modelo], tamanho, qtd]);
+        });
+      });
+  
+      exportarCSV("resumo_fabrica_umadecampi.csv", linhas);
+    });
+  
+    renderSession();
+  }
+  
+  iniciar();
