@@ -1,3 +1,10 @@
+const SUPABASE_URL = "https://dqwlhouwoxbwkcaytja.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_b_tuFrU9PhG3VKYLupMVhg_pWPF6Spj";
+
+const supabase = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
+);
 const SUPABASE_URL = 'https://dqwlhouwoxbwkcaytja.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_b_tuFrU9PhG3VKYLupMVhg_pWPF6Spj';
 const SESSION_KEY = 'umadecampi_sessao_supabase_v1';
