@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pedidos UMADECAMPI</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Sistema oficial</p>
+        <h1>Pedidos UMADECAMPI</h1>
+        <p class="subtitle">Lançamento de pedidos de camisetas por setor e congregação.</p>
+      </div>
+      <div class="hero-stats">
+        <div class="stat"><span>21</span><small>Setores</small></div>
+        <div class="stat"><span>120</span><small>Igrejas</small></div>
+      </div>
+    </header>
+
+    <section class="card" id="login-card">
+      <h2>Acesso ao sistema</h2>
+      <p class="muted">Entre como administrador ou como líder de setor.</p>
+      <div class="grid-2">
+        <div>
+          <label>Login</label>
+          <input id="login" type="text" placeholder="admin ou setor01" />
+        </div>
+        <div>
+          <label>Senha</label>
+          <input id="senha" type="password" placeholder="Digite a senha" />
+        </div>
+      </div>
+      <button id="btnEntrar">Entrar</button>
+      <p id="loginErro" class="error"></p>
+      <div class="examples">
+        <div>
+          <strong>Administrador</strong>
+          <p>Login: admin<br>Senha: umadecampi2026</p>
+        </div>
+        <div>
+          <strong>Exemplo setor</strong>
+          <p>Login: setor01<br>Senha: umade01</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="app" class="hidden">
+      <div class="topbar card">
+        <div>
+          <h2 id="welcomeTitle">Bem-vindo</h2>
+          <p id="welcomeText" class="muted"></p>
+        </div>
+        <button id="btnSair" class="secondary">Sair</button>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="setor">Área do setor</button>
+        <button class="tab" data-tab="admin">Painel administrativo</button>
+      </div>
+
+      <section id="tab-setor" class="tab-content active">
+        <div class="layout-2">
+          <div class="card">
+            <h3>Novo pedido</h3>
+            <p class="muted">Cadastre os pedidos da congregação do seu setor.</p>
+            <div class="stack">
+              <div>
+                <label>Congregação</label>
+                <input id="congregacao" list="listaCongregacoes" type="text" placeholder="Ex.: Congregação Vila Nova" />
+                <datalist id="listaCongregacoes"></datalist>
+              </div>
+              <div class="grid-3">
+                <div>
+                  <label>Modelo</label>
+                  <select id="modelo">
+                    <option value="masculino">Masculino</option>
+                    <option value="babylook">Baby Look Feminina</option>
+                  </select>
+                </div>
+                <div>
+                  <label>Tamanho</label>
+                  <select id="tamanho"></select>
+                </div>
+                <div>
+                  <label>Quantidade</label>
+                  <input id="quantidade" type="number" min="1" value="1" />
+                </div>
+              </div>
+              <button id="btnAdicionar">Adicionar pedido</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Pedidos do setor</h3>
+            <p class="muted">Visualize e remova os pedidos do setor logado.</p>
+            <div id="listaSetor" class="stack"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-admin" class="tab-content">
+        <div class="layout-2">
+          <div class="card">
+            <div class="section-header">
+              <div>
+                <h3>Resumo para a fábrica</h3>
+                <p class="muted">Totais por modelo e tamanho.</p>
+              </div>
+              <button id="btnExportarResumo" class="secondary">Exportar resumo CSV</button>
+            </div>
+            <div id="resumoCards" class="stack"></div>
+          </div>
+
+          <div class="card">
+            <div class="section-header wrap">
+              <div>
+                <h3>Pedidos consolidados</h3>
+                <p class="muted">Lista completa para conferência.</p>
+              </div>
+              <div class="actions">
+                <input id="busca" type="text" placeholder="Buscar pedido" />
+                <button id="btnExportarPedidos" class="secondary">Exportar pedidos CSV</button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Setor</th>
+                    <th>Congregação</th>
+                    <th>Modelo</th>
+                    <th>Tamanho</th>
+                    <th>Qtd.</th>
+                    <th>Ação</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyPedidos"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
