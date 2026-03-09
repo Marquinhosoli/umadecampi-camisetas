@@ -97,14 +97,19 @@ function resumoGeral() {
   return mapa;
 }
 
-function resumoPorSetor() {
-  const mapa = {};
+function rankingSetores() {
+  const ranking = {};
+
   pedidosCache.forEach((p) => {
-    const nomeSetor = getSetorNome(p.setorId);
-    if (!mapa[nomeSetor]) mapa[nomeSetor] = 0;
-    mapa[nomeSetor] += Number(p.quantidade || 0);
+    const nome = getSetorNome(p.setorId);
+
+    if (!ranking[nome]) ranking[nome] = 0;
+
+    ranking[nome] += Number(p.quantidade || 0);
   });
-  return mapa;
+
+  return Object.entries(ranking)
+    .sort((a, b) => b[1] - a[1]);
 }
 
 async function carregarDadosBase() {
