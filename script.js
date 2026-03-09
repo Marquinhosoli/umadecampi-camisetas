@@ -9,7 +9,7 @@ const modelos = {
 };
 
 const CONFIG = {
-  bloquearPedidosApos: "", // ex: "2026-08-10"
+  bloquearPedidosApos: "",
 };
 
 let sessao = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
@@ -114,16 +114,18 @@ async function carregarDadosBase() {
   congregacoes = congregacoesData || [];
   campanhaAtual = campanhasData?.[0] || null;
 
-  const statSpans = document.querySelectorAll(".stat span");
+  const statSpans = document.querySelectorAll(".stat");
   if (statSpans[0]) statSpans[0].textContent = setores.length || 0;
   if (statSpans[1]) statSpans[1].textContent = congregacoes.length || 0;
 }
 
 function preencherCongregacoesSetor() {
   const lista = el("listaCongregacoes");
-  if (!lista || !sessao || sessao.tipo !== "setor") return;
+  if (!lista) return;
 
   lista.innerHTML = "";
+
+  if (!sessao || sessao.tipo !== "setor") return;
 
   congregacoes
     .filter((c) => c.setor_id === sessao.setor_id)
@@ -172,6 +174,7 @@ function ativarTab(nome) {
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.classList.toggle("active", tab.dataset.tab === nome);
   });
+
   el("tab-setor")?.classList.toggle("active", nome === "setor");
   el("tab-admin")?.classList.toggle("active", nome === "admin");
 }
@@ -182,57 +185,12 @@ function atualizarPermissoesTabs() {
   if (!btnSetor || !btnAdmin) return;
 
   btnSetor.style.opacity = "1";
-  btnAdmin.style.opacity = "1";
+  btnAdmin.style.opacity = sessao?.tipo === "admin" ? "1" : "0.5";
 
   if (sessao?.tipo === "admin") {
     ativarTab("admin");
   } else {
     ativarTab("setor");
-  }
-}
-
-async function editarPedidoAdmin(itemId) {
-  const pedido = pedidosCache.find((p) => p.itemId === itemId);
-  if (!pedido) return;
-
-  const novaQuantidade = prompt("Nova quantidade:", String(pedido.quantidade));
-  if (novaQuantidade === null) return;
-
-  const qtd = Number(novaQuantidade);
-  if (!Number.isFinite(qtd) || qtd < 1) {
-    alert("Quantidade inválida.");
-    return;
-  }
-
-  const novoModelo = prompt(
-    "Modelo: masculino ou babylook",
-    pedido.modelo
-  );
-  if (novoModelo === null) return;
-
-  const novoTamanho = prompt(
-    "Tamanho: PP, P, M, G, GG, XG, XXG",
-    pedido.tamanho
-  );
-  if (novoTamanho === null) return;
-
-  try {
-    await api(`itens_pedido?id=eq.${itemId}`, {
-      method: "PATCH",
-      prefer: "return=minimal",
-      body: {
-        quantidade: qtd,
-        modelo: String(novoModelo).trim().toLowerCase(),
-        tamanho: String(novoTamanho).trim().toUpperCase(),
-      },
-    });
-
-    await carregarPedidos();
-    renderSetor();
-    renderAdmin();
-  } catch (error) {
-    console.error(error);
-    alert("Não foi possível editar o pedido.");
   }
 }
 
@@ -260,6 +218,57 @@ async function removerPedido(itemId, pedidoId) {
   } catch (error) {
     console.error(error);
     alert("Não foi possível remover o pedido.");
+  }
+}
+
+async function editarPedidoAdmin(itemId) {
+  const pedido = pedidosCache.find((p) => p.itemId === itemId);
+  if (!pedido) return;
+
+  const novaQuantidade = prompt("Nova quantidade:", String(pedido.quantidade));
+  if (novaQuantidade === null) return;
+
+  const qtd = Number(novaQuantidade);
+  if (!Number.isFinite(qtd) || qtd < 1) {
+    alert("Quantidade inválida.");
+    return;
+  }
+
+  const novoModelo = prompt("Modelo: masculino ou babylook", pedido.modelo);
+  if (novoModelo === null) return;
+
+  const modeloFinal = String(novoModelo).trim().toLowerCase();
+  if (!["masculino", "babylook"].includes(modeloFinal)) {
+    alert("Modelo inválido. Use masculino ou babylook.");
+    return;
+  }
+
+  const novoTamanho = prompt("Tamanho: PP, P, M, G, GG, XG, XXG", pedido.tamanho);
+  if (novoTamanho === null) return;
+
+  const tamanhoFinal = String(novoTamanho).trim().toUpperCase();
+  if (!["PP", "P", "M", "G", "GG", "XG", "XXG"].includes(tamanhoFinal)) {
+    alert("Tamanho inválido.");
+    return;
+  }
+
+  try {
+    await api(`itens_pedido?id=eq.${itemId}`, {
+      method: "PATCH",
+      prefer: "return=minimal",
+      body: {
+        quantidade: qtd,
+        modelo: modeloFinal,
+        tamanho: tamanhoFinal,
+      },
+    });
+
+    await carregarPedidos();
+    renderSetor();
+    renderAdmin();
+  } catch (error) {
+    console.error(error);
+    alert("Não foi possível editar o pedido.");
   }
 }
 
@@ -361,6 +370,7 @@ function renderAdmin() {
   const blocoSetores = document.createElement("div");
   blocoSetores.className = "resumo-bloco";
   blocoSetores.innerHTML = "<h4>Total por setor</h4>";
+
   const gridSetor = document.createElement("div");
   gridSetor.className = "grid-3";
 
