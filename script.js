@@ -9,7 +9,8 @@ const modelos = {
 };
 
 const CONFIG = {
-  bloquearPedidosApos: "",
+  inicioPedidos: 1,
+  fimPedidos: 20
 };
 
 let sessao = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
@@ -72,10 +73,13 @@ function exportarCSV(nomeArquivo, linhas) {
 }
 
 function pedidosBloqueados() {
-  if (!CONFIG.bloquearPedidosApos) return false;
   const hoje = new Date();
-  const limite = new Date(`${CONFIG.bloquearPedidosApos}T23:59:59`);
-  return hoje > limite;
+  const dia = hoje.getDate();
+
+  if (dia < CONFIG.inicioPedidos) return true;
+  if (dia > CONFIG.fimPedidos) return true;
+
+  return false;
 }
 
 function resumoGeral() {
