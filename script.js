@@ -109,10 +109,6 @@ function rankingSetores() {
     .sort((a, b) => b[1] - a[1]);
 }
 
-  return Object.entries(ranking)
-    .sort((a, b) => b[1] - a[1]);
-}
-
 async function carregarDadosBase() {
   const [setoresData, congregacoesData, campanhasData] = await Promise.all([
     api("setores?select=id,numero,nome&order=numero.asc"),
