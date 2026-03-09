@@ -98,15 +98,8 @@ function resumoGeral() {
 }
 
 function rankingSetores() {
-  const ranking = {};
-
-  pedidosCache.forEach((p) => {
-    const nome = getSetorNome(p.setorId);
-
-    if (!ranking[nome]) ranking[nome] = 0;
-
-    ranking[nome] += Number(p.quantidade || 0);
-  });
+  return [];
+}
 
   return Object.entries(ranking)
     .sort((a, b) => b[1] - a[1]);
