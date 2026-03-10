@@ -56,20 +56,11 @@ function salvarSessao() {
   else localStorage.removeItem(SESSION_KEY);
 }
 
-function exportarCSV(nomeArquivo, linhas) {
-  const csv = linhas
-    .map((linha) =>
-      linha.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")
-    )
-    .join("\n");
-
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = nomeArquivo;
-  a.click();
-  URL.revokeObjectURL(url);
+function exportarExcel(nomeArquivo, linhas, nomeAba = "Planilha") {
+  const ws = XLSX.utils.aoa_to_sheet(linhas);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, nomeAba);
+  XLSX.writeFile(wb, nomeArquivo);
 }
 
 function pedidosBloqueados() {
@@ -648,7 +639,7 @@ async function iniciar() {
       ]);
     });
 
-    exportarCSV("pedidos_umadecampi.csv", linhas);
+    exportarExcel("pedidos_umadecampi.xlsx", linhas, "Pedidos");
   });
 
   el("btnExportarResumo")?.addEventListener("click", () => {
@@ -668,7 +659,7 @@ async function iniciar() {
       linhas.push([setor, qtd]);
     });
 
-    exportarCSV("resumo_fabrica_umadecampi.csv", linhas);
+    exportarExcel("resumo_fabrica_umadecampi.xlsx", linhas, "Resumo");
   });
 
   renderSession();
