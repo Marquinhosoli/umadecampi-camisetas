@@ -176,7 +176,7 @@ function resumoPorSetor(listaPedidos = pedidosCache) {
 function rankingSetores(listaPedidos = pedidosCache) {
   return Object.entries(resumoPorSetor(listaPedidos))
     .map(([setor, total]) => ({ setor, total }))
-    .sort((a, b) => b.total - a.total);
+    .sort((a, b) => b.total - a.total || a.setor.localeCompare(b.setor, "pt-BR"));
 }
 
 function calcularTotaisGeraisAdmin(listaPedidos = pedidosCache) {
@@ -233,6 +233,40 @@ function renderTotaisGeraisAdmin(listaPedidos = pedidosCache) {
     item.className = "summary-stat";
     item.innerHTML = `<span>${card.valor}</span><small>${card.titulo}</small>`;
     container.appendChild(item);
+  });
+}
+
+function renderRankingSetoresAdmin(listaPedidos = pedidosCache) {
+  const container = el("rankingSetoresAdmin");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  if (!sessao || sessao.tipo !== "admin") {
+    container.innerHTML =
+      '<div class="pedido-card">Somente o administrador pode visualizar o ranking.</div>';
+    return;
+  }
+
+  const ranking = rankingSetores(listaPedidos);
+
+  if (!ranking.length) {
+    container.innerHTML =
+      '<div class="pedido-card">Nenhum setor encontrado para o ranking com os filtros atuais.</div>';
+    return;
+  }
+
+  ranking.forEach((itemRanking, index) => {
+    const posicao = index + 1;
+    const card = document.createElement("div");
+    card.className = "pedido-card";
+    card.innerHTML = `
+      <strong>${posicao}º lugar • ${itemRanking.setor}</strong>
+      <div style="margin-top:8px;">
+        <span class="pill">Total ${itemRanking.total}</span>
+      </div>
+    `;
+    container.appendChild(card);
   });
 }
 
@@ -473,6 +507,7 @@ function renderAdmin() {
 
   if (!sessao || sessao.tipo !== "admin") {
     renderTotaisGeraisAdmin([]);
+    renderRankingSetoresAdmin([]);
     resumoContainer.innerHTML =
       '<div class="pedido-card">Entre como administrador para visualizar a consolidação geral.</div>';
     tbody.innerHTML =
@@ -484,6 +519,7 @@ function renderAdmin() {
 
   const filtrados = getPedidosAdminFiltrados();
   renderTotaisGeraisAdmin(filtrados);
+  renderRankingSetoresAdmin(filtrados);
 
   const resumo = resumoGeral(filtrados);
 
@@ -514,12 +550,14 @@ function renderAdmin() {
   const gridSetor = document.createElement("div");
   gridSetor.className = "grid-3";
 
-  Object.entries(setoresResumo).forEach(([setor, qtd]) => {
-    const item = document.createElement("div");
-    item.className = "summary-stat";
-    item.innerHTML = `<span>${qtd}</span><small>${setor}</small>`;
-    gridSetor.appendChild(item);
-  });
+  Object.entries(setoresResumo)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "pt-BR"))
+    .forEach(([setor, qtd]) => {
+      const item = document.createElement("div");
+      item.className = "summary-stat";
+      item.innerHTML = `<span>${qtd}</span><small>${setor}</small>`;
+      gridSetor.appendChild(item);
+    });
 
   blocoSetores.appendChild(gridSetor);
   resumoContainer.appendChild(blocoSetores);
@@ -790,8 +828,8 @@ async function iniciar() {
     linhas.push([]);
     linhas.push(["Setor", "Total"]);
 
-    Object.entries(resumoPorSetor(filtrados)).forEach(([setor, qtd]) => {
-      linhas.push([setor, qtd]);
+    rankingSetores(filtrados).forEach(({ setor, total }) => {
+      linhas.push([setor, total]);
     });
 
     exportarExcel("resumo_fabrica_umadecampi.xlsx", linhas, "Resumo");
