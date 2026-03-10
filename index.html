@@ -34,17 +34,17 @@
       <div class="grid-2">
         <div>
           <label for="login">Login</label>
-          <input id="login" placeholder="admin ou setor01" />
+          <input id="login" placeholder="admin ou setor01" autocomplete="username" />
         </div>
 
         <div>
           <label for="senha">Senha</label>
-          <input id="senha" type="password" placeholder="Digite a senha" />
+          <input id="senha" type="password" placeholder="Digite a senha" autocomplete="current-password" />
         </div>
       </div>
 
       <div style="margin-top: 16px;">
-        <button id="btnEntrar" class="primary full">Entrar</button>
+        <button id="btnEntrar" class="primary full" type="button">Entrar</button>
       </div>
 
       <p id="loginErro"></p>
@@ -72,13 +72,13 @@
         </div>
 
         <div class="hero-actions">
-          <button id="btnSair" class="secondary full">Sair</button>
+          <button id="btnSair" class="secondary full" type="button">Sair</button>
         </div>
       </div>
 
       <div class="tabs-wrap">
-        <button class="tab active" data-tab="setor">Área do setor</button>
-        <button class="tab" data-tab="admin">Painel administrativo</button>
+        <button class="tab active" data-tab="setor" type="button">Área do setor</button>
+        <button class="tab" data-tab="admin" type="button">Painel administrativo</button>
       </div>
 
       <section id="tab-setor" class="tab-content active">
@@ -118,7 +118,7 @@
               </div>
             </div>
 
-            <button id="btnAdicionar" class="primary full">Adicionar pedido</button>
+            <button id="btnAdicionar" class="primary full" type="button">Adicionar pedido</button>
           </div>
 
           <div class="card">
@@ -145,8 +145,8 @@
             <input id="busca" type="text" placeholder="Setor, congregação, modelo ou tamanho" />
 
             <div class="action-grid">
-              <button id="btnExportarPedidos" class="secondary">Exportar pedidos</button>
-              <button id="btnExportarResumo" class="secondary">Exportar resumo</button>
+              <button id="btnExportarPedidos" class="secondary" type="button">Exportar pedidos</button>
+              <button id="btnExportarResumo" class="secondary" type="button">Exportar resumo</button>
             </div>
           </div>
         </div>
@@ -174,6 +174,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
