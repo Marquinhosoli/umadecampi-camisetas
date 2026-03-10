@@ -73,13 +73,87 @@ function pedidosBloqueados() {
   return false;
 }
 
-function resumoGeral() {
+function preencherFiltroSetoresAdmin() {
+  const select = el("filtroSetoresAdmin");
+  if (!select) return;
+
+  const selecionadosAtuais = getSetoresSelecionadosAdmin();
+  select.innerHTML = "";
+
+  setores
+    .slice()
+    .sort((a, b) => {
+      const na = Number(a.numero || 0);
+      const nb = Number(b.numero || 0);
+      if (na !== nb) return na - nb;
+      return String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR");
+    })
+    .forEach((setor) => {
+      const option = document.createElement("option");
+      option.value = String(setor.id);
+      option.textContent = setor.numero ? `${setor.numero} - ${setor.nome}` : setor.nome;
+      option.selected = selecionadosAtuais.includes(String(setor.id));
+      select.appendChild(option);
+    });
+}
+
+function getSetoresSelecionadosAdmin() {
+  const select = el("filtroSetoresAdmin");
+  if (!select) return [];
+  return Array.from(select.selectedOptions).map((option) => String(option.value));
+}
+
+function selecionarTodosSetoresAdmin() {
+  const select = el("filtroSetoresAdmin");
+  if (!select) return;
+
+  Array.from(select.options).forEach((option) => {
+    option.selected = true;
+  });
+
+  renderAdmin();
+}
+
+function limparSetoresAdmin() {
+  const select = el("filtroSetoresAdmin");
+  if (!select) return;
+
+  Array.from(select.options).forEach((option) => {
+    option.selected = false;
+  });
+
+  renderAdmin();
+}
+
+function getPedidosAdminFiltrados() {
+  const busca = (el("busca")?.value || "").trim().toLowerCase();
+  const setoresSelecionados = getSetoresSelecionadosAdmin();
+
+  return pedidosCache.filter((p) => {
+    const setorIdTexto = String(p.setorId);
+    const passouFiltroSetor =
+      setoresSelecionados.length === 0 || setoresSelecionados.includes(setorIdTexto);
+
+    if (!passouFiltroSetor) return false;
+
+    if (!busca) return true;
+
+    return (
+      p.congregacao.toLowerCase().includes(busca) ||
+      getSetorNome(p.setorId).toLowerCase().includes(busca) ||
+      (modelos[p.modelo] || p.modelo).toLowerCase().includes(busca) ||
+      p.tamanho.toLowerCase().includes(busca)
+    );
+  });
+}
+
+function resumoGeral(listaPedidos = pedidosCache) {
   const mapa = {
     masculino: Object.fromEntries(tamanhos.map((t) => [t, 0])),
     babylook: Object.fromEntries(tamanhos.map((t) => [t, 0])),
   };
 
-  pedidosCache.forEach((p) => {
+  listaPedidos.forEach((p) => {
     if (mapa[p.modelo] && mapa[p.modelo][p.tamanho] !== undefined) {
       mapa[p.modelo][p.tamanho] += Number(p.quantidade || 0);
     }
@@ -88,10 +162,10 @@ function resumoGeral() {
   return mapa;
 }
 
-function resumoPorSetor() {
+function resumoPorSetor(listaPedidos = pedidosCache) {
   const mapa = {};
 
-  pedidosCache.forEach((p) => {
+  listaPedidos.forEach((p) => {
     const nomeSetor = getSetorNome(p.setorId);
     mapa[nomeSetor] = (mapa[nomeSetor] || 0) + Number(p.quantidade || 0);
   });
@@ -99,8 +173,8 @@ function resumoPorSetor() {
   return mapa;
 }
 
-function rankingSetores() {
-  return Object.entries(resumoPorSetor())
+function rankingSetores(listaPedidos = pedidosCache) {
+  return Object.entries(resumoPorSetor(listaPedidos))
     .map(([setor, total]) => ({ setor, total }))
     .sort((a, b) => b.total - a.total);
 }
@@ -348,7 +422,11 @@ function renderAdmin() {
     return;
   }
 
-  const resumo = resumoGeral();
+  preencherFiltroSetoresAdmin();
+
+  const filtrados = getPedidosAdminFiltrados();
+  const resumo = resumoGeral(filtrados);
+
   Object.entries(resumo).forEach(([modelo, tamanhosObj]) => {
     const bloco = document.createElement("div");
     bloco.className = "resumo-bloco";
@@ -368,7 +446,7 @@ function renderAdmin() {
     resumoContainer.appendChild(bloco);
   });
 
-  const setoresResumo = resumoPorSetor();
+  const setoresResumo = resumoPorSetor(filtrados);
   const blocoSetores = document.createElement("div");
   blocoSetores.className = "resumo-bloco";
   blocoSetores.innerHTML = "<h4>Total por setor</h4>";
@@ -385,17 +463,6 @@ function renderAdmin() {
 
   blocoSetores.appendChild(gridSetor);
   resumoContainer.appendChild(blocoSetores);
-
-  const busca = (el("busca")?.value || "").trim().toLowerCase();
-  const filtrados = pedidosCache.filter((p) => {
-    if (!busca) return true;
-    return (
-      p.congregacao.toLowerCase().includes(busca) ||
-      getSetorNome(p.setorId).toLowerCase().includes(busca) ||
-      (modelos[p.modelo] || p.modelo).toLowerCase().includes(busca) ||
-      p.tamanho.toLowerCase().includes(busca)
-    );
-  });
 
   if (!filtrados.length) {
     tbody.innerHTML = '<tr><td colspan="7">Nenhum pedido encontrado.</td></tr>';
@@ -624,12 +691,17 @@ async function iniciar() {
 
   el("btnAdicionar")?.addEventListener("click", adicionarPedido);
   el("busca")?.addEventListener("input", renderAdmin);
+  el("filtroSetoresAdmin")?.addEventListener("change", renderAdmin);
+  el("btnTodosSetores")?.addEventListener("click", selecionarTodosSetoresAdmin);
+  el("btnLimparSetores")?.addEventListener("click", limparSetoresAdmin);
 
   el("btnExportarPedidos")?.addEventListener("click", () => {
     if (sessao?.tipo !== "admin") return;
 
+    const filtrados = getPedidosAdminFiltrados();
     const linhas = [["Setor", "Congregação", "Modelo", "Tamanho", "Quantidade"]];
-    pedidosCache.forEach((p) => {
+
+    filtrados.forEach((p) => {
       linhas.push([
         getSetorNome(p.setorId),
         p.congregacao,
@@ -645,8 +717,10 @@ async function iniciar() {
   el("btnExportarResumo")?.addEventListener("click", () => {
     if (sessao?.tipo !== "admin") return;
 
-    const resumo = resumoGeral();
+    const filtrados = getPedidosAdminFiltrados();
+    const resumo = resumoGeral(filtrados);
     const linhas = [["Modelo", "Tamanho", "Quantidade"]];
+
     Object.entries(resumo).forEach(([modelo, tamanhosObj]) => {
       Object.entries(tamanhosObj).forEach(([tamanho, qtd]) => {
         linhas.push([modelos[modelo], tamanho, qtd]);
@@ -655,7 +729,8 @@ async function iniciar() {
 
     linhas.push([]);
     linhas.push(["Setor", "Total"]);
-    Object.entries(resumoPorSetor()).forEach(([setor, qtd]) => {
+
+    Object.entries(resumoPorSetor(filtrados)).forEach(([setor, qtd]) => {
       linhas.push([setor, qtd]);
     });
 
