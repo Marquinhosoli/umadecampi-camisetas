@@ -139,12 +139,25 @@
 
           <div class="card">
             <h3>Ferramentas</h3>
-            <p class="muted">Busque, exporte e gerencie os pedidos.</p>
+            <p class="muted">Busque, filtre por vários setores, exporte e gerencie os pedidos.</p>
 
             <label for="busca">Buscar</label>
             <input id="busca" type="text" placeholder="Setor, congregação, modelo ou tamanho" />
 
-            <div class="action-grid">
+            <label for="filtroSetoresAdmin" style="margin-top: 14px; display: block;">Filtrar por setores</label>
+            <select id="filtroSetoresAdmin" multiple size="8" style="width: 100%;">
+            </select>
+
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+              <button id="btnTodosSetores" class="secondary" type="button">Selecionar todos</button>
+              <button id="btnLimparSetores" class="secondary" type="button">Limpar setores</button>
+            </div>
+
+            <small class="muted" style="display:block; margin-top:8px;">
+              Dica: segure Ctrl no Windows ou Command no Mac para selecionar vários setores manualmente.
+            </small>
+
+            <div class="action-grid" style="margin-top: 16px;">
               <button id="btnExportarPedidos" class="secondary" type="button">Exportar pedidos</button>
               <button id="btnExportarResumo" class="secondary" type="button">Exportar resumo</button>
             </div>
