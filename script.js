@@ -63,6 +63,17 @@ function exportarExcel(nomeArquivo, linhas, nomeAba = "Planilha") {
   XLSX.writeFile(wb, nomeArquivo);
 }
 
+function exportarWorkbook(nomeArquivo, abas) {
+  const wb = XLSX.utils.book_new();
+
+  abas.forEach((aba) => {
+    const ws = XLSX.utils.aoa_to_sheet(aba.linhas || []);
+    XLSX.utils.book_append_sheet(wb, ws, aba.nome);
+  });
+
+  XLSX.writeFile(wb, nomeArquivo);
+}
+
 function pedidosBloqueados() {
   const hoje = new Date();
   const dia = hoje.getDate();
@@ -594,6 +605,130 @@ function renderAdmin() {
   });
 }
 
+function montarResumoProducaoPorModelo(listaPedidos, modelo) {
+  const linhas = [["Tamanho", "Quantidade"]];
+  const totais = Object.fromEntries(tamanhos.map((t) => [t, 0]));
+
+  listaPedidos.forEach((pedido) => {
+    if (pedido.modelo === modelo && totais[pedido.tamanho] !== undefined) {
+      totais[pedido.tamanho] += Number(pedido.quantidade || 0);
+    }
+  });
+
+  tamanhos.forEach((tamanho) => {
+    linhas.push([tamanho, totais[tamanho]]);
+  });
+
+  linhas.push(["TOTAL", tamanhos.reduce((acc, t) => acc + totais[t], 0)]);
+  return linhas;
+}
+
+function montarResumoGeralProducao(listaPedidos) {
+  const linhas = [["Modelo", "Tamanho", "Quantidade"]];
+  const resumo = resumoGeral(listaPedidos);
+
+  ["masculino", "babylook"].forEach((modelo) => {
+    tamanhos.forEach((tamanho) => {
+      linhas.push([
+        modelos[modelo],
+        tamanho,
+        resumo[modelo][tamanho] || 0,
+      ]);
+    });
+  });
+
+  linhas.push([]);
+  const totais = calcularTotaisGeraisAdmin(listaPedidos);
+  linhas.push(["Resumo", "Quantidade"]);
+  linhas.push(["Total geral", totais.totalGeral]);
+  linhas.push(["Masculino", totais.totalMasculino]);
+  linhas.push(["Baby Look Feminina", totais.totalBabylook]);
+
+  return linhas;
+}
+
+function montarResumoPorSetorProducao(listaPedidos) {
+  const linhas = [["Setor", "Total"]];
+  rankingSetores(listaPedidos).forEach(({ setor, total }) => {
+    linhas.push([setor, total]);
+  });
+  return linhas;
+}
+
+function montarPedidosDetalhadosProducao(listaPedidos) {
+  const linhas = [["Setor", "Congregação", "Modelo", "Tamanho", "Quantidade"]];
+
+  listaPedidos
+    .slice()
+    .sort((a, b) => {
+      const setorA = getSetorNome(a.setorId);
+      const setorB = getSetorNome(b.setorId);
+      const cmpSetor = setorA.localeCompare(setorB, "pt-BR");
+      if (cmpSetor !== 0) return cmpSetor;
+
+      const cmpCong = a.congregacao.localeCompare(b.congregacao, "pt-BR");
+      if (cmpCong !== 0) return cmpCong;
+
+      const cmpModelo = (modelos[a.modelo] || a.modelo).localeCompare(
+        modelos[b.modelo] || b.modelo,
+        "pt-BR"
+      );
+      if (cmpModelo !== 0) return cmpModelo;
+
+      const idxA = tamanhos.indexOf(a.tamanho);
+      const idxB = tamanhos.indexOf(b.tamanho);
+      if (idxA !== idxB) return idxA - idxB;
+
+      return Number(a.quantidade || 0) - Number(b.quantidade || 0);
+    })
+    .forEach((p) => {
+      linhas.push([
+        getSetorNome(p.setorId),
+        p.congregacao,
+        modelos[p.modelo] || p.modelo,
+        p.tamanho,
+        p.quantidade,
+      ]);
+    });
+
+  return linhas;
+}
+
+function gerarNomeArquivoRelatorioFabrica() {
+  const data = new Date();
+  const yyyy = data.getFullYear();
+  const mm = String(data.getMonth() + 1).padStart(2, "0");
+  const dd = String(data.getDate()).padStart(2, "0");
+  return `relatorio_fabrica_umadecampi_${yyyy}-${mm}-${dd}.xlsx`;
+}
+
+function exportarRelatorioFabrica(listaPedidos) {
+  const abas = [
+    {
+      nome: "Producao Geral",
+      linhas: montarResumoGeralProducao(listaPedidos),
+    },
+    {
+      nome: "Masculino",
+      linhas: montarResumoProducaoPorModelo(listaPedidos, "masculino"),
+    },
+    {
+      nome: "Baby Look",
+      linhas: montarResumoProducaoPorModelo(listaPedidos, "babylook"),
+    },
+    {
+      nome: "Por Setor",
+      linhas: montarResumoPorSetorProducao(listaPedidos),
+    },
+    {
+      nome: "Pedidos Detalhados",
+      linhas: montarPedidosDetalhadosProducao(listaPedidos),
+    },
+  ];
+
+  exportarWorkbook(gerarNomeArquivoRelatorioFabrica(), abas);
+}
+
 async function fazerLogin(loginInformado, senhaInformada) {
   const loginErro = el("loginErro");
   if (loginErro) loginErro.textContent = "";
@@ -816,23 +951,7 @@ async function iniciar() {
     if (sessao?.tipo !== "admin") return;
 
     const filtrados = getPedidosAdminFiltrados();
-    const resumo = resumoGeral(filtrados);
-    const linhas = [["Modelo", "Tamanho", "Quantidade"]];
-
-    Object.entries(resumo).forEach(([modelo, tamanhosObj]) => {
-      Object.entries(tamanhosObj).forEach(([tamanho, qtd]) => {
-        linhas.push([modelos[modelo], tamanho, qtd]);
-      });
-    });
-
-    linhas.push([]);
-    linhas.push(["Setor", "Total"]);
-
-    rankingSetores(filtrados).forEach(({ setor, total }) => {
-      linhas.push([setor, total]);
-    });
-
-    exportarExcel("resumo_fabrica_umadecampi.xlsx", linhas, "Resumo");
+    exportarRelatorioFabrica(filtrados);
   });
 
   renderSession();
