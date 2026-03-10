@@ -97,11 +97,22 @@ function resumoGeral() {
   return mapa;
 }
 
-function rankingSetores() {
-  return [];
+function resumoPorSetor() {
+  const mapa = {};
+
+  pedidosCache.forEach((p) => {
+    const nomeSetor = getSetorNome(p.setorId);
+    mapa[nomeSetor] = (mapa[nomeSetor] || 0) + Number(p.quantidade || 0);
+  });
+
+  return mapa;
 }
 
- 
+function rankingSetores() {
+  return Object.entries(resumoPorSetor())
+    .map(([setor, total]) => ({ setor, total }))
+    .sort((a, b) => b.total - a.total);
+}
 
 async function carregarDadosBase() {
   const [setoresData, congregacoesData, campanhasData] = await Promise.all([
