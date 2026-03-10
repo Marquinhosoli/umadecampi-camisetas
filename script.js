@@ -179,6 +179,63 @@ function rankingSetores(listaPedidos = pedidosCache) {
     .sort((a, b) => b.total - a.total);
 }
 
+function calcularTotaisGeraisAdmin(listaPedidos = pedidosCache) {
+  return listaPedidos.reduce(
+    (acc, pedido) => {
+      const quantidade = Number(pedido.quantidade || 0);
+
+      acc.totalGeral += quantidade;
+
+      if (pedido.modelo === "masculino") {
+        acc.totalMasculino += quantidade;
+      }
+
+      if (pedido.modelo === "babylook") {
+        acc.totalBabylook += quantidade;
+      }
+
+      return acc;
+    },
+    {
+      totalGeral: 0,
+      totalMasculino: 0,
+      totalBabylook: 0,
+    }
+  );
+}
+
+function renderTotaisGeraisAdmin(listaPedidos = pedidosCache) {
+  const container = el("totaisGeraisAdmin");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  if (!sessao || sessao.tipo !== "admin") {
+    container.innerHTML = `
+      <div class="summary-stat">
+        <span>0</span>
+        <small>Somente administrador</small>
+      </div>
+    `;
+    return;
+  }
+
+  const totais = calcularTotaisGeraisAdmin(listaPedidos);
+
+  const cards = [
+    { titulo: "Total geral", valor: totais.totalGeral },
+    { titulo: "Masculino", valor: totais.totalMasculino },
+    { titulo: "Baby Look Feminina", valor: totais.totalBabylook },
+  ];
+
+  cards.forEach((card) => {
+    const item = document.createElement("div");
+    item.className = "summary-stat";
+    item.innerHTML = `<span>${card.valor}</span><small>${card.titulo}</small>`;
+    container.appendChild(item);
+  });
+}
+
 async function carregarDadosBase() {
   const [setoresData, congregacoesData, campanhasData] = await Promise.all([
     api("setores?select=id,numero,nome&order=numero.asc"),
@@ -415,6 +472,7 @@ function renderAdmin() {
   tbody.innerHTML = "";
 
   if (!sessao || sessao.tipo !== "admin") {
+    renderTotaisGeraisAdmin([]);
     resumoContainer.innerHTML =
       '<div class="pedido-card">Entre como administrador para visualizar a consolidação geral.</div>';
     tbody.innerHTML =
@@ -425,6 +483,8 @@ function renderAdmin() {
   preencherFiltroSetoresAdmin();
 
   const filtrados = getPedidosAdminFiltrados();
+  renderTotaisGeraisAdmin(filtrados);
+
   const resumo = resumoGeral(filtrados);
 
   Object.entries(resumo).forEach(([modelo, tamanhosObj]) => {
