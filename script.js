@@ -366,7 +366,14 @@ function preencherCongregacoesSetor() {
 
   lista.innerHTML = "";
 
-  const setorAtual = getSetorPedidoAtual();
+ let setorIdAtual = getSetorPedidoAtual();
+
+if (sessao?.tipo === "admin") {
+  const selectSetor = el("setorAdminPedido");
+  if (selectSetor && selectSetor.value) {
+    setorIdAtual = Number(selectSetor.value);
+  }
+}
   if (!setorAtual) return;
 
   congregacoes
