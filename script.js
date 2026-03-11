@@ -84,6 +84,31 @@ function pedidosBloqueadosParaSetor() {
   return dia < CONFIG.inicioPedidos || dia > CONFIG.fimPedidos;
 }
 
+function atualizarAvisoPeriodoPedidos() {
+  const aviso = el("avisoPeriodoPedidos");
+  const btnAdicionar = el("btnAdicionar");
+  if (!aviso || !btnAdicionar) return;
+
+  if (!sessao || sessao.tipo !== "setor") {
+    aviso.classList.add("hidden");
+    btnAdicionar.disabled = false;
+    return;
+  }
+
+  if (pedidosBloqueadosParaSetor()) {
+    aviso.classList.remove("hidden");
+    aviso.innerHTML = `
+      <strong>Período fechado para pedidos</strong>
+      <p>Os líderes de setor só podem lançar pedidos do dia ${CONFIG.inicioPedidos} ao dia ${CONFIG.fimPedidos} de cada mês.</p>
+    `;
+    btnAdicionar.disabled = true;
+  } else {
+    aviso.classList.add("hidden");
+    aviso.innerHTML = "";
+    btnAdicionar.disabled = false;
+  }
+}
+
 function getSetoresSelecionadosAdmin() {
   const select = el("filtroSetoresAdmin");
   if (!select) return [];
@@ -965,6 +990,7 @@ function renderSession() {
     if (el("welcomeText")) el("welcomeText").textContent = "Área do sistema.";
 
     atualizarVisibilidadeAdminPedido();
+    atualizarAvisoPeriodoPedidos();
     return;
   }
 
@@ -988,6 +1014,7 @@ function renderSession() {
   atualizarVisibilidadeAdminPedido();
   preencherSetoresAdminPedido();
   preencherCongregacoesSetor();
+  atualizarAvisoPeriodoPedidos();
   renderSetor();
   renderAdmin();
   atualizarPermissoesTabs();
@@ -1027,6 +1054,13 @@ async function iniciar() {
   });
 
   el("senha")?.addEventListener("keydown", async (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      el("btnEntrar")?.click();
+    }
+  });
+
+  el("login")?.addEventListener("keydown", async (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
       el("btnEntrar")?.click();
