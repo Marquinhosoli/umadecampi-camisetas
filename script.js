@@ -51,6 +51,10 @@ function getCongregacaoNome(id) {
   return congregacoes.find((c) => c.id === id)?.nome || "Congregação";
 }
 
+function getStatusEnvioLabel(status) {
+  return status === "enviado" ? "Enviado" : "Pendente";
+}
+
 function salvarSessao() {
   if (sessao) localStorage.setItem(SESSION_KEY, JSON.stringify(sessao));
   else localStorage.removeItem(SESSION_KEY);
@@ -114,6 +118,10 @@ function getSetoresSelecionadosAdmin() {
   return Array.from(select.selectedOptions).map((option) => String(option.value));
 }
 
+function getFiltroStatusAdmin() {
+  return (el("filtroStatusAdmin")?.value || "todos").trim().toLowerCase();
+}
+
 function selecionarTodosSetoresAdmin() {
   const select = el("filtroSetoresAdmin");
   if (!select) return;
@@ -139,6 +147,7 @@ function limparSetoresAdmin() {
 function getPedidosAdminFiltrados() {
   const busca = (el("busca")?.value || "").trim().toLowerCase();
   const setoresSelecionados = getSetoresSelecionadosAdmin();
+  const filtroStatus = getFiltroStatusAdmin();
 
   return pedidosCache.filter((p) => {
     const setorIdTexto = String(p.setorId);
@@ -147,13 +156,18 @@ function getPedidosAdminFiltrados() {
 
     if (!passouFiltroSetor) return false;
 
+    if (filtroStatus !== "todos" && (p.statusEnvio || "pendente") !== filtroStatus) {
+      return false;
+    }
+
     if (!busca) return true;
 
     return (
       p.congregacao.toLowerCase().includes(busca) ||
       getSetorNome(p.setorId).toLowerCase().includes(busca) ||
       (modelos[p.modelo] || p.modelo).toLowerCase().includes(busca) ||
-      p.tamanho.toLowerCase().includes(busca)
+      p.tamanho.toLowerCase().includes(busca) ||
+      getStatusEnvioLabel(p.statusEnvio).toLowerCase().includes(busca)
     );
   });
 }
@@ -320,7 +334,7 @@ async function carregarPedidos() {
     "pedidos?select=id,campanha_id,setor_id,congregacao_id,usuario_id,data&order=data.desc"
   );
   const itens = await api(
-    "itens_pedido?select=id,pedido_id,modelo,tamanho,quantidade"
+    "itens_pedido?select=id,pedido_id,modelo,tamanho,quantidade,status_envio"
   );
 
   const itensPorPedido = new Map();
@@ -343,6 +357,7 @@ async function carregarPedidos() {
         modelo: item.modelo,
         tamanho: item.tamanho,
         quantidade: Number(item.quantidade || 0),
+        statusEnvio: item.status_envio || "pendente",
       });
     });
   });
@@ -450,6 +465,48 @@ async function editarPedidoAdmin(itemId) {
   }
 }
 
+async function atualizarStatusPedidosFiltrados(novoStatus) {
+  if (sessao?.tipo !== "admin") return;
+
+  const filtrados = getPedidosAdminFiltrados();
+  if (!filtrados.length) {
+    alert("Nenhum pedido encontrado com os filtros atuais.");
+    return;
+  }
+
+  const ids = [...new Set(filtrados.map((p) => p.itemId).filter(Boolean))];
+  if (!ids.length) {
+    alert("Nenhum item válido encontrado para atualização.");
+    return;
+  }
+
+  const confirmacao = confirm(
+    `${novoStatus === "enviado" ? "Marcar" : "Voltar"} ${ids.length} item(ns) como ${getStatusEnvioLabel(novoStatus).toLowerCase()}?`
+  );
+
+  if (!confirmacao) return;
+
+  try {
+    const filtroIds = ids.join(",");
+    await api(`itens_pedido?id=in.(${filtroIds})`, {
+      method: "PATCH",
+      prefer: "return=minimal",
+      body: {
+        status_envio: novoStatus,
+      },
+    });
+
+    await carregarPedidos();
+    renderSetor();
+    renderAdmin();
+
+    alert(`Status atualizado para ${getStatusEnvioLabel(novoStatus).toLowerCase()} com sucesso.`);
+  } catch (error) {
+    console.error(error);
+    alert("Não foi possível atualizar o status dos pedidos filtrados.");
+  }
+}
+
 function renderSetor() {
   const lista = el("listaSetor");
   if (!lista) return;
@@ -482,10 +539,11 @@ function renderSetor() {
         <span class="pill">${modelos[pedido.modelo] || pedido.modelo}</span>
         <span class="pill">${pedido.tamanho}</span>
         <span class="pill">Qtd. ${pedido.quantidade}</span>
+        <span class="pill">${getStatusEnvioLabel(pedido.statusEnvio)}</span>
       </div>
       <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
         ${
-          sessao.tipo === "admin"
+          sessao.type === "admin"
             ? `<button class="secondary" data-edit-item="${pedido.itemId}">Editar</button>`
             : ""
         }
@@ -522,7 +580,7 @@ function renderAdmin() {
     resumoContainer.innerHTML =
       '<div class="pedido-card">Entre como administrador para visualizar a consolidação geral.</div>';
     tbody.innerHTML =
-      '<tr><td colspan="7">Somente o administrador pode visualizar esta área.</td></tr>';
+      '<tr><td colspan="8">Somente o administrador pode visualizar esta área.</td></tr>';
     return;
   }
 
@@ -574,7 +632,7 @@ function renderAdmin() {
   resumoContainer.appendChild(blocoSetores);
 
   if (!filtrados.length) {
-    tbody.innerHTML = '<tr><td colspan="7">Nenhum pedido encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8">Nenhum pedido encontrado.</td></tr>';
     return;
   }
 
@@ -586,6 +644,7 @@ function renderAdmin() {
       <td>${modelos[p.modelo] || p.modelo}</td>
       <td>${p.tamanho}</td>
       <td>${p.quantidade}</td>
+      <td>${getStatusEnvioLabel(p.statusEnvio)}</td>
       <td><button class="secondary" data-edit-admin-item="${p.itemId}">Editar</button></td>
       <td><button class="secondary" data-remove-admin-item="${p.itemId}" data-remove-admin-pedido="${p.id}">Remover</button></td>
     `;
@@ -656,7 +715,7 @@ function montarResumoPorSetorProducao(listaPedidos) {
 }
 
 function montarPedidosDetalhadosProducao(listaPedidos) {
-  const linhas = [["Setor", "Congregação", "Modelo", "Tamanho", "Quantidade"]];
+  const linhas = [["Setor", "Congregação", "Modelo", "Tamanho", "Quantidade", "Status"]];
 
   listaPedidos
     .slice()
@@ -688,6 +747,7 @@ function montarPedidosDetalhadosProducao(listaPedidos) {
         modelos[p.modelo] || p.modelo,
         p.tamanho,
         p.quantidade,
+        getStatusEnvioLabel(p.statusEnvio),
       ]);
     });
 
@@ -832,6 +892,7 @@ async function adicionarPedido() {
         modelo,
         tamanho,
         quantidade,
+        status_envio: "pendente",
       },
     });
 
@@ -863,7 +924,7 @@ function renderSession() {
 
   if (sessao.tipo === "admin") {
     el("welcomeTitle").textContent = "Administrador Geral";
-    el("welcomeText").textContent = "Acompanhe todos os pedidos, edite lançamentos e exporte relatórios.";
+    el("welcomeText").textContent = "Acompanhe todos os pedidos, edite lançamentos, trate os envios e exporte relatórios.";
   } else {
     el("welcomeTitle").textContent = sessao.setor_nome || "Setor";
     el("welcomeText").textContent = `${sessao.nome} • Lance os pedidos das congregações do seu setor.`;
@@ -924,15 +985,24 @@ async function iniciar() {
 
   el("btnAdicionar")?.addEventListener("click", adicionarPedido);
   el("busca")?.addEventListener("input", renderAdmin);
+  el("filtroStatusAdmin")?.addEventListener("change", renderAdmin);
   el("filtroSetoresAdmin")?.addEventListener("change", renderAdmin);
   el("btnTodosSetores")?.addEventListener("click", selecionarTodosSetoresAdmin);
   el("btnLimparSetores")?.addEventListener("click", limparSetoresAdmin);
+
+  el("btnMarcarEnviados")?.addEventListener("click", async () => {
+    await atualizarStatusPedidosFiltrados("enviado");
+  });
+
+  el("btnVoltarPendentes")?.addEventListener("click", async () => {
+    await atualizarStatusPedidosFiltrados("pendente");
+  });
 
   el("btnExportarPedidos")?.addEventListener("click", () => {
     if (sessao?.tipo !== "admin") return;
 
     const filtrados = getPedidosAdminFiltrados();
-    const linhas = [["Setor", "Congregação", "Modelo", "Tamanho", "Quantidade"]];
+    const linhas = [["Setor", "Congregação", "Modelo", "Tamanho", "Quantidade", "Status"]];
 
     filtrados.forEach((p) => {
       linhas.push([
@@ -941,6 +1011,7 @@ async function iniciar() {
         modelos[p.modelo] || p.modelo,
         p.tamanho,
         p.quantidade,
+        getStatusEnvioLabel(p.statusEnvio),
       ]);
     });
 
