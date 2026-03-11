@@ -20,6 +20,7 @@ let setores = [];
 let congregacoes = [];
 let pedidosCache = [];
 let campanhaAtual = null;
+let recebimentosCache = [];
 
 const el = (id) => document.getElementById(id);
 
@@ -85,6 +86,20 @@ function formatarMoeda(valor) {
     style: "currency",
     currency: "BRL",
   });
+}
+
+function formatarDataBR(data) {
+  if (!data) return "-";
+  const d = new Date(`${data}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return data;
+  return d.toLocaleDateString("pt-BR");
+}
+
+function formatarDataHoraBR(data) {
+  if (!data) return "-";
+  const d = new Date(data);
+  if (Number.isNaN(d.getTime())) return data;
+  return d.toLocaleString("pt-BR");
 }
 
 function pedidosBloqueadosParaSetor() {
@@ -249,6 +264,33 @@ function preencherSetoresAdminPedido() {
   }
 
   preencherCongregacoesSetor();
+}
+
+function preencherSetoresFinanceiro() {
+  const select = el("financeiroSetor");
+  if (!select) return;
+
+  const valorAtual = String(select.value || "");
+  select.innerHTML = `<option value="">Selecione o setor</option>`;
+
+  setores
+    .slice()
+    .sort((a, b) => {
+      const na = Number(a.numero || 0);
+      const nb = Number(b.numero || 0);
+      if (na !== nb) return na - nb;
+      return String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR");
+    })
+    .forEach((setor) => {
+      const option = document.createElement("option");
+      option.value = String(setor.id);
+      option.textContent = setor.numero ? `${setor.numero} - ${setor.nome}` : setor.nome;
+      select.appendChild(option);
+    });
+
+  if (valorAtual && Array.from(select.options).some((o) => o.value === valorAtual)) {
+    select.value = valorAtual;
+  }
 }
 
 function selecionarTodosSetoresAdmin() {
@@ -458,6 +500,45 @@ function calcularFinanceiroGeral(listaPedidos = pedidosCache) {
   );
 }
 
+function getRecebimentosFiltradosAdmin() {
+  const setoresSelecionados = getSetoresSelecionadosAdmin();
+
+  return recebimentosCache
+    .filter((item) => {
+      if (!setoresSelecionados.length) return true;
+      return setoresSelecionados.includes(String(item.setor_id));
+    })
+    .sort((a, b) => {
+      const dataA = new Date(a.data_registro || a.data_recebimento || 0).getTime();
+      const dataB = new Date(b.data_registro || b.data_recebimento || 0).getTime();
+      return dataB - dataA;
+    });
+}
+
+function calcularRecebidoPorSetor(listaRecebimentos = recebimentosCache) {
+  const mapa = {};
+
+  listaRecebimentos.forEach((item) => {
+    const setorNome = getSetorNome(item.setor_id);
+    const valor = Number(item.valor || 0);
+
+    if (!mapa[setorNome]) {
+      mapa[setorNome] = {
+        setor: setorNome,
+        valor: 0,
+        registros: 0,
+      };
+    }
+
+    mapa[setorNome].valor += valor;
+    mapa[setorNome].registros += 1;
+  });
+
+  return Object.values(mapa).sort(
+    (a, b) => b.valor - a.valor || a.setor.localeCompare(b.setor, "pt-BR")
+  );
+}
+
 function renderTotaisGeraisAdmin(listaPedidos = pedidosCache) {
   const container = el("totaisGeraisAdmin");
   if (!container) return;
@@ -537,24 +618,44 @@ function renderRankingSetoresAdmin(listaPedidos = pedidosCache) {
 }
 
 function renderCongregacoesSemPedidosAdmin(listaPedidos = pedidosCache) {
+  const resumo = el("congregacoesSemPedidosResumo");
   const container = el("congregacoesSemPedidosAdmin");
-  if (!container) return;
+  if (!resumo || !container) return;
 
+  resumo.innerHTML = "";
   container.innerHTML = "";
 
   if (!sessao || sessao.tipo !== "admin") {
-    container.innerHTML =
+    resumo.innerHTML =
       '<div class="pedido-card">Somente o administrador pode visualizar esta área.</div>';
     return;
   }
 
   const lista = listarCongregacoesSemPedidos(listaPedidos);
 
+  const cardResumo = document.createElement("div");
+  cardResumo.className = "pedido-card";
+
   if (!lista.length) {
-    container.innerHTML =
-      '<div class="pedido-card">Todas as congregações já lançaram pedidos.</div>';
+    cardResumo.innerHTML = `
+      <strong>Todas as congregações já lançaram pedidos</strong>
+      <div style="margin-top:8px;">
+        <span class="pill">0 pendentes</span>
+      </div>
+    `;
+    resumo.appendChild(cardResumo);
     return;
   }
+
+  cardResumo.innerHTML = `
+    <strong>${lista.length} congregação(ões) sem pedidos</strong>
+    <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+      <span class="pill">Pendentes: ${lista.length}</span>
+      <button id="abrirModalCongregacoes" class="secondary" type="button">Ver lista completa</button>
+    </div>
+  `;
+
+  resumo.appendChild(cardResumo);
 
   lista.forEach((item) => {
     const card = document.createElement("div");
@@ -566,6 +667,10 @@ function renderCongregacoesSemPedidosAdmin(listaPedidos = pedidosCache) {
       </div>
     `;
     container.appendChild(card);
+  });
+
+  el("abrirModalCongregacoes")?.addEventListener("click", () => {
+    el("modalCongregacoesSemPedidos")?.classList.remove("hidden");
   });
 }
 
@@ -582,6 +687,8 @@ function renderFinanceiroPorSetorAdmin(listaPedidos = pedidosCache) {
   }
 
   const financeiro = calcularFinanceiroPorSetor(listaPedidos);
+  const recebidos = calcularRecebidoPorSetor(getRecebimentosFiltradosAdmin());
+  const recebidosMap = Object.fromEntries(recebidos.map((r) => [r.setor, r]));
   const geral = calcularFinanceiroGeral(listaPedidos);
 
   if (!financeiro.length) {
@@ -590,29 +697,118 @@ function renderFinanceiroPorSetorAdmin(listaPedidos = pedidosCache) {
     return;
   }
 
+  const totalRecebido = recebidos.reduce((acc, item) => acc + Number(item.valor || 0), 0);
+
   const resumo = document.createElement("div");
   resumo.className = "pedido-card";
   resumo.innerHTML = `
     <strong>Total geral estimado</strong>
     <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
       <span class="pill">Camisetas: ${geral.quantidade}</span>
-      <span class="pill">Valor: ${formatarMoeda(geral.valor)}</span>
+      <span class="pill">Estimado: ${formatarMoeda(geral.valor)}</span>
+      <span class="pill">Recebido: ${formatarMoeda(totalRecebido)}</span>
       <span class="pill">Unitário: ${formatarMoeda(CONFIG.valorUnitarioCamiseta)}</span>
     </div>
   `;
   container.appendChild(resumo);
 
   financeiro.forEach((item) => {
+    const recebido = Number(recebidosMap[item.setor]?.valor || 0);
+    const saldo = item.valor - recebido;
+
     const card = document.createElement("div");
     card.className = "pedido-card";
     card.innerHTML = `
       <strong>${item.setor}</strong>
       <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
         <span class="pill">Qtd. ${item.quantidade}</span>
-        <span class="pill">${formatarMoeda(item.valor)}</span>
+        <span class="pill">Estimado: ${formatarMoeda(item.valor)}</span>
+        <span class="pill">Recebido: ${formatarMoeda(recebido)}</span>
+        <span class="pill">Saldo: ${formatarMoeda(saldo)}</span>
       </div>
     `;
     container.appendChild(card);
+  });
+}
+
+function renderResumoFinanceiroSetores() {
+  const container = el("financeiroResumoSetores");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  if (!sessao || sessao.tipo !== "admin") {
+    container.innerHTML =
+      '<div class="pedido-card">Somente o administrador pode visualizar esta área.</div>';
+    return;
+  }
+
+  const recebidos = calcularRecebidoPorSetor(getRecebimentosFiltradosAdmin());
+  const estimados = calcularFinanceiroPorSetor(getPedidosAdminFiltrados());
+  const estimadosMap = Object.fromEntries(estimados.map((item) => [item.setor, item]));
+
+  if (!estimados.length && !recebidos.length) {
+    container.innerHTML =
+      '<div class="pedido-card">Nenhum dado financeiro encontrado.</div>';
+    return;
+  }
+
+  const nomes = new Set([
+    ...estimados.map((item) => item.setor),
+    ...recebidos.map((item) => item.setor),
+  ]);
+
+  Array.from(nomes)
+    .sort((a, b) => a.localeCompare(b, "pt-BR"))
+    .forEach((setor) => {
+      const estimado = Number(estimadosMap[setor]?.valor || 0);
+      const camisetas = Number(estimadosMap[setor]?.quantidade || 0);
+      const recebido = Number(recebidos.find((r) => r.setor === setor)?.valor || 0);
+      const saldo = estimado - recebido;
+
+      const card = document.createElement("div");
+      card.className = "pedido-card";
+      card.innerHTML = `
+        <strong>${setor}</strong>
+        <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+          <span class="pill">Qtd. ${camisetas}</span>
+          <span class="pill">Estimado: ${formatarMoeda(estimado)}</span>
+          <span class="pill">Recebido: ${formatarMoeda(recebido)}</span>
+          <span class="pill">Saldo: ${formatarMoeda(saldo)}</span>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+}
+
+function renderHistoricoRecebimentos() {
+  const tbody = el("tbodyRecebimentos");
+  if (!tbody) return;
+
+  tbody.innerHTML = "";
+
+  if (!sessao || sessao.tipo !== "admin") {
+    tbody.innerHTML = '<tr><td colspan="5">Somente o administrador pode visualizar esta área.</td></tr>';
+    return;
+  }
+
+  const lista = getRecebimentosFiltradosAdmin();
+
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="5">Nenhum recebimento registrado.</td></tr>';
+    return;
+  }
+
+  lista.forEach((item) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${formatarDataBR(item.data_recebimento)}</td>
+      <td>${getSetorNome(item.setor_id)}</td>
+      <td>${formatarMoeda(item.valor)}</td>
+      <td>${item.observacao || "-"}</td>
+      <td>${item.usuario_nome || item.usuario_id || "-"}</td>
+    `;
+    tbody.appendChild(tr);
   });
 }
 
@@ -690,6 +886,25 @@ async function carregarPedidos() {
       });
     });
   });
+}
+
+async function carregarRecebimentos() {
+  try {
+    const recebimentos = await api(
+      "recebimentos?select=id,setor_id,valor,data_recebimento,observacao,usuario_id,data_registro&order=data_registro.desc"
+    );
+
+    recebimentosCache = (recebimentos || []).map((item) => ({
+      ...item,
+      usuario_nome:
+        String(item.usuario_id || "") === String(sessao?.id || "") && sessao?.nome
+          ? sessao.nome
+          : `Usuário ${item.usuario_id || "-"}`,
+    }));
+  } catch (error) {
+    console.error(error);
+    recebimentosCache = [];
+  }
 }
 
 function ativarTab(nome) {
@@ -857,6 +1072,55 @@ async function atualizarStatusPedidosFiltrados(novoStatus) {
   }
 }
 
+async function registrarRecebimento() {
+  if (sessao?.tipo !== "admin") return;
+
+  const setorId = String(el("financeiroSetor")?.value || "").trim();
+  const valor = Number(el("financeiroValor")?.value || 0);
+  const dataRecebimento = String(el("financeiroData")?.value || "").trim();
+  const observacao = String(el("financeiroObservacao")?.value || "").trim();
+
+  if (!setorId) {
+    alert("Selecione um setor.");
+    return;
+  }
+
+  if (!Number.isFinite(valor) || valor <= 0) {
+    alert("Informe um valor válido.");
+    return;
+  }
+
+  if (!dataRecebimento) {
+    alert("Informe a data do recebimento.");
+    return;
+  }
+
+  try {
+    await api("recebimentos", {
+      method: "POST",
+      body: {
+        setor_id: Number(setorId),
+        valor,
+        data_recebimento: dataRecebimento,
+        observacao: observacao || null,
+        usuario_id: sessao.id,
+      },
+    });
+
+    if (el("financeiroSetor")) el("financeiroSetor").value = "";
+    if (el("financeiroValor")) el("financeiroValor").value = "";
+    if (el("financeiroData")) el("financeiroData").value = "";
+    if (el("financeiroObservacao")) el("financeiroObservacao").value = "";
+
+    await carregarRecebimentos();
+    renderAdmin();
+    alert("Recebimento registrado com sucesso.");
+  } catch (error) {
+    console.error(error);
+    alert("Não foi possível registrar o recebimento.");
+  }
+}
+
 function renderSetor() {
   const lista = el("listaSetor");
   if (!lista) return;
@@ -940,6 +1204,8 @@ function renderAdmin() {
     renderRankingSetoresAdmin([]);
     renderCongregacoesSemPedidosAdmin([]);
     renderFinanceiroPorSetorAdmin([]);
+    renderResumoFinanceiroSetores();
+    renderHistoricoRecebimentos();
 
     resumoContainer.innerHTML =
       '<div class="pedido-card">Entre como administrador para visualizar a consolidação geral.</div>';
@@ -949,12 +1215,15 @@ function renderAdmin() {
   }
 
   preencherFiltroSetoresAdmin();
+  preencherSetoresFinanceiro();
 
   const filtrados = getPedidosAdminFiltrados();
   renderTotaisGeraisAdmin(filtrados);
   renderRankingSetoresAdmin(filtrados);
   renderCongregacoesSemPedidosAdmin(filtrados);
   renderFinanceiroPorSetorAdmin(filtrados);
+  renderResumoFinanceiroSetores();
+  renderHistoricoRecebimentos();
 
   const indicadores = calcularIndicadoresAdmin(filtrados);
   const resumo = resumoGeral(filtrados);
@@ -1150,6 +1419,34 @@ function montarCongregacoesSemPedidosExportacao(listaPedidos) {
   return linhas;
 }
 
+function montarRecebimentosExportacao(listaRecebimentos) {
+  const linhas = [["Data", "Setor", "Valor", "Observação", "Usuário", "Registrado em"]];
+
+  listaRecebimentos.forEach((item) => {
+    linhas.push([
+      item.data_recebimento || "",
+      getSetorNome(item.setor_id),
+      Number(item.valor || 0),
+      item.observacao || "",
+      item.usuario_nome || item.usuario_id || "",
+      formatarDataHoraBR(item.data_registro),
+    ]);
+  });
+
+  return linhas;
+}
+
+function montarResumoRecebidoPorSetorExportacao(listaRecebimentos) {
+  const linhas = [["Setor", "Valor recebido", "Registros"]];
+  const resumo = calcularRecebidoPorSetor(listaRecebimentos);
+
+  resumo.forEach((item) => {
+    linhas.push([item.setor, item.valor, item.registros]);
+  });
+
+  return linhas;
+}
+
 function montarPedidosDetalhadosProducao(listaPedidos) {
   const linhas = [["Setor", "Congregação", "Modelo", "Tamanho", "Quantidade", "Status"]];
 
@@ -1199,6 +1496,8 @@ function gerarNomeArquivoRelatorioFabrica() {
 }
 
 function exportarRelatorioFabrica(listaPedidos) {
+  const recebimentosFiltrados = getRecebimentosFiltradosAdmin();
+
   const abas = [
     { nome: "Producao Geral", linhas: montarResumoGeralProducao(listaPedidos) },
     { nome: "Masculino", linhas: montarResumoProducaoPorModelo(listaPedidos, "masculino") },
@@ -1206,6 +1505,8 @@ function exportarRelatorioFabrica(listaPedidos) {
     { nome: "Por Setor", linhas: montarResumoPorSetorProducao(listaPedidos) },
     { nome: "Financeiro", linhas: montarResumoFinanceiroPorSetor(listaPedidos) },
     { nome: "Sem Pedidos", linhas: montarCongregacoesSemPedidosExportacao(listaPedidos) },
+    { nome: "Recebimentos", linhas: montarRecebimentosExportacao(recebimentosFiltrados) },
+    { nome: "Recebido por Setor", linhas: montarResumoRecebidoPorSetorExportacao(recebimentosFiltrados) },
     { nome: "Pedidos Detalhados", linhas: montarPedidosDetalhadosProducao(listaPedidos) },
   ];
 
@@ -1254,6 +1555,7 @@ async function fazerLogin(loginInformado, senhaInformada) {
 
     salvarSessao();
     await carregarPedidos();
+    await carregarRecebimentos();
     renderSession();
   } catch (error) {
     console.error(error);
@@ -1374,7 +1676,7 @@ function renderSession() {
     if (el("welcomeTitle")) el("welcomeTitle").textContent = "Administrador Geral";
     if (el("welcomeText")) {
       el("welcomeText").textContent =
-        "Acompanhe todos os pedidos, lance pedidos em exceção, trate os envios e exporte relatórios.";
+        "Acompanhe todos os pedidos, lance pedidos em exceção, trate os envios, registre recebimentos e exporte relatórios.";
     }
   } else {
     if (el("welcomeTitle")) el("welcomeTitle").textContent = sessao.setor_nome || "Setor";
@@ -1386,6 +1688,7 @@ function renderSession() {
 
   atualizarVisibilidadeAdminPedido();
   preencherSetoresAdminPedido();
+  preencherSetoresFinanceiro();
   preencherCongregacoesSetor();
   atualizarAvisoPeriodoPedidos();
   renderSetor();
@@ -1404,9 +1707,14 @@ async function iniciar() {
     });
   }
 
+  if (el("financeiroData")) {
+    el("financeiroData").value = new Date().toISOString().slice(0, 10);
+  }
+
   try {
     await carregarDadosBase();
     await carregarPedidos();
+    await carregarRecebimentos();
   } catch (error) {
     console.error(error);
     if (el("loginErro")) {
@@ -1475,6 +1783,10 @@ async function iniciar() {
     await atualizarStatusPedidosFiltrados("pendente");
   });
 
+  el("btnRegistrarRecebimento")?.addEventListener("click", async () => {
+    await registrarRecebimento();
+  });
+
   el("btnExportarPedidos")?.addEventListener("click", () => {
     if (sessao?.tipo !== "admin") return;
 
@@ -1498,6 +1810,16 @@ async function iniciar() {
   el("btnExportarResumo")?.addEventListener("click", () => {
     if (sessao?.tipo !== "admin") return;
     exportarRelatorioFabrica(getPedidosAdminFiltrados());
+  });
+
+  el("fecharModalCongregacoes")?.addEventListener("click", () => {
+    el("modalCongregacoesSemPedidos")?.classList.add("hidden");
+  });
+
+  el("modalCongregacoesSemPedidos")?.addEventListener("click", (event) => {
+    if (event.target.id === "modalCongregacoesSemPedidos") {
+      el("modalCongregacoesSemPedidos")?.classList.add("hidden");
+    }
   });
 
   renderSession();
