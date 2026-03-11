@@ -1,22 +1,30 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Pedidos UMADECAMPI</title>
+
 <link rel="stylesheet" href="styles.css">
+
 </head>
 
 <body>
 
 <div class="container">
 
+
 <div class="card hero-card">
 
 <div class="hero-info">
+
 <h1>SISTEMA OFICIAL</h1>
 <h2>Pedidos UMADECAMPI</h2>
+
 <p>Lançamento de pedidos de camisetas por setor e congregação.</p>
+
 </div>
 
 <div class="stats">
@@ -35,9 +43,11 @@
 </div>
 
 
+
 <div id="login-card" class="card">
 
 <h3>Acesso ao sistema</h3>
+
 <p>Entre como administrador ou líder de setor.</p>
 
 <div class="grid-2">
@@ -61,26 +71,34 @@
 </div>
 
 
-<div id="app" class="hidden">
 
+<div id="app" class="hidden">
 
 <div class="card hero-card">
 
 <div class="hero-info">
+
 <h2 id="welcomeTitle"></h2>
+
 <p id="welcomeText"></p>
+
 </div>
 
 <div>
+
 <button id="btnSair" class="secondary">Sair</button>
+
 </div>
 
 </div>
 
 
 <div class="tabs-wrap">
+
 <button class="tab active" data-tab="setor">Área do setor</button>
+
 <button class="tab" data-tab="admin">Painel administrativo</button>
+
 </div>
 
 
@@ -96,11 +114,15 @@
 <h3>Novo pedido</h3>
 
 <div id="adminSetorWrapper" class="hidden">
+
 <label>Setor</label>
+
 <select id="setorAdminPedido"></select>
+
 </div>
 
 <label>Congregação</label>
+
 <select id="congregacao"></select>
 
 <div class="grid-3">
@@ -130,6 +152,7 @@
 </div>
 
 
+
 <div class="card">
 
 <h3>Pedidos do setor</h3>
@@ -147,17 +170,26 @@
 
 <section id="tab-admin" class="tab-content">
 
+
 <div class="card">
+
 <h3>Totais gerais</h3>
+
 <div id="totaisGeraisAdmin" class="grid-3"></div>
+
 </div>
+
 
 
 <div class="grid-2">
 
+
 <div class="card">
+
 <h3>Resumo geral</h3>
+
 <div id="resumoCards" class="cards-list"></div>
+
 </div>
 
 
@@ -169,22 +201,31 @@
 <input id="busca">
 
 <label>Status</label>
+
 <select id="filtroStatusAdmin">
+
 <option value="todos">Todos</option>
+
 <option value="pendente">Pendentes</option>
+
 <option value="enviado">Enviados</option>
+
 </select>
 
 <label>Setores</label>
+
 <select id="filtroSetoresAdmin" multiple></select>
 
 <button id="btnTodosSetores">Selecionar todos</button>
+
 <button id="btnLimparSetores">Limpar setores</button>
 
 <button id="btnExportarPedidos">Exportar pedidos</button>
+
 <button id="btnExportarResumo">Exportar resumo</button>
 
 <button id="btnMarcarEnviados">Marcar enviados</button>
+
 <button id="btnVoltarPendentes">Voltar pendentes</button>
 
 </div>
@@ -192,28 +233,118 @@
 </div>
 
 
+
 <div class="card">
 
 <h3>Ranking dos setores</h3>
+
 <div id="rankingSetoresAdmin" class="cards-list"></div>
 
 </div>
 
 
+
 <div class="card">
 
-<h3>Congregações sem pedidos</h3>
+<h3>Congregações que ainda não pediram</h3>
 
 <div id="congregacoesSemPedidosResumo"></div>
 
 </div>
 
 
+
 <div class="card">
 
-<h3>Financeiro por setor</h3>
+<h3>Financeiro por setor (estimado)</h3>
 
 <div id="financeiroPorSetorAdmin" class="cards-list"></div>
+
+</div>
+
+
+
+<div class="card">
+
+<h3>Lançar recebimento</h3>
+
+<div class="grid-2">
+
+<div>
+
+<label>Setor</label>
+
+<select id="financeiroSetor"></select>
+
+</div>
+
+<div>
+
+<label>Valor recebido</label>
+
+<input id="financeiroValor" type="number" step="0.01">
+
+</div>
+
+</div>
+
+<div class="grid-2">
+
+<div>
+
+<label>Data</label>
+
+<input id="financeiroData" type="date">
+
+</div>
+
+<div>
+
+<label>Observação</label>
+
+<input id="financeiroObservacao">
+
+</div>
+
+</div>
+
+<button id="btnRegistrarRecebimento" class="primary full">Registrar recebimento</button>
+
+</div>
+
+
+
+<div class="card">
+
+<h3>Resumo financeiro por setor</h3>
+
+<div id="financeiroResumoSetores" class="cards-list"></div>
+
+</div>
+
+
+
+<div class="card">
+
+<h3>Histórico de recebimentos</h3>
+
+<table>
+
+<thead>
+
+<tr>
+<th>Data</th>
+<th>Setor</th>
+<th>Valor</th>
+<th>Observação</th>
+<th>Responsável</th>
+</tr>
+
+</thead>
+
+<tbody id="tbodyRecebimentos"></tbody>
+
+</table>
 
 </div>
 
@@ -254,6 +385,7 @@
 
 
 
+
 <div id="modalCongregacoesSemPedidos" class="modal hidden">
 
 <div class="modal-box">
@@ -274,6 +406,7 @@
 
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
 <script src="script.js"></script>
 
 </body>
