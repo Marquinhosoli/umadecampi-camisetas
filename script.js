@@ -1041,12 +1041,18 @@ async function iniciar() {
       if (tab.dataset.tab === "admin" && sessao?.tipo !== "admin") return;
       ativarTab(tab.dataset.tab);
     });
-  });
+el("setorAdminPedido")?.addEventListener("change", () => {
+  if (el("congregacao")) el("congregacao").value = "";
 
-  el("setorAdminPedido")?.addEventListener("change", () => {
-    if (el("congregacao")) el("congregacao").value = "";
-    preencherCongregacoesSetor();
-  });
+  // atualiza lista de congregações do setor escolhido
+  preencherCongregacoesSetor();
+
+  // força abrir a lista novamente
+  const input = el("congregacao");
+  if (input) {
+    input.focus();
+  }
+});
 
   el("btnAdicionar")?.addEventListener("click", adicionarPedido);
   el("busca")?.addEventListener("input", renderAdmin);
