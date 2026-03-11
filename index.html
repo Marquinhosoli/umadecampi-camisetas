@@ -1,232 +1,280 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pedidos UMADECAMPI</title>
-  <link rel="stylesheet" href="styles.css" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pedidos UMADECAMPI</title>
+<link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
-  <div class="container">
-    <div class="card hero-card">
-      <div class="hero-info">
-        <h1>SISTEMA OFICIAL</h1>
-        <h2>Pedidos UMADECAMPI</h2>
-        <p>Lançamento de pedidos de camisetas por setor e congregação.</p>
-      </div>
 
-      <div class="stats">
-        <div class="card">
-          <span class="stat">21</span>
-          <p>Setores</p>
-        </div>
-        <div class="card">
-          <span class="stat">105</span>
-          <p>Igrejas</p>
-        </div>
-      </div>
-    </div>
+<div class="container">
 
-    <div id="login-card" class="card">
-      <h3>Acesso ao sistema</h3>
-      <p>Entre como administrador ou como líder de setor.</p>
+<div class="card hero-card">
 
-      <div class="grid-2">
-        <div>
-          <label for="login">Login</label>
-          <input id="login" placeholder="admin ou setor01" autocomplete="username" />
-        </div>
+<div class="hero-info">
+<h1>SISTEMA OFICIAL</h1>
+<h2>Pedidos UMADECAMPI</h2>
+<p>Lançamento de pedidos de camisetas por setor e congregação.</p>
+</div>
 
-        <div>
-          <label for="senha">Senha</label>
-          <input id="senha" type="password" placeholder="Digite a senha" autocomplete="current-password" />
-        </div>
-      </div>
+<div class="stats">
 
-      <div style="margin-top: 16px;">
-        <button id="btnEntrar" class="primary full" type="button">Entrar</button>
-      </div>
+<div class="card">
+<span class="stat">21</span>
+<p>Setores</p>
+</div>
 
-      <p id="loginErro"></p>
+<div class="card">
+<span class="stat">105</span>
+<p>Igrejas</p>
+</div>
 
-      <div class="grid-2" style="margin-top: 20px;">
-        <div class="card">
-          <h3>Administrador</h3>
-          <p>Login: admin</p>
-          <p>Senha: umadecampi2026</p>
-        </div>
+</div>
+</div>
 
-        <div class="card">
-          <h3>Exemplo setor</h3>
-          <p>Login: setor01</p>
-          <p>Senha: umade01</p>
-        </div>
-      </div>
-    </div>
 
-    <div id="app" class="hidden">
-      <div class="card hero-card">
-        <div class="hero-info">
-          <h2 id="welcomeTitle">Setor</h2>
-          <p id="welcomeText">Área do sistema.</p>
-        </div>
+<div id="login-card" class="card">
 
-        <div class="hero-actions">
-          <button id="btnSair" class="secondary full" type="button">Sair</button>
-        </div>
-      </div>
+<h3>Acesso ao sistema</h3>
+<p>Entre como administrador ou líder de setor.</p>
 
-      <div class="tabs-wrap">
-        <button class="tab active" data-tab="setor" type="button">Área do setor</button>
-        <button class="tab" data-tab="admin" type="button">Painel administrativo</button>
-      </div>
+<div class="grid-2">
 
-      <section id="tab-setor" class="tab-content active">
-        <div id="avisoPeriodoPedidos" class="card aviso hidden"></div>
+<div>
+<label>Login</label>
+<input id="login">
+</div>
 
-        <div class="grid-2">
-          <div class="card">
-            <h3>Novo pedido</h3>
-            <p class="muted">Cadastre os pedidos da congregação do seu setor.</p>
+<div>
+<label>Senha</label>
+<input id="senha" type="password">
+</div>
 
-            <div id="adminSetorWrapper" class="hidden">
-              <label for="setorAdminPedido">Setor</label>
-              <select id="setorAdminPedido">
-                <option value="">Selecione o setor</option>
-              </select>
-            </div>
+</div>
 
-            <label for="congregacao" style="margin-top: 14px; display: block;">Congregação</label>
-            <select id="congregacao">
-              <option value="">Selecione a congregação</option>
-            </select>
+<button id="btnEntrar" class="primary full">Entrar</button>
 
-            <div class="grid-3 form-grid">
-              <div>
-                <label for="modelo">Modelo</label>
-                <select id="modelo">
-                  <option value="masculino">Masculino</option>
-                  <option value="babylook">Baby Look Feminina</option>
-                </select>
-              </div>
+<p id="loginErro"></p>
 
-              <div>
-                <label for="tamanho">Tamanho</label>
-                <select id="tamanho"></select>
-              </div>
+</div>
 
-              <div>
-                <label for="quantidade">Quantidade</label>
-                <input id="quantidade" type="number" min="1" value="1" />
-              </div>
-            </div>
 
-            <button id="btnAdicionar" class="primary full" type="button">Adicionar pedido</button>
-          </div>
+<div id="app" class="hidden">
 
-          <div class="card">
-            <h3>Pedidos do setor</h3>
-            <p class="muted">Visualize os pedidos do setor selecionado. Fora do período, o setor apenas consulta.</p>
-            <div id="listaSetor" class="cards-list"></div>
-          </div>
-        </div>
-      </section>
 
-      <section id="tab-admin" class="tab-content">
-        <div class="card">
-          <h3>Totais gerais</h3>
-          <p class="muted">Os totais abaixo respeitam a busca, os setores selecionados e o status filtrado.</p>
-          <div id="totaisGeraisAdmin" class="grid-3"></div>
-        </div>
+<div class="card hero-card">
 
-        <div class="grid-2 admin-top">
-          <div class="card">
-            <h3>Resumo geral</h3>
-            <p class="muted">Totais por modelo, tamanho e setor.</p>
-            <div id="resumoCards" class="cards-list"></div>
-          </div>
+<div class="hero-info">
+<h2 id="welcomeTitle"></h2>
+<p id="welcomeText"></p>
+</div>
 
-          <div class="card">
-            <h3>Ferramentas</h3>
-            <p class="muted">Busque, filtre, exporte, trate os envios e gerencie os pedidos.</p>
+<div>
+<button id="btnSair" class="secondary">Sair</button>
+</div>
 
-            <label for="busca">Buscar</label>
-            <input id="busca" type="text" placeholder="Setor, congregação, modelo ou tamanho" />
+</div>
 
-            <label for="filtroStatusAdmin" style="margin-top: 14px; display: block;">Filtrar por status</label>
-            <select id="filtroStatusAdmin">
-              <option value="todos" selected>Todos</option>
-              <option value="pendente">Pendentes</option>
-              <option value="enviado">Enviados</option>
-            </select>
 
-            <label for="filtroSetoresAdmin" style="margin-top: 14px; display: block;">Filtrar por setores</label>
-            <select id="filtroSetoresAdmin" multiple size="8" style="width: 100%;"></select>
+<div class="tabs-wrap">
+<button class="tab active" data-tab="setor">Área do setor</button>
+<button class="tab" data-tab="admin">Painel administrativo</button>
+</div>
 
-            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
-              <button id="btnTodosSetores" class="secondary" type="button">Selecionar todos</button>
-              <button id="btnLimparSetores" class="secondary" type="button">Limpar setores</button>
-            </div>
 
-            <small class="muted" style="display:block; margin-top:8px;">
-              Dica: segure Ctrl no Windows ou Command no Mac para selecionar vários setores manualmente.
-            </small>
 
-            <div class="action-grid" style="margin-top: 16px;">
-              <button id="btnExportarPedidos" class="secondary" type="button">Exportar pedidos</button>
-              <button id="btnExportarResumo" class="secondary" type="button">Exportar resumo</button>
-            </div>
+<section id="tab-setor" class="tab-content active">
 
-            <div class="action-grid" style="margin-top: 12px;">
-              <button id="btnMarcarEnviados" class="primary" type="button">Marcar filtrados como enviados</button>
-              <button id="btnVoltarPendentes" class="secondary" type="button">Voltar filtrados para pendente</button>
-            </div>
-          </div>
-        </div>
+<div id="avisoPeriodoPedidos" class="card aviso hidden"></div>
 
-        <div class="card">
-          <h3>Ranking dos setores</h3>
-          <p class="muted">Mostra os setores que mais pediram, respeitando a busca, os filtros e o status.</p>
-          <div id="rankingSetoresAdmin" class="cards-list"></div>
-        </div>
+<div class="grid-2">
 
-        <div class="card">
-          <h3>Congregações que ainda não pediram</h3>
-          <p class="muted">Lista as congregações sem pedidos lançados conforme os filtros aplicados.</p>
-          <div id="congregacoesSemPedidosAdmin" class="cards-list"></div>
-        </div>
+<div class="card">
 
-        <div class="card">
-          <h3>Financeiro por setor</h3>
-          <p class="muted">Estimativa com base na quantidade de camisetas multiplicada pelo valor unitário configurado.</p>
-          <div id="financeiroPorSetorAdmin" class="cards-list"></div>
-        </div>
+<h3>Novo pedido</h3>
 
-        <div class="card">
-          <h3>Pedidos lançados</h3>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Setor</th>
-                  <th>Congregação</th>
-                  <th>Modelo</th>
-                  <th>Tamanho</th>
-                  <th>Quantidade</th>
-                  <th>Status</th>
-                  <th>Editar</th>
-                  <th>Remover</th>
-                </tr>
-              </thead>
-              <tbody id="tbodyPedidos"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-    </div>
-  </div>
+<div id="adminSetorWrapper" class="hidden">
+<label>Setor</label>
+<select id="setorAdminPedido"></select>
+</div>
 
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="script.js"></script>
+<label>Congregação</label>
+<select id="congregacao"></select>
+
+<div class="grid-3">
+
+<div>
+<label>Modelo</label>
+<select id="modelo">
+<option value="masculino">Masculino</option>
+<option value="babylook">Baby Look Feminina</option>
+</select>
+</div>
+
+<div>
+<label>Tamanho</label>
+<select id="tamanho"></select>
+</div>
+
+<div>
+<label>Quantidade</label>
+<input id="quantidade" type="number" min="1" value="1">
+</div>
+
+</div>
+
+<button id="btnAdicionar" class="primary full">Adicionar pedido</button>
+
+</div>
+
+
+<div class="card">
+
+<h3>Pedidos do setor</h3>
+
+<div id="listaSetor" class="cards-list"></div>
+
+</div>
+
+</div>
+
+</section>
+
+
+
+
+<section id="tab-admin" class="tab-content">
+
+<div class="card">
+<h3>Totais gerais</h3>
+<div id="totaisGeraisAdmin" class="grid-3"></div>
+</div>
+
+
+<div class="grid-2">
+
+<div class="card">
+<h3>Resumo geral</h3>
+<div id="resumoCards" class="cards-list"></div>
+</div>
+
+
+<div class="card">
+
+<h3>Ferramentas</h3>
+
+<label>Buscar</label>
+<input id="busca">
+
+<label>Status</label>
+<select id="filtroStatusAdmin">
+<option value="todos">Todos</option>
+<option value="pendente">Pendentes</option>
+<option value="enviado">Enviados</option>
+</select>
+
+<label>Setores</label>
+<select id="filtroSetoresAdmin" multiple></select>
+
+<button id="btnTodosSetores">Selecionar todos</button>
+<button id="btnLimparSetores">Limpar setores</button>
+
+<button id="btnExportarPedidos">Exportar pedidos</button>
+<button id="btnExportarResumo">Exportar resumo</button>
+
+<button id="btnMarcarEnviados">Marcar enviados</button>
+<button id="btnVoltarPendentes">Voltar pendentes</button>
+
+</div>
+
+</div>
+
+
+<div class="card">
+
+<h3>Ranking dos setores</h3>
+<div id="rankingSetoresAdmin" class="cards-list"></div>
+
+</div>
+
+
+<div class="card">
+
+<h3>Congregações sem pedidos</h3>
+
+<div id="congregacoesSemPedidosResumo"></div>
+
+</div>
+
+
+<div class="card">
+
+<h3>Financeiro por setor</h3>
+
+<div id="financeiroPorSetorAdmin" class="cards-list"></div>
+
+</div>
+
+
+
+<div class="card">
+
+<h3>Pedidos lançados</h3>
+
+<table>
+
+<thead>
+
+<tr>
+<th>Setor</th>
+<th>Congregação</th>
+<th>Modelo</th>
+<th>Tamanho</th>
+<th>Qtd</th>
+<th>Status</th>
+<th>Editar</th>
+<th>Remover</th>
+</tr>
+
+</thead>
+
+<tbody id="tbodyPedidos"></tbody>
+
+</table>
+
+</div>
+
+</section>
+
+</div>
+
+</div>
+
+
+
+<div id="modalCongregacoesSemPedidos" class="modal hidden">
+
+<div class="modal-box">
+
+<div class="modal-header">
+
+<h3>Congregações sem pedidos</h3>
+
+<button id="fecharModalCongregacoes">Fechar</button>
+
+</div>
+
+<div id="congregacoesSemPedidosAdmin" class="cards-list"></div>
+
+</div>
+
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script src="script.js"></script>
+
 </body>
 </html>
