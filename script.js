@@ -88,7 +88,38 @@ function pedidosBloqueadosParaSetor() {
   return false;
 }
 
-function preencherFiltroSetoresAdmin() {
+function preencherSetoresAdminPedido() {
+  const select = el("setorAdminPedido");
+  if (!select) return;
+
+  const valorAtual = select.value;
+
+  select.innerHTML = `<option value="">Selecione o setor</option>`;
+
+  setores
+    .slice()
+    .sort((a, b) => {
+      const na = Number(a.numero || 0);
+      const nb = Number(b.numero || 0);
+      if (na !== nb) return na - nb;
+      return String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR");
+    })
+    .forEach((setor) => {
+      const option = document.createElement("option");
+      option.value = String(setor.id);
+      option.textContent = setor.numero
+        ? `${setor.numero} - ${setor.nome}`
+        : setor.nome;
+
+      select.appendChild(option);
+    });
+
+  if (valorAtual && Array.from(select.options).some((o) => o.value === valorAtual)) {
+    select.value = valorAtual;
+  }
+
+  preencherCongregacoesSetor();
+}
   const select = el("filtroSetoresAdmin");
   if (!select) return;
 
