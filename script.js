@@ -155,12 +155,18 @@ function getSetorPedidoAtual() {
   if (!sessao) return null;
 
   if (sessao.tipo === "setor") {
-    return sessao.setor_id || null;
+    return Number(sessao.setor_id) || null;
   }
 
   if (sessao.tipo === "admin") {
-    const setorSelecionado = el("setorAdminPedido")?.value || "";
-    return setorSelecionado ? Number(setorSelecionado) : null;
+    const select = el("setorAdminPedido");
+    if (!select) return null;
+
+    const valor = String(select.value || "").trim();
+
+    if (valor === "") return null;
+
+    return Number(valor);
   }
 
   return null;
