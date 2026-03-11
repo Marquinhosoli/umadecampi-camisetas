@@ -101,7 +101,7 @@ function preencherFiltroSetoresAdmin() {
       const na = Number(a.numero || 0);
       const nb = Number(b.numero || 0);
       if (na !== nb) return na - nb;
-      return String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR");
+      return String(a.nome || "").localeCompare(String(a.nome || ""), "pt-BR");
     })
     .forEach((setor) => {
       const option = document.createElement("option");
@@ -112,6 +112,33 @@ function preencherFiltroSetoresAdmin() {
     });
 }
 
+function preencherSetoresAdminPedido() {
+  const select = el("setorAdminPedido");
+  if (!select) return;
+
+  const valorAtual = select.value;
+  select.innerHTML = `<option value="">Selecione o setor</option>`;
+
+  setores
+    .slice()
+    .sort((a, b) => {
+      const na = Number(a.numero || 0);
+      const nb = Number(b.numero || 0);
+      if (na !== nb) return na - nb;
+      return String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR");
+    })
+    .forEach((setor) => {
+      const option = document.createElement("option");
+      option.value = String(setor.id);
+      option.textContent = setor.numero ? `${setor.numero} - ${setor.nome}` : setor.nome;
+      select.appendChild(option);
+    });
+
+  if (valorAtual && Array.from(select.options).some((o) => o.value === valorAtual)) {
+    select.value = valorAtual;
+  }
+}
+
 function getSetoresSelecionadosAdmin() {
   const select = el("filtroSetoresAdmin");
   if (!select) return [];
@@ -120,6 +147,32 @@ function getSetoresSelecionadosAdmin() {
 
 function getFiltroStatusAdmin() {
   return (el("filtroStatusAdmin")?.value || "todos").trim().toLowerCase();
+}
+
+function getSetorPedidoAtual() {
+  if (!sessao) return null;
+
+  if (sessao.tipo === "setor") {
+    return sessao.setor_id || null;
+  }
+
+  if (sessao.tipo === "admin") {
+    const setorSelecionado = el("setorAdminPedido")?.value || "";
+    return setorSelecionado ? Number(setorSelecionado) : null;
+  }
+
+  return null;
+}
+
+function atualizarVisibilidadeAdminPedido() {
+  const wrapper = el("adminSetorWrapper");
+  if (!wrapper) return;
+
+  if (sessao?.tipo === "admin") {
+    wrapper.classList.remove("hidden");
+  } else {
+    wrapper.classList.add("hidden");
+  }
 }
 
 function selecionarTodosSetoresAdmin() {
@@ -317,10 +370,11 @@ function preencherCongregacoesSetor() {
 
   lista.innerHTML = "";
 
-  if (!sessao || sessao.tipo !== "setor") return;
+  const setorAtual = getSetorPedidoAtual();
+  if (!setorAtual) return;
 
   congregacoes
-    .filter((c) => c.setor_id === sessao.setor_id)
+    .filter((c) => c.setor_id === setorAtual)
     .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
     .forEach((c) => {
       const option = document.createElement("option");
@@ -394,9 +448,7 @@ async function removerPedido(itemId, pedidoId) {
       prefer: "return=minimal",
     });
 
-    const restantes = await api(
-      `itens_pedido?select=id&pedido_id=eq.${pedidoId}`
-    );
+    const restantes = await api(`itens_pedido?select=id&pedido_id=eq.${pedidoId}`);
 
     if (!restantes || restantes.length === 0) {
       await api(`pedidos?id=eq.${pedidoId}`, {
@@ -543,7 +595,7 @@ function renderSetor() {
       </div>
       <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
         ${
-          sessao.type === "admin"
+          sessao.tipo === "admin"
             ? `<button class="secondary" data-edit-item="${pedido.itemId}">Editar</button>`
             : ""
         }
@@ -837,17 +889,23 @@ async function fazerLogin(loginInformado, senhaInformada) {
 }
 
 async function adicionarPedido() {
-  if (!sessao || sessao.tipo !== "setor") return;
+  if (!sessao || (sessao.tipo !== "setor" && sessao.tipo !== "admin")) return;
 
   if (pedidosBloqueados()) {
     alert("O período de pedidos foi encerrado.");
     return;
   }
 
+  const setorIdAtual = getSetorPedidoAtual();
   const nomeCongregacao = el("congregacao")?.value.trim() || "";
   const modelo = el("modelo")?.value;
   const tamanho = el("tamanho")?.value;
   const quantidade = Number(el("quantidade")?.value || 0);
+
+  if (!setorIdAtual) {
+    alert("Selecione um setor.");
+    return;
+  }
 
   if (!nomeCongregacao) {
     alert("Selecione uma congregação.");
@@ -856,12 +914,12 @@ async function adicionarPedido() {
 
   const congregacao = congregacoes.find(
     (c) =>
-      c.setor_id === sessao.setor_id &&
+      c.setor_id === setorIdAtual &&
       c.nome.toLowerCase() === nomeCongregacao.toLowerCase()
   );
 
   if (!congregacao) {
-    alert("Escolha uma congregação válida da lista do seu setor.");
+    alert("Escolha uma congregação válida da lista do setor selecionado.");
     return;
   }
 
@@ -875,7 +933,7 @@ async function adicionarPedido() {
       method: "POST",
       body: {
         campanha_id: campanhaAtual?.id || null,
-        setor_id: sessao.setor_id,
+        setor_id: setorIdAtual,
         congregacao_id: congregacao.id,
         usuario_id: sessao.id,
         data: new Date().toISOString(),
@@ -924,12 +982,14 @@ function renderSession() {
 
   if (sessao.tipo === "admin") {
     el("welcomeTitle").textContent = "Administrador Geral";
-    el("welcomeText").textContent = "Acompanhe todos os pedidos, edite lançamentos, trate os envios e exporte relatórios.";
+    el("welcomeText").textContent = "Acompanhe todos os pedidos, lance pedidos em exceção, trate os envios e exporte relatórios.";
   } else {
     el("welcomeTitle").textContent = sessao.setor_nome || "Setor";
     el("welcomeText").textContent = `${sessao.nome} • Lance os pedidos das congregações do seu setor.`;
   }
 
+  atualizarVisibilidadeAdminPedido();
+  preencherSetoresAdminPedido();
   preencherCongregacoesSetor();
   renderSetor();
   renderAdmin();
@@ -981,6 +1041,11 @@ async function iniciar() {
       if (tab.dataset.tab === "admin" && sessao?.tipo !== "admin") return;
       ativarTab(tab.dataset.tab);
     });
+  });
+
+  el("setorAdminPedido")?.addEventListener("change", () => {
+    if (el("congregacao")) el("congregacao").value = "";
+    preencherCongregacoesSetor();
   });
 
   el("btnAdicionar")?.addEventListener("click", adicionarPedido);
