@@ -360,10 +360,10 @@ async function carregarDadosBase() {
 }
 
 function preencherCongregacoesSetor() {
-  const lista = el("listaCongregacoes");
-  if (!lista) return;
+  const select = el("congregacao");
+  if (!select) return;
 
-  lista.innerHTML = "";
+  select.innerHTML = `<option value="">Selecione a congregação</option>`;
 
   let setorIdAtual = getSetorPedidoAtual();
 
@@ -382,7 +382,8 @@ function preencherCongregacoesSetor() {
     .forEach((c) => {
       const option = document.createElement("option");
       option.value = c.nome;
-      lista.appendChild(option);
+      option.textContent = c.nome;
+      select.appendChild(option);
     });
 }
 
@@ -818,7 +819,7 @@ function exportarRelatorioFabrica(listaPedidos) {
   exportarWorkbook(gerarNomeArquivoRelatorioFabrica(), abas);
 }
 
-async function fazerLogin(loginInformado, senhaInformado) {
+async function fazerLogin(loginInformado, senhaInformada) {
   const loginErro = el("loginErro");
   if (loginErro) loginErro.textContent = "";
 
@@ -830,7 +831,7 @@ async function fazerLogin(loginInformado, senhaInformado) {
       const senhaBanco = String(u.senha || "").trim();
       return (
         loginBanco === String(loginInformado).trim().toLowerCase() &&
-        senhaBanco === String(senhaInformado).trim()
+        senhaBanco === String(senhaInformada).trim()
       );
     });
 
@@ -1050,8 +1051,8 @@ async function iniciar() {
     if (el("congregacao")) el("congregacao").value = "";
     preencherCongregacoesSetor();
 
-    const input = el("congregacao");
-    if (input) input.focus();
+    const selectCongregacao = el("congregacao");
+    if (selectCongregacao) selectCongregacao.focus();
   });
 
   el("btnAdicionar")?.addEventListener("click", adicionarPedido);
