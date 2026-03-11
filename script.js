@@ -81,11 +81,41 @@ function exportarWorkbook(nomeArquivo, abas) {
 function pedidosBloqueadosParaSetor() {
   const hoje = new Date();
   const dia = hoje.getDate();
+  return dia < CONFIG.inicioPedidos || dia > CONFIG.fimPedidos;
+}
 
-  if (dia < CONFIG.inicioPedidos) return true;
-  if (dia > CONFIG.fimPedidos) return true;
+function getSetoresSelecionadosAdmin() {
+  const select = el("filtroSetoresAdmin");
+  if (!select) return [];
+  return Array.from(select.selectedOptions).map((option) => String(option.value));
+}
 
-  return false;
+function getFiltroStatusAdmin() {
+  return (el("filtroStatusAdmin")?.value || "todos").trim().toLowerCase();
+}
+
+function getSetorPedidoAtual() {
+  if (!sessao) return null;
+
+  if (sessao.tipo === "setor") {
+    return Number(sessao.setor_id) || null;
+  }
+
+  if (sessao.tipo === "admin") {
+    const select = el("setorAdminPedido");
+    const valor = String(select?.value || "").trim();
+    return valor ? Number(valor) : null;
+  }
+
+  return null;
+}
+
+function atualizarVisibilidadeAdminPedido() {
+  const wrapper = el("adminSetorWrapper");
+  if (!wrapper) return;
+
+  if (sessao?.tipo === "admin") wrapper.classList.remove("hidden");
+  else wrapper.classList.add("hidden");
 }
 
 function preencherFiltroSetoresAdmin() {
@@ -116,7 +146,7 @@ function preencherSetoresAdminPedido() {
   const select = el("setorAdminPedido");
   if (!select) return;
 
-  const valorAtual = select.value;
+  const valorAtual = String(select.value || "");
   select.innerHTML = `<option value="">Selecione o setor</option>`;
 
   setores
@@ -139,44 +169,6 @@ function preencherSetoresAdminPedido() {
   }
 
   preencherCongregacoesSetor();
-}
-
-function getSetoresSelecionadosAdmin() {
-  const select = el("filtroSetoresAdmin");
-  if (!select) return [];
-  return Array.from(select.selectedOptions).map((option) => String(option.value));
-}
-
-function getFiltroStatusAdmin() {
-  return (el("filtroStatusAdmin")?.value || "todos").trim().toLowerCase();
-}
-
-function getSetorPedidoAtual() {
-  if (!sessao) return null;
-
-  if (sessao.tipo === "setor") {
-    return Number(sessao.setor_id) || null;
-  }
-
-  if (sessao.tipo === "admin") {
-    const select = el("setorAdminPedido");
-    if (!select) return null;
-
-    const valor = String(select.value || "").trim();
-    if (valor === "") return null;
-
-    return Number(valor);
-  }
-
-  return null;
-}
-
-function atualizarVisibilidadeAdminPedido() {
-  const wrapper = el("adminSetorWrapper");
-  if (!wrapper) return;
-
-  if (sessao?.tipo === "admin") wrapper.classList.remove("hidden");
-  else wrapper.classList.add("hidden");
 }
 
 function selecionarTodosSetoresAdmin() {
@@ -363,28 +355,26 @@ function preencherCongregacoesSetor() {
   const select = el("congregacao");
   if (!select) return;
 
+  const valorAtual = String(select.value || "");
   select.innerHTML = `<option value="">Selecione a congregação</option>`;
 
-  let setorIdAtual = getSetorPedidoAtual();
-
-  if (sessao?.tipo === "admin") {
-    const selectSetor = el("setorAdminPedido");
-    if (selectSetor && selectSetor.value) {
-      setorIdAtual = Number(selectSetor.value);
-    }
-  }
-
+  const setorIdAtual = getSetorPedidoAtual();
   if (!setorIdAtual) return;
 
-  congregacoes
+  const listaCongregacoes = congregacoes
     .filter((c) => Number(c.setor_id) === Number(setorIdAtual))
-    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-    .forEach((c) => {
-      const option = document.createElement("option");
-      option.value = c.nome;
-      option.textContent = c.nome;
-      select.appendChild(option);
-    });
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+
+  listaCongregacoes.forEach((c) => {
+    const option = document.createElement("option");
+    option.value = String(c.id);
+    option.textContent = c.nome;
+    select.appendChild(option);
+  });
+
+  if (valorAtual && Array.from(select.options).some((o) => o.value === valorAtual)) {
+    select.value = valorAtual;
+  }
 }
 
 async function carregarPedidos() {
@@ -468,7 +458,7 @@ async function removerPedido(itemId, pedidoId) {
 }
 
 async function editarPedidoAdmin(itemId) {
-  const pedido = pedidosCache.find((p) => p.itemId === itemId);
+  const pedido = pedidosCache.find((p) => Number(p.itemId) === Number(itemId));
   if (!pedido) return;
 
   const novaQuantidade = prompt("Nova quantidade:", String(pedido.quantidade));
@@ -568,10 +558,15 @@ function renderSetor() {
     return;
   }
 
-  const pedidosSetor =
-    sessao.tipo === "admin"
-      ? pedidosCache
-      : pedidosCache.filter((p) => Number(p.setorId) === Number(sessao.setor_id));
+  const setorAtual = getSetorPedidoAtual();
+
+  if (sessao.tipo === "admin" && !setorAtual) {
+    lista.innerHTML =
+      '<div class="pedido-card">Selecione um setor para visualizar os pedidos e as congregações.</div>';
+    return;
+  }
+
+  const pedidosSetor = pedidosCache.filter((p) => Number(p.setorId) === Number(setorAtual));
 
   if (!pedidosSetor.length) {
     lista.innerHTML =
@@ -876,16 +871,8 @@ async function adicionarPedido() {
     return;
   }
 
-  let setorIdAtual = getSetorPedidoAtual();
-
-  if (sessao?.tipo === "admin") {
-    const selectSetor = el("setorAdminPedido");
-    if (selectSetor && selectSetor.value) {
-      setorIdAtual = Number(selectSetor.value);
-    }
-  }
-
-  const nomeCongregacao = el("congregacao")?.value.trim() || "";
+  const setorIdAtual = getSetorPedidoAtual();
+  const congregacaoId = Number(el("congregacao")?.value || 0);
   const modelo = el("modelo")?.value;
   const tamanho = el("tamanho")?.value;
   const quantidade = Number(el("quantidade")?.value || 0);
@@ -895,15 +882,15 @@ async function adicionarPedido() {
     return;
   }
 
-  if (!nomeCongregacao) {
+  if (!congregacaoId) {
     alert("Selecione uma congregação.");
     return;
   }
 
   const congregacao = congregacoes.find(
     (c) =>
-      Number(c.setor_id) === Number(setorIdAtual) &&
-      String(c.nome || "").toLowerCase() === nomeCongregacao.toLowerCase()
+      Number(c.id) === Number(congregacaoId) &&
+      Number(c.setor_id) === Number(setorIdAtual)
   );
 
   if (!congregacao) {
@@ -916,7 +903,12 @@ async function adicionarPedido() {
     return;
   }
 
-  if (quantidade < 1) {
+  if (!["masculino", "babylook"].includes(modelo)) {
+    alert("Selecione um modelo válido.");
+    return;
+  }
+
+  if (!Number.isFinite(quantidade) || quantidade < 1) {
     alert("Informe uma quantidade válida.");
     return;
   }
@@ -951,6 +943,7 @@ async function adicionarPedido() {
     if (el("quantidade")) el("quantidade").value = 1;
 
     await carregarPedidos();
+    preencherCongregacoesSetor();
     renderSetor();
     renderAdmin();
   } catch (error) {
@@ -1050,9 +1043,7 @@ async function iniciar() {
   el("setorAdminPedido")?.addEventListener("change", () => {
     if (el("congregacao")) el("congregacao").value = "";
     preencherCongregacoesSetor();
-
-    const selectCongregacao = el("congregacao");
-    if (selectCongregacao) selectCongregacao.focus();
+    renderSetor();
   });
 
   el("btnAdicionar")?.addEventListener("click", adicionarPedido);
@@ -1092,9 +1083,7 @@ async function iniciar() {
 
   el("btnExportarResumo")?.addEventListener("click", () => {
     if (sessao?.tipo !== "admin") return;
-
-    const filtrados = getPedidosAdminFiltrados();
-    exportarRelatorioFabrica(filtrados);
+    exportarRelatorioFabrica(getPedidosAdminFiltrados());
   });
 
   renderSession();
