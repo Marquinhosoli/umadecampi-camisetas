@@ -12,7 +12,7 @@ const CONFIG = {
   inicioPedidos: 1,
   fimPedidos: 20,
   adminPodeEditarForaPrazo: true,
-  valorUnitarioCamiseta: 35,
+  valorUnitarioCamiseta: 45,
 };
 
 let sessao = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
