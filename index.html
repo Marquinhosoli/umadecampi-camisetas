@@ -87,7 +87,14 @@
             <h3>Novo pedido</h3>
             <p class="muted">Cadastre os pedidos da congregação do seu setor.</p>
 
-            <label for="congregacao">Congregação</label>
+            <div id="adminSetorWrapper" class="hidden">
+              <label for="setorAdminPedido">Setor</label>
+              <select id="setorAdminPedido">
+                <option value="">Selecione o setor</option>
+              </select>
+            </div>
+
+            <label for="congregacao" style="margin-top: 14px; display: block;">Congregação</label>
             <div class="input-with-arrow">
               <input
                 id="congregacao"
