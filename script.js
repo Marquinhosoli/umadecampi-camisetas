@@ -104,6 +104,16 @@ function podeEditarPedidosNaSessao() {
   return false;
 }
 
+function getSetorSessaoTexto() {
+  if (!sessao || sessao.tipo !== "setor") return null;
+  return String(sessao.setor_id || "").trim() || null;
+}
+
+function pedidoPertenceAoSetorDaSessao(pedido) {
+  if (!sessao || sessao.tipo !== "setor") return false;
+  return String(pedido?.setorId) === String(getSetorSessaoTexto());
+}
+
 function atualizarAvisoPeriodoPedidos() {
   const aviso = el("avisoPeriodoPedidos");
   const btnAdicionar = el("btnAdicionar");
@@ -334,6 +344,47 @@ function calcularTotaisGeraisAdmin(listaPedidos = pedidosCache) {
   );
 }
 
+function calcularIndicadoresAdmin(listaPedidos = pedidosCache) {
+  const totais = calcularTotaisGeraisAdmin(listaPedidos);
+
+  const idsPedidos = new Set();
+  const idsSetores = new Set();
+  const idsCongregacoes = new Set();
+  let totalPendentes = 0;
+  let totalEnviados = 0;
+
+  listaPedidos.forEach((pedido) => {
+    if (pedido.id !== undefined && pedido.id !== null) {
+      idsPedidos.add(String(pedido.id));
+    }
+
+    if (pedido.setorId !== undefined && pedido.setorId !== null) {
+      idsSetores.add(String(pedido.setorId));
+    }
+
+    if (pedido.congregacaoId !== undefined && pedido.congregacaoId !== null) {
+      idsCongregacoes.add(String(pedido.congregacaoId));
+    }
+
+    if ((pedido.statusEnvio || "pendente") === "enviado") totalEnviados += 1;
+    else totalPendentes += 1;
+  });
+
+  return {
+    totalPedidos: idsPedidos.size,
+    totalItens: listaPedidos.length,
+    totalGeral: totais.totalGeral,
+    totalMasculino: totais.totalMasculino,
+    totalBabylook: totais.totalBabylook,
+    setoresParticipantes: idsSetores.size,
+    congregacoesParticipantes: idsCongregacoes.size,
+    setoresSemPedidos: Math.max(setores.length - idsSetores.size, 0),
+    congregacoesSemPedidos: Math.max(congregacoes.length - idsCongregacoes.size, 0),
+    totalPendentes,
+    totalEnviados,
+  };
+}
+
 function renderTotaisGeraisAdmin(listaPedidos = pedidosCache) {
   const container = el("totaisGeraisAdmin");
   if (!container) return;
@@ -350,13 +401,23 @@ function renderTotaisGeraisAdmin(listaPedidos = pedidosCache) {
     return;
   }
 
-  const totais = calcularTotaisGeraisAdmin(listaPedidos);
+  const indicadores = calcularIndicadoresAdmin(listaPedidos);
 
-  [
-    { titulo: "Total geral", valor: totais.totalGeral },
-    { titulo: "Masculino", valor: totais.totalMasculino },
-    { titulo: "Baby Look Feminina", valor: totais.totalBabylook },
-  ].forEach((card) => {
+  const cards = [
+    { titulo: "Pedidos", valor: indicadores.totalPedidos },
+    { titulo: "Itens lançados", valor: indicadores.totalItens },
+    { titulo: "Camisetas totais", valor: indicadores.totalGeral },
+    { titulo: "Masculino", valor: indicadores.totalMasculino },
+    { titulo: "Baby Look Feminina", valor: indicadores.totalBabylook },
+    { titulo: "Setores participantes", valor: `${indicadores.setoresParticipantes}/${setores.length}` },
+    { titulo: "Congregações participantes", valor: `${indicadores.congregacoesParticipantes}/${congregacoes.length}` },
+    { titulo: "Setores sem pedidos", valor: indicadores.setoresSemPedidos },
+    { titulo: "Congregações sem pedidos", valor: indicadores.congregacoesSemPedidos },
+    { titulo: "Itens pendentes", valor: indicadores.totalPendentes },
+    { titulo: "Itens enviados", valor: indicadores.totalEnviados },
+  ];
+
+  cards.forEach((card) => {
     const item = document.createElement("div");
     item.className = "summary-stat";
     item.innerHTML = `<span>${card.valor}</span><small>${card.titulo}</small>`;
@@ -385,10 +446,13 @@ function renderRankingSetoresAdmin(listaPedidos = pedidosCache) {
   }
 
   ranking.forEach((itemRanking, index) => {
+    const posicao = index + 1;
+    const medalha = posicao === 1 ? "🥇" : posicao === 2 ? "🥈" : posicao === 3 ? "🥉" : "🏅";
+
     const card = document.createElement("div");
     card.className = "pedido-card";
     card.innerHTML = `
-      <strong>${index + 1}º lugar • ${itemRanking.setor}</strong>
+      <strong>${medalha} ${posicao}º lugar • ${itemRanking.setor}</strong>
       <div style="margin-top:8px;">
         <span class="pill">Total ${itemRanking.total}</span>
       </div>
@@ -497,9 +561,25 @@ function atualizarPermissoesTabs() {
 async function removerPedido(itemId, pedidoId) {
   if (!sessao) return;
 
-  if (sessao.tipo === "setor" && !podeEditarPedidosNaSessao()) {
-    alert("O período de pedidos foi encerrado. Não é possível remover pedidos agora.");
+  const pedido = pedidosCache.find(
+    (p) => String(p.itemId) === String(itemId) && String(p.id) === String(pedidoId)
+  );
+
+  if (!pedido) {
+    alert("Pedido não encontrado.");
     return;
+  }
+
+  if (sessao.tipo === "setor") {
+    if (!pedidoPertenceAoSetorDaSessao(pedido)) {
+      alert("Você só pode remover pedidos do seu próprio setor.");
+      return;
+    }
+
+    if (!podeEditarPedidosNaSessao()) {
+      alert("O período de pedidos foi encerrado. Não é possível remover pedidos agora.");
+      return;
+    }
   }
 
   try {
@@ -716,7 +796,55 @@ function renderAdmin() {
   renderTotaisGeraisAdmin(filtrados);
   renderRankingSetoresAdmin(filtrados);
 
+  const indicadores = calcularIndicadoresAdmin(filtrados);
   const resumo = resumoGeral(filtrados);
+
+  if (campanhaAtual?.nome) {
+    const blocoCampanha = document.createElement("div");
+    blocoCampanha.className = "resumo-bloco";
+    blocoCampanha.innerHTML = `
+      <h4>Campanha atual</h4>
+      <div class="grid-3">
+        <div class="summary-stat">
+          <span>${campanhaAtual.nome}</span>
+          <small>Nome da campanha</small>
+        </div>
+        <div class="summary-stat">
+          <span>${campanhaAtual.ano || "-"}</span>
+          <small>Ano</small>
+        </div>
+        <div class="summary-stat">
+          <span>${campanhaAtual.status || "ativa"}</span>
+          <small>Status</small>
+        </div>
+      </div>
+    `;
+    resumoContainer.appendChild(blocoCampanha);
+  }
+
+  const blocoParticipacao = document.createElement("div");
+  blocoParticipacao.className = "resumo-bloco";
+  blocoParticipacao.innerHTML = "<h4>Painel de participação</h4>";
+
+  const gridParticipacao = document.createElement("div");
+  gridParticipacao.className = "grid-3";
+
+  [
+    { titulo: "Pedidos", valor: indicadores.totalPedidos },
+    { titulo: "Itens lançados", valor: indicadores.totalItens },
+    { titulo: "Setores participantes", valor: `${indicadores.setoresParticipantes}/${setores.length}` },
+    { titulo: "Congregações participantes", valor: `${indicadores.congregacoesParticipantes}/${congregacoes.length}` },
+    { titulo: "Itens pendentes", valor: indicadores.totalPendentes },
+    { titulo: "Itens enviados", valor: indicadores.totalEnviados },
+  ].forEach((itemInfo) => {
+    const item = document.createElement("div");
+    item.className = "summary-stat";
+    item.innerHTML = `<span>${itemInfo.valor}</span><small>${itemInfo.titulo}</small>`;
+    gridParticipacao.appendChild(item);
+  });
+
+  blocoParticipacao.appendChild(gridParticipacao);
+  resumoContainer.appendChild(blocoParticipacao);
 
   Object.entries(resumo).forEach(([modelo, tamanhosObj]) => {
     const bloco = document.createElement("div");
