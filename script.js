@@ -44,11 +44,11 @@ async function api(path, options = {}) {
 }
 
 function getSetorNome(id) {
-  return setores.find((s) => s.id === id)?.nome || "Setor";
+  return setores.find((s) => Number(s.id) === Number(id))?.nome || "Setor";
 }
 
 function getCongregacaoNome(id) {
-  return congregacoes.find((c) => c.id === id)?.nome || "Congregação";
+  return congregacoes.find((c) => Number(c.id) === Number(id))?.nome || "Congregação";
 }
 
 function getStatusEnvioLabel(status) {
@@ -591,9 +591,7 @@ function renderSetor() {
       </div>
       <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
         ${
-          sessao.type === "admin"
-            ? `<button class="secondary" data-edit-item="${pedido.itemId}">Editar</button>`
-            : sessao.tipo === "admin"
+          sessao.tipo === "admin"
             ? `<button class="secondary" data-edit-item="${pedido.itemId}">Editar</button>`
             : ""
         }
@@ -820,7 +818,7 @@ function exportarRelatorioFabrica(listaPedidos) {
   exportarWorkbook(gerarNomeArquivoRelatorioFabrica(), abas);
 }
 
-async function fazerLogin(loginInformado, senhaInformada) {
+async function fazerLogin(loginInformado, senhaInformado) {
   const loginErro = el("loginErro");
   if (loginErro) loginErro.textContent = "";
 
@@ -832,7 +830,7 @@ async function fazerLogin(loginInformado, senhaInformada) {
       const senhaBanco = String(u.senha || "").trim();
       return (
         loginBanco === String(loginInformado).trim().toLowerCase() &&
-        senhaBanco === String(senhaInformada).trim()
+        senhaBanco === String(senhaInformado).trim()
       );
     });
 
