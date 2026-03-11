@@ -943,36 +943,12 @@ async function adicionarPedido() {
     if (el("quantidade")) el("quantidade").value = 1;
 
     await carregarPedidos();
-   function preencherCongregacoesSetor() {
-  const select = el("congregacao");
-  if (!select) return;
-
-  const valorAtual = String(select.value || "");
-  select.innerHTML = `<option value="">Selecione a congregação</option>`;
-
-  const setorIdAtual = getSetorPedidoAtual();
-
-  console.log("setorIdAtual:", setorIdAtual);
-  console.log("sessao:", sessao);
-  console.log("congregacoes carregadas:", congregacoes);
-
-  if (!setorIdAtual) return;
-
-  const listaCongregacoes = congregacoes
-    .filter((c) => Number(c.setor_id) === Number(setorIdAtual))
-    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
-
-  console.log("congregacoes filtradas do setor:", listaCongregacoes);
-
-  listaCongregacoes.forEach((c) => {
-    const option = document.createElement("option");
-    option.value = String(c.id);
-    option.textContent = c.nome;
-    select.appendChild(option);
-  });
-
-  if (valorAtual && Array.from(select.options).some((o) => o.value === valorAtual)) {
-    select.value = valorAtual;
+    preencherCongregacoesSetor();
+    renderSetor();
+    renderAdmin();
+  } catch (error) {
+    console.error(error);
+    alert("Não foi possível salvar o pedido.");
   }
 }
 
@@ -1048,6 +1024,13 @@ async function iniciar() {
     }
 
     await fazerLogin(login, senha);
+  });
+
+  el("senha")?.addEventListener("keydown", async (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      el("btnEntrar")?.click();
+    }
   });
 
   el("btnSair")?.addEventListener("click", () => {
