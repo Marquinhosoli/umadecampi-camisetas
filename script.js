@@ -44,11 +44,11 @@ async function api(path, options = {}) {
 }
 
 function getSetorNome(id) {
-  return setores.find((s) => Number(s.id) === Number(id))?.nome || "Setor";
+  return setores.find((s) => String(s.id) === String(id))?.nome || "Setor";
 }
 
 function getCongregacaoNome(id) {
-  return congregacoes.find((c) => Number(c.id) === Number(id))?.nome || "Congregação";
+  return congregacoes.find((c) => String(c.id) === String(id))?.nome || "Congregação";
 }
 
 function getStatusEnvioLabel(status) {
@@ -98,13 +98,13 @@ function getSetorPedidoAtual() {
   if (!sessao) return null;
 
   if (sessao.tipo === "setor") {
-    return Number(sessao.setor_id) || null;
+    return String(sessao.setor_id || "").trim() || null;
   }
 
   if (sessao.tipo === "admin") {
     const select = el("setorAdminPedido");
     const valor = String(select?.value || "").trim();
-    return valor ? Number(valor) : null;
+    return valor || null;
   }
 
   return null;
@@ -212,10 +212,10 @@ function getPedidosAdminFiltrados() {
     if (!busca) return true;
 
     return (
-      p.congregacao.toLowerCase().includes(busca) ||
+      String(p.congregacao || "").toLowerCase().includes(busca) ||
       getSetorNome(p.setorId).toLowerCase().includes(busca) ||
       (modelos[p.modelo] || p.modelo).toLowerCase().includes(busca) ||
-      p.tamanho.toLowerCase().includes(busca) ||
+      String(p.tamanho || "").toLowerCase().includes(busca) ||
       getStatusEnvioLabel(p.statusEnvio).toLowerCase().includes(busca)
     );
   });
@@ -362,7 +362,7 @@ function preencherCongregacoesSetor() {
   if (!setorIdAtual) return;
 
   const listaCongregacoes = congregacoes
-    .filter((c) => Number(c.setor_id) === Number(setorIdAtual))
+    .filter((c) => String(c.setor_id) === String(setorIdAtual))
     .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 
   listaCongregacoes.forEach((c) => {
@@ -458,7 +458,7 @@ async function removerPedido(itemId, pedidoId) {
 }
 
 async function editarPedidoAdmin(itemId) {
-  const pedido = pedidosCache.find((p) => Number(p.itemId) === Number(itemId));
+  const pedido = pedidosCache.find((p) => String(p.itemId) === String(itemId));
   if (!pedido) return;
 
   const novaQuantidade = prompt("Nova quantidade:", String(pedido.quantidade));
@@ -566,7 +566,7 @@ function renderSetor() {
     return;
   }
 
-  const pedidosSetor = pedidosCache.filter((p) => Number(p.setorId) === Number(setorAtual));
+  const pedidosSetor = pedidosCache.filter((p) => String(p.setorId) === String(setorAtual));
 
   if (!pedidosSetor.length) {
     lista.innerHTML =
@@ -765,7 +765,7 @@ function montarPedidosDetalhadosProducao(listaPedidos) {
       const cmpSetor = setorA.localeCompare(setorB, "pt-BR");
       if (cmpSetor !== 0) return cmpSetor;
 
-      const cmpCong = a.congregacao.localeCompare(b.congregacao, "pt-BR");
+      const cmpCong = String(a.congregacao || "").localeCompare(String(b.congregacao || ""), "pt-BR");
       if (cmpCong !== 0) return cmpCong;
 
       const cmpModelo = (modelos[a.modelo] || a.modelo).localeCompare(
@@ -844,7 +844,7 @@ async function fazerLogin(loginInformado, senhaInformada) {
         id: usuario.id,
       };
     } else {
-      const setor = setores.find((s) => Number(s.id) === Number(usuario.setor_id));
+      const setor = setores.find((s) => String(s.id) === String(usuario.setor_id));
       sessao = {
         tipo: "setor",
         id: usuario.id,
@@ -872,7 +872,7 @@ async function adicionarPedido() {
   }
 
   const setorIdAtual = getSetorPedidoAtual();
-  const congregacaoId = Number(el("congregacao")?.value || 0);
+  const congregacaoId = String(el("congregacao")?.value || "").trim();
   const modelo = el("modelo")?.value;
   const tamanho = el("tamanho")?.value;
   const quantidade = Number(el("quantidade")?.value || 0);
@@ -889,8 +889,8 @@ async function adicionarPedido() {
 
   const congregacao = congregacoes.find(
     (c) =>
-      Number(c.id) === Number(congregacaoId) &&
-      Number(c.setor_id) === Number(setorIdAtual)
+      String(c.id) === String(congregacaoId) &&
+      String(c.setor_id) === String(setorIdAtual)
   );
 
   if (!congregacao) {
