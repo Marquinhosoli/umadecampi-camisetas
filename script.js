@@ -11,6 +11,7 @@ const modelos = {
 const CONFIG = {
   inicioPedidos: 1,
   fimPedidos: 20,
+  adminPodeEditarForaPrazo: true,
 };
 
 let sessao = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
@@ -84,22 +85,58 @@ function pedidosBloqueadosParaSetor() {
   return dia < CONFIG.inicioPedidos || dia > CONFIG.fimPedidos;
 }
 
+function adminPodeEditarForaPrazo() {
+  return !!CONFIG.adminPodeEditarForaPrazo;
+}
+
+function podeEditarPedidosNaSessao() {
+  if (!sessao) return false;
+
+  if (sessao.tipo === "admin") {
+    if (pedidosBloqueadosParaSetor()) return adminPodeEditarForaPrazo();
+    return true;
+  }
+
+  if (sessao.tipo === "setor") {
+    return !pedidosBloqueadosParaSetor();
+  }
+
+  return false;
+}
+
 function atualizarAvisoPeriodoPedidos() {
   const aviso = el("avisoPeriodoPedidos");
   const btnAdicionar = el("btnAdicionar");
   if (!aviso || !btnAdicionar) return;
 
-  if (!sessao || sessao.tipo !== "setor") {
+  if (!sessao) {
     aviso.classList.add("hidden");
+    aviso.innerHTML = "";
+    btnAdicionar.disabled = true;
+    return;
+  }
+
+  if (sessao.tipo === "admin") {
+    if (pedidosBloqueadosParaSetor()) {
+      aviso.classList.remove("hidden");
+      aviso.innerHTML = `
+        <strong>Período fechado para setores</strong>
+        <p>Os líderes de setor só podem lançar pedidos do dia ${CONFIG.inicioPedidos} ao dia ${CONFIG.fimPedidos} de cada mês. Como administrador, você ainda pode lançar e ajustar pedidos.</p>
+      `;
+    } else {
+      aviso.classList.add("hidden");
+      aviso.innerHTML = "";
+    }
+
     btnAdicionar.disabled = false;
     return;
   }
 
-  if (pedidosBloqueadosParaSetor()) {
+  if (sessao.tipo === "setor" && pedidosBloqueadosParaSetor()) {
     aviso.classList.remove("hidden");
     aviso.innerHTML = `
       <strong>Período fechado para pedidos</strong>
-      <p>Os líderes de setor só podem lançar pedidos do dia ${CONFIG.inicioPedidos} ao dia ${CONFIG.fimPedidos} de cada mês.</p>
+      <p>Os líderes de setor só podem lançar, editar e remover pedidos do dia ${CONFIG.inicioPedidos} ao dia ${CONFIG.fimPedidos} de cada mês.</p>
     `;
     btnAdicionar.disabled = true;
   } else {
@@ -458,6 +495,13 @@ function atualizarPermissoesTabs() {
 }
 
 async function removerPedido(itemId, pedidoId) {
+  if (!sessao) return;
+
+  if (sessao.tipo === "setor" && !podeEditarPedidosNaSessao()) {
+    alert("O período de pedidos foi encerrado. Não é possível remover pedidos agora.");
+    return;
+  }
+
   try {
     await api(`itens_pedido?id=eq.${itemId}`, {
       method: "DELETE",
@@ -483,6 +527,13 @@ async function removerPedido(itemId, pedidoId) {
 }
 
 async function editarPedidoAdmin(itemId) {
+  if (sessao?.tipo !== "admin") return;
+
+  if (!podeEditarPedidosNaSessao()) {
+    alert("Não é possível editar pedidos fora do período configurado.");
+    return;
+  }
+
   const pedido = pedidosCache.find((p) => String(p.itemId) === String(itemId));
   if (!pedido) return;
 
@@ -599,6 +650,8 @@ function renderSetor() {
     return;
   }
 
+  const setorPodeEditar = sessao.tipo === "admin" || podeEditarPedidosNaSessao();
+
   pedidosSetor.forEach((pedido) => {
     const div = document.createElement("div");
     div.className = "pedido-card";
@@ -616,7 +669,11 @@ function renderSetor() {
             ? `<button class="secondary" data-edit-item="${pedido.itemId}">Editar</button>`
             : ""
         }
-        <button class="secondary" data-remove-item="${pedido.itemId}" data-remove-pedido="${pedido.id}">Remover</button>
+        ${
+          setorPodeEditar
+            ? `<button class="secondary" data-remove-item="${pedido.itemId}" data-remove-pedido="${pedido.id}">Remover</button>`
+            : ""
+        }
       </div>
     `;
     lista.appendChild(div);
@@ -891,7 +948,7 @@ async function fazerLogin(loginInformado, senhaInformada) {
 async function adicionarPedido() {
   if (!sessao || (sessao.tipo !== "setor" && sessao.tipo !== "admin")) return;
 
-  if (sessao.tipo === "setor" && pedidosBloqueadosParaSetor()) {
+  if (!podeEditarPedidosNaSessao()) {
     alert("O período de pedidos foi encerrado.");
     return;
   }
