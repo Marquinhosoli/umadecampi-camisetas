@@ -168,6 +168,7 @@ function preencherSetoresAdminPedido() {
   if (valorAtual && Array.from(select.options).some((o) => o.value === valorAtual)) {
     select.value = valorAtual;
   }
+  preencherCongregacoesSetor();
 }
 
 function getSetoresSelecionadosAdmin() {
