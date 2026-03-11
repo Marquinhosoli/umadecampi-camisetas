@@ -11,6 +11,9 @@
   --warning-bg: #fff7ed;
   --warning-border: #fdba74;
   --warning-text: #9a3412;
+  --success-bg: #ecfdf5;
+  --success-border: #86efac;
+  --success-text: #166534;
   --radius: 22px;
   --shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
 }
@@ -81,14 +84,21 @@ p {
 }
 
 .aviso {
-  background: var(--warning-bg);
+  background: linear-gradient(180deg, #fffaf3 0%, var(--warning-bg) 100%);
   border: 1px solid var(--warning-border);
   color: var(--warning-text);
+  border-left: 6px solid #f97316;
 }
 
 .aviso p,
 .aviso strong {
   color: var(--warning-text);
+}
+
+.aviso strong {
+  display: block;
+  font-size: 16px;
+  margin-bottom: 6px;
 }
 
 .stats {
@@ -136,6 +146,7 @@ select {
   background: #fff;
   color: var(--text);
   outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 input:focus,
@@ -156,12 +167,17 @@ button {
   border-radius: 16px;
   cursor: pointer;
   font-weight: 700;
-  transition: 0.2s ease;
+  transition: transform 0.15s ease, background 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
 }
 
 button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  transform: none;
 }
 
 #btnEntrar,
@@ -172,9 +188,9 @@ button:disabled {
   color: #fff;
 }
 
-#btnEntrar:hover,
-#btnAdicionar:hover,
-.primary:hover {
+#btnEntrar:hover:not(:disabled),
+#btnAdicionar:hover:not(:disabled),
+.primary:hover:not(:disabled) {
   background: var(--primary-2);
 }
 
@@ -184,7 +200,7 @@ button:disabled {
   border: 1px solid #cfd8e3;
 }
 
-.secondary:hover {
+.secondary:hover:not(:disabled) {
   background: #f8fafc;
 }
 
@@ -259,6 +275,11 @@ button:disabled {
   padding: 16px;
 }
 
+.pedido-card strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
 .pill {
   display: inline-flex;
   align-items: center;
@@ -276,6 +297,10 @@ button:disabled {
   border-radius: 18px;
   padding: 16px;
   text-align: center;
+  min-height: 104px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .summary-stat span {
@@ -290,6 +315,7 @@ button:disabled {
   margin-top: 6px;
   color: var(--muted);
   font-size: 13px;
+  line-height: 1.35;
 }
 
 .resumo-bloco {
@@ -299,8 +325,14 @@ button:disabled {
   padding: 16px;
 }
 
+.resumo-bloco h4 {
+  margin-bottom: 14px;
+}
+
 .table-wrap {
   overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 18px;
 }
 
 table {
@@ -321,6 +353,12 @@ td {
 th {
   background: #f8fafc;
   font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+tbody tr:hover {
+  background: #f8fafc;
 }
 
 .action-grid {
@@ -347,6 +385,25 @@ th {
 
 .hero-actions {
   min-width: 260px;
+}
+
+#totaisGeraisAdmin {
+  margin-top: 14px;
+}
+
+#rankingSetoresAdmin .pedido-card {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+#rankingSetoresAdmin .pedido-card strong {
+  color: var(--primary);
+}
+
+#listaSetor:empty::before,
+#rankingSetoresAdmin:empty::before,
+#resumoCards:empty::before {
+  content: "";
+  display: none;
 }
 
 @media (max-width: 900px) {
@@ -376,5 +433,13 @@ th {
 
   h2 {
     font-size: 28px;
+  }
+
+  .hero-actions {
+    min-width: 100%;
+  }
+
+  .summary-stat {
+    min-height: auto;
   }
 }
