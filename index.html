@@ -185,6 +185,65 @@
         </div>
 
         <div class="card">
+          <h3>Controle financeiro</h3>
+          <p class="muted">Registre os valores recebidos por setor e acompanhe o histórico.</p>
+
+          <div class="grid-2">
+            <div>
+              <label for="financeiroSetor">Setor</label>
+              <select id="financeiroSetor">
+                <option value="">Selecione o setor</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="financeiroValor">Valor recebido</label>
+              <input id="financeiroValor" type="number" min="0" step="0.01" placeholder="0,00" />
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div>
+              <label for="financeiroData">Data do recebimento</label>
+              <input id="financeiroData" type="date" />
+            </div>
+
+            <div>
+              <label for="financeiroObservacao">Observação</label>
+              <input id="financeiroObservacao" type="text" placeholder="Ex.: pagamento parcial, combinado em mãos" />
+            </div>
+          </div>
+
+          <div style="margin-top: 16px;">
+            <button id="btnRegistrarRecebimento" class="primary" type="button">Registrar recebimento</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Resumo financeiro por setor</h3>
+          <p class="muted">Visualize quanto já foi recebido em cada setor nesta campanha.</p>
+          <div id="financeiroResumoSetores" class="cards-list"></div>
+        </div>
+
+        <div class="card">
+          <h3>Histórico de recebimentos</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Setor</th>
+                  <th>Valor</th>
+                  <th>Observação</th>
+                  <th>Responsável</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyRecebimentos"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
           <h3>Ranking dos setores</h3>
           <p class="muted">Mostra os setores que mais pediram, respeitando a busca, os filtros e o status.</p>
           <div id="rankingSetoresAdmin" class="cards-list"></div>
