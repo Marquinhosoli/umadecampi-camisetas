@@ -8,6 +8,9 @@
   --primary-2: #14244d;
   --soft: #f8fafc;
   --danger: #b91c1c;
+  --warning-bg: #fff7ed;
+  --warning-border: #fdba74;
+  --warning-text: #9a3412;
   --radius: 22px;
   --shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
 }
@@ -77,6 +80,17 @@ p {
   box-shadow: var(--shadow);
 }
 
+.aviso {
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  color: var(--warning-text);
+}
+
+.aviso p,
+.aviso strong {
+  color: var(--warning-text);
+}
+
 .stats {
   display: flex;
   gap: 16px;
@@ -143,6 +157,11 @@ button {
   cursor: pointer;
   font-weight: 700;
   transition: 0.2s ease;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 #btnEntrar,
