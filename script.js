@@ -12,6 +12,7 @@ const CONFIG = {
   inicioPedidos: 1,
   fimPedidos: 20,
   adminPodeEditarForaPrazo: true,
+  valorUnitarioCamiseta: 35,
 };
 
 let sessao = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
@@ -77,6 +78,13 @@ function exportarWorkbook(nomeArquivo, abas) {
   });
 
   XLSX.writeFile(wb, nomeArquivo);
+}
+
+function formatarMoeda(valor) {
+  return Number(valor || 0).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
 }
 
 function pedidosBloqueadosParaSetor() {
@@ -385,6 +393,71 @@ function calcularIndicadoresAdmin(listaPedidos = pedidosCache) {
   };
 }
 
+function getCongregacoesComPedidos(listaPedidos = pedidosCache) {
+  const ids = new Set();
+  listaPedidos.forEach((pedido) => {
+    if (pedido.congregacaoId !== undefined && pedido.congregacaoId !== null) {
+      ids.add(String(pedido.congregacaoId));
+    }
+  });
+  return ids;
+}
+
+function listarCongregacoesSemPedidos(listaPedidos = pedidosCache) {
+  const congregacoesComPedidos = getCongregacoesComPedidos(listaPedidos);
+
+  return congregacoes
+    .filter((congregacao) => !congregacoesComPedidos.has(String(congregacao.id)))
+    .map((congregacao) => ({
+      id: congregacao.id,
+      nome: congregacao.nome,
+      setorId: congregacao.setor_id,
+      setorNome: getSetorNome(congregacao.setor_id),
+    }))
+    .sort((a, b) => {
+      const cmpSetor = String(a.setorNome).localeCompare(String(b.setorNome), "pt-BR");
+      if (cmpSetor !== 0) return cmpSetor;
+      return String(a.nome).localeCompare(String(b.nome), "pt-BR");
+    });
+}
+
+function calcularFinanceiroPorSetor(listaPedidos = pedidosCache) {
+  const mapa = {};
+
+  listaPedidos.forEach((pedido) => {
+    const setorNome = getSetorNome(pedido.setorId);
+    const quantidade = Number(pedido.quantidade || 0);
+    const valor = quantidade * Number(CONFIG.valorUnitarioCamiseta || 0);
+
+    if (!mapa[setorNome]) {
+      mapa[setorNome] = {
+        setor: setorNome,
+        quantidade: 0,
+        valor: 0,
+      };
+    }
+
+    mapa[setorNome].quantidade += quantidade;
+    mapa[setorNome].valor += valor;
+  });
+
+  return Object.values(mapa).sort(
+    (a, b) => b.valor - a.valor || a.setor.localeCompare(b.setor, "pt-BR")
+  );
+}
+
+function calcularFinanceiroGeral(listaPedidos = pedidosCache) {
+  return listaPedidos.reduce(
+    (acc, pedido) => {
+      const quantidade = Number(pedido.quantidade || 0);
+      acc.quantidade += quantidade;
+      acc.valor += quantidade * Number(CONFIG.valorUnitarioCamiseta || 0);
+      return acc;
+    },
+    { quantidade: 0, valor: 0 }
+  );
+}
+
 function renderTotaisGeraisAdmin(listaPedidos = pedidosCache) {
   const container = el("totaisGeraisAdmin");
   if (!container) return;
@@ -402,11 +475,13 @@ function renderTotaisGeraisAdmin(listaPedidos = pedidosCache) {
   }
 
   const indicadores = calcularIndicadoresAdmin(listaPedidos);
+  const financeiro = calcularFinanceiroGeral(listaPedidos);
 
   const cards = [
     { titulo: "Pedidos", valor: indicadores.totalPedidos },
     { titulo: "Itens lançados", valor: indicadores.totalItens },
     { titulo: "Camisetas totais", valor: indicadores.totalGeral },
+    { titulo: "Valor total", valor: formatarMoeda(financeiro.valor) },
     { titulo: "Masculino", valor: indicadores.totalMasculino },
     { titulo: "Baby Look Feminina", valor: indicadores.totalBabylook },
     { titulo: "Setores participantes", valor: `${indicadores.setoresParticipantes}/${setores.length}` },
@@ -455,6 +530,86 @@ function renderRankingSetoresAdmin(listaPedidos = pedidosCache) {
       <strong>${medalha} ${posicao}º lugar • ${itemRanking.setor}</strong>
       <div style="margin-top:8px;">
         <span class="pill">Total ${itemRanking.total}</span>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function renderCongregacoesSemPedidosAdmin(listaPedidos = pedidosCache) {
+  const container = el("congregacoesSemPedidosAdmin");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  if (!sessao || sessao.tipo !== "admin") {
+    container.innerHTML =
+      '<div class="pedido-card">Somente o administrador pode visualizar esta área.</div>';
+    return;
+  }
+
+  const lista = listarCongregacoesSemPedidos(listaPedidos);
+
+  if (!lista.length) {
+    container.innerHTML =
+      '<div class="pedido-card">Todas as congregações já lançaram pedidos.</div>';
+    return;
+  }
+
+  lista.forEach((item) => {
+    const card = document.createElement("div");
+    card.className = "pedido-card";
+    card.innerHTML = `
+      <strong>${item.nome}</strong>
+      <div style="margin-top:8px;">
+        <span class="pill">${item.setorNome}</span>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function renderFinanceiroPorSetorAdmin(listaPedidos = pedidosCache) {
+  const container = el("financeiroPorSetorAdmin");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  if (!sessao || sessao.tipo !== "admin") {
+    container.innerHTML =
+      '<div class="pedido-card">Somente o administrador pode visualizar o financeiro.</div>';
+    return;
+  }
+
+  const financeiro = calcularFinanceiroPorSetor(listaPedidos);
+  const geral = calcularFinanceiroGeral(listaPedidos);
+
+  if (!financeiro.length) {
+    container.innerHTML =
+      '<div class="pedido-card">Nenhum pedido encontrado para o financeiro.</div>';
+    return;
+  }
+
+  const resumo = document.createElement("div");
+  resumo.className = "pedido-card";
+  resumo.innerHTML = `
+    <strong>Total geral estimado</strong>
+    <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+      <span class="pill">Camisetas: ${geral.quantidade}</span>
+      <span class="pill">Valor: ${formatarMoeda(geral.valor)}</span>
+      <span class="pill">Unitário: ${formatarMoeda(CONFIG.valorUnitarioCamiseta)}</span>
+    </div>
+  `;
+  container.appendChild(resumo);
+
+  financeiro.forEach((item) => {
+    const card = document.createElement("div");
+    card.className = "pedido-card";
+    card.innerHTML = `
+      <strong>${item.setor}</strong>
+      <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+        <span class="pill">Qtd. ${item.quantidade}</span>
+        <span class="pill">${formatarMoeda(item.valor)}</span>
       </div>
     `;
     container.appendChild(card);
@@ -783,6 +938,9 @@ function renderAdmin() {
   if (!sessao || sessao.tipo !== "admin") {
     renderTotaisGeraisAdmin([]);
     renderRankingSetoresAdmin([]);
+    renderCongregacoesSemPedidosAdmin([]);
+    renderFinanceiroPorSetorAdmin([]);
+
     resumoContainer.innerHTML =
       '<div class="pedido-card">Entre como administrador para visualizar a consolidação geral.</div>';
     tbody.innerHTML =
@@ -795,6 +953,8 @@ function renderAdmin() {
   const filtrados = getPedidosAdminFiltrados();
   renderTotaisGeraisAdmin(filtrados);
   renderRankingSetoresAdmin(filtrados);
+  renderCongregacoesSemPedidosAdmin(filtrados);
+  renderFinanceiroPorSetorAdmin(filtrados);
 
   const indicadores = calcularIndicadoresAdmin(filtrados);
   const resumo = resumoGeral(filtrados);
@@ -964,6 +1124,32 @@ function montarResumoPorSetorProducao(listaPedidos) {
   return linhas;
 }
 
+function montarResumoFinanceiroPorSetor(listaPedidos) {
+  const linhas = [["Setor", "Quantidade", "Valor estimado"]];
+  const financeiro = calcularFinanceiroPorSetor(listaPedidos);
+
+  financeiro.forEach((item) => {
+    linhas.push([item.setor, item.quantidade, item.valor]);
+  });
+
+  const geral = calcularFinanceiroGeral(listaPedidos);
+  linhas.push([]);
+  linhas.push(["TOTAL", geral.quantidade, geral.valor]);
+
+  return linhas;
+}
+
+function montarCongregacoesSemPedidosExportacao(listaPedidos) {
+  const linhas = [["Setor", "Congregação"]];
+  const lista = listarCongregacoesSemPedidos(listaPedidos);
+
+  lista.forEach((item) => {
+    linhas.push([item.setorNome, item.nome]);
+  });
+
+  return linhas;
+}
+
 function montarPedidosDetalhadosProducao(listaPedidos) {
   const linhas = [["Setor", "Congregação", "Modelo", "Tamanho", "Quantidade", "Status"]];
 
@@ -1018,6 +1204,8 @@ function exportarRelatorioFabrica(listaPedidos) {
     { nome: "Masculino", linhas: montarResumoProducaoPorModelo(listaPedidos, "masculino") },
     { nome: "Baby Look", linhas: montarResumoProducaoPorModelo(listaPedidos, "babylook") },
     { nome: "Por Setor", linhas: montarResumoPorSetorProducao(listaPedidos) },
+    { nome: "Financeiro", linhas: montarResumoFinanceiroPorSetor(listaPedidos) },
+    { nome: "Sem Pedidos", linhas: montarCongregacoesSemPedidosExportacao(listaPedidos) },
     { nome: "Pedidos Detalhados", linhas: montarPedidosDetalhadosProducao(listaPedidos) },
   ];
 
