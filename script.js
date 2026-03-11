@@ -163,7 +163,6 @@ function getSetorPedidoAtual() {
     if (!select) return null;
 
     const valor = String(select.value || "").trim();
-
     if (valor === "") return null;
 
     return Number(valor);
@@ -366,18 +365,19 @@ function preencherCongregacoesSetor() {
 
   lista.innerHTML = "";
 
- let setorIdAtual = getSetorPedidoAtual();
+  let setorIdAtual = getSetorPedidoAtual();
 
-if (sessao?.tipo === "admin") {
-  const selectSetor = el("setorAdminPedido");
-  if (selectSetor && selectSetor.value) {
-    setorIdAtual = Number(selectSetor.value);
+  if (sessao?.tipo === "admin") {
+    const selectSetor = el("setorAdminPedido");
+    if (selectSetor && selectSetor.value) {
+      setorIdAtual = Number(selectSetor.value);
+    }
   }
-}
-  if (!setorAtual) return;
+
+  if (!setorIdAtual) return;
 
   congregacoes
-    .filter((c) => Number(c.setor_id) === Number(setorAtual))
+    .filter((c) => Number(c.setor_id) === Number(setorIdAtual))
     .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
     .forEach((c) => {
       const option = document.createElement("option");
@@ -591,7 +591,9 @@ function renderSetor() {
       </div>
       <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
         ${
-          sessao.tipo === "admin"
+          sessao.type === "admin"
+            ? `<button class="secondary" data-edit-item="${pedido.itemId}">Editar</button>`
+            : sessao.tipo === "admin"
             ? `<button class="secondary" data-edit-item="${pedido.itemId}">Editar</button>`
             : ""
         }
@@ -875,7 +877,15 @@ async function adicionarPedido() {
     return;
   }
 
-  const setorIdAtual = getSetorPedidoAtual();
+  let setorIdAtual = getSetorPedidoAtual();
+
+  if (sessao?.tipo === "admin") {
+    const selectSetor = el("setorAdminPedido");
+    if (selectSetor && selectSetor.value) {
+      setorIdAtual = Number(selectSetor.value);
+    }
+  }
+
   const nomeCongregacao = el("congregacao")?.value.trim() || "";
   const modelo = el("modelo")?.value;
   const tamanho = el("tamanho")?.value;
