@@ -1072,14 +1072,32 @@ async function atualizarStatusPedidosFiltrados(novoStatus) {
   }
 }
 
-async function registrarRecebimento() {
+async function registrarRecebimento(event) {
   try {
-    const setorId = Number(el("financeiroSetor").value || 0);
-    const valorTexto = String(el("financeiroValor").value || "").trim();
+    if (event) event.preventDefault();
+
+    const selectSetor = el("financeiroSetor");
+    const valorTexto = String(el("financeiroValor")?.value || "").trim();
+    const dataRecebimento = String(el("financeiroData")?.value || "").trim();
     const observacao = String(el("financeiroObs")?.value || "").trim();
 
-    if (!setorId) {
+    const setorValue =
+      String(selectSetor?.value || "").trim() ||
+      String(selectSetor?.selectedOptions?.[0]?.value || "").trim();
+
+    console.log("financeiroSetor.value =", selectSetor?.value);
+    console.log("selected option value =", selectSetor?.selectedOptions?.[0]?.value);
+    console.log("selected option text =", selectSetor?.selectedOptions?.[0]?.textContent);
+
+    if (!setorValue) {
       alert("Selecione o setor.");
+      return;
+    }
+
+    const setorId = Number(setorValue);
+
+    if (!Number.isFinite(setorId) || setorId <= 0) {
+      alert("Setor inválido.");
       return;
     }
 
@@ -1090,8 +1108,13 @@ async function registrarRecebimento() {
 
     const valor = Number(valorTexto.replace(/\./g, "").replace(",", "."));
 
-    if (isNaN(valor) || valor <= 0) {
+    if (!Number.isFinite(valor) || valor <= 0) {
       alert("Valor inválido.");
+      return;
+    }
+
+    if (!dataRecebimento) {
+      alert("Informe a data.");
       return;
     }
 
@@ -1104,8 +1127,11 @@ async function registrarRecebimento() {
     const payload = {
       campanha_id: campanhaAtual.id,
       setor_id: setorId,
-      valor: valor,
-      observacao: observacao
+      valor,
+      data_recebimento: dataRecebimento,
+      observacao,
+      usuario_id: sessao?.id || null,
+      data_registro: new Date().toISOString(),
     };
 
     console.log("ENVIANDO:", payload);
@@ -1116,14 +1142,14 @@ async function registrarRecebimento() {
         apikey: SUPABASE_ANON_KEY,
         Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
         "Content-Type": "application/json",
-        Prefer: "return=representation"
+        Prefer: "return=representation",
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
 
-    const result = await response.text();
+    const resultText = await response.text();
     console.log("STATUS:", response.status);
-    console.log("RESPOSTA:", result);
+    console.log("RESPOSTA:", resultText);
 
     if (!response.ok) {
       alert("Erro ao registrar. Veja o console.");
@@ -1132,16 +1158,17 @@ async function registrarRecebimento() {
 
     alert("Recebimento registrado com sucesso.");
 
-    el("financeiroValor").value = "";
+    if (el("financeiroValor")) el("financeiroValor").value = "";
     if (el("financeiroObs")) el("financeiroObs").value = "";
 
-    await carregarResumoFinanceiro();
-
+    await carregarRecebimentos();
+    renderAdmin();
   } catch (erro) {
-    console.error("Erro:", erro);
+    console.error("Erro ao registrar recebimento:", erro);
     alert("Não foi possível registrar.");
   }
 }
+
 function renderSetor() {
   const lista = el("listaSetor");
   if (!lista) return;
@@ -1185,7 +1212,7 @@ function renderSetor() {
       </div>
       <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
         ${
-          sessao.tipo === "admin"
+          sessao.type === "admin"
             ? `<button class="secondary" data-edit-item="${pedido.itemId}">Editar</button>`
             : ""
         }
@@ -1546,7 +1573,7 @@ async function fazerLogin(loginInformado, senhaInformada) {
       const senhaBanco = String(u.senha || "").trim();
       return (
         loginBanco === String(loginInformado).trim().toLowerCase() &&
-        senhaBanco === String(senhaInformada).trim()
+        senhaBanco === String(senhaInformado).trim()
       );
     });
 
@@ -1804,9 +1831,7 @@ async function iniciar() {
     await atualizarStatusPedidosFiltrados("pendente");
   });
 
-  el("btnRegistrarRecebimento")?.addEventListener("click", async () => {
-    await registrarRecebimento();
-  });
+  el("btnRegistrarRecebimento")?.addEventListener("click", registrarRecebimento);
 
   el("btnExportarPedidos")?.addEventListener("click", () => {
     if (sessao?.tipo !== "admin") return;
