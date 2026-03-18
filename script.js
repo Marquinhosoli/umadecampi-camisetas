@@ -1073,54 +1073,75 @@ async function atualizarStatusPedidosFiltrados(novoStatus) {
 }
 
 async function registrarRecebimento() {
-  if (sessao?.tipo !== "admin") return;
-
-  const setorId = String(el("financeiroSetor")?.value || "").trim();
-  const valor = Number(el("financeiroValor")?.value || 0);
-  const dataRecebimento = String(el("financeiroData")?.value || "").trim();
-  const observacao = String(el("financeiroObservacao")?.value || "").trim();
-
-  if (!setorId) {
-    alert("Selecione um setor.");
-    return;
-  }
-
-  if (!Number.isFinite(valor) || valor <= 0) {
-    alert("Informe um valor válido.");
-    return;
-  }
-
-  if (!dataRecebimento) {
-    alert("Informe a data do recebimento.");
-    return;
-  }
-
   try {
-    await api("recebimentos", {
+    const setorId = Number(el("financeiroSetor").value || 0);
+    const valorTexto = String(el("financeiroValor").value || "").trim();
+    const observacao = String(el("financeiroObs")?.value || "").trim();
+
+    if (!setorId) {
+      alert("Selecione o setor.");
+      return;
+    }
+
+    if (!valorTexto) {
+      alert("Digite o valor.");
+      return;
+    }
+
+    const valor = Number(valorTexto.replace(/\./g, "").replace(",", "."));
+
+    if (isNaN(valor) || valor <= 0) {
+      alert("Valor inválido.");
+      return;
+    }
+
+    if (!campanhaAtual?.id) {
+      alert("Campanha não encontrada.");
+      console.log("campanhaAtual:", campanhaAtual);
+      return;
+    }
+
+    const payload = {
+      campanha_id: campanhaAtual.id,
+      setor_id: setorId,
+      valor: valor,
+      observacao: observacao
+    };
+
+    console.log("ENVIANDO:", payload);
+
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/recebimentos`, {
       method: "POST",
-      body: {
-        setor_id: Number(setorId),
-        valor,
-        data_recebimento: dataRecebimento,
-        observacao: observacao || null,
-        usuario_id: sessao.id,
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=representation"
       },
+      body: JSON.stringify(payload)
     });
 
-    if (el("financeiroSetor")) el("financeiroSetor").value = "";
-    if (el("financeiroValor")) el("financeiroValor").value = "";
-    if (el("financeiroData")) el("financeiroData").value = "";
-    if (el("financeiroObservacao")) el("financeiroObservacao").value = "";
+    const result = await response.text();
+    console.log("STATUS:", response.status);
+    console.log("RESPOSTA:", result);
 
-    await carregarRecebimentos();
-    renderAdmin();
+    if (!response.ok) {
+      alert("Erro ao registrar. Veja o console.");
+      return;
+    }
+
     alert("Recebimento registrado com sucesso.");
-  } catch (error) {
-    console.error(error);
-    alert("Não foi possível registrar o recebimento.");
+
+    el("financeiroValor").value = "";
+    if (el("financeiroObs")) el("financeiroObs").value = "";
+
+    await carregarResumoFinanceiro();
+
+  } catch (erro) {
+    console.error("Erro:", erro);
+    alert("Não foi possível registrar.");
   }
 }
-
 function renderSetor() {
   const lista = el("listaSetor");
   if (!lista) return;
