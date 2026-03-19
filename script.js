@@ -221,7 +221,160 @@ async function recarregarTudo() {
   await carregarPedidos();
   await carregarRecebimentos();
 }
+function formatarDataHora(valor) {
+  if (!valor) return "-";
+  const d = new Date(valor);
+  if (Number.isNaN(d.getTime())) return valor;
+  return d.toLocaleString("pt-BR");
+}
 
+function nomeCongregacaoPorId(id) {
+  const item = congregacoes.find(c => String(c.id) === String(id));
+  return item ? item.nome : "-";
+}
+
+function nomeSetorPorId(id) {
+  const item = setores.find(s => String(s.id) === String(id));
+  return item ? item.nome : "-";
+}
+
+function popularSelectCongregacoesSetor() {
+  const select = el("pedidoCongregacao");
+  if (!select || sessao?.tipo !== "setor") return;
+
+  const lista = congregacoes
+    .filter(c => String(c.setor_id) === String(sessao.setor_id))
+    .sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"));
+
+  select.innerHTML = "";
+
+  if (!lista.length) {
+    select.innerHTML = `<option value="">Nenhuma congregação encontrada</option>`;
+    return;
+  }
+
+  select.innerHTML = lista
+    .map(c => `<option value="${c.id}">${c.nome}</option>`)
+    .join("");
+}
+
+function renderCongregacoesSetor() {
+  const tbody = el("tbodyCongregacoesSetor");
+  if (!tbody || sessao?.tipo !== "setor") return;
+
+  const congregacoesSetor = congregacoes.filter(
+    c => String(c.setor_id) === String(sessao.setor_id)
+  );
+
+  if (!congregacoesSetor.length) {
+    tbody.innerHTML = `<tr><td colspan="2">Nenhuma congregação cadastrada.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = congregacoesSetor.map(c => {
+    const temPedido = pedidos.some(p => String(p.congregacao_id) === String(c.id));
+    return `
+      <tr>
+        <td>${c.nome}</td>
+        <td>${temPedido ? "Com pedido" : "Sem pedido"}</td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function renderPedidosSetor() {
+  const tbody = el("tbodyPedidosSetor");
+  if (!tbody || sessao?.tipo !== "setor") return;
+
+  const pedidosSetor = pedidos.filter(
+    p => String(p.setor_id) === String(sessao.setor_id)
+  );
+
+  if (!pedidosSetor.length) {
+    tbody.innerHTML = `<tr><td colspan="5">Nenhum pedido lançado.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = pedidosSetor.map(p => `
+    <tr>
+      <td>${formatarDataHora(p.created_at)}</td>
+      <td>${nomeCongregacaoPorId(p.congregacao_id)}</td>
+      <td>${p.modelo || "-"}</td>
+      <td>${p.tamanho || "-"}</td>
+      <td>${p.quantidade || 0}</td>
+    </tr>
+  `).join("");
+}
+
+function popularSelectSetoresAdmin() {
+  const select = el("recebimentoSetor");
+  if (!select) return;
+
+  select.innerHTML = "";
+
+  if (!setores.length) {
+    select.innerHTML = `<option value="">Nenhum setor encontrado</option>`;
+    return;
+  }
+
+  select.innerHTML = setores
+    .map(s => `<option value="${s.id}">${s.nome}</option>`)
+    .join("");
+}
+
+function renderRecebimentosAdmin() {
+  const tbody = el("tbodyRecebimentosAdmin");
+  if (!tbody || sessao?.tipo !== "admin") return;
+
+  if (!recebimentos.length) {
+    tbody.innerHTML = `<tr><td colspan="4">Nenhum recebimento lançado.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = recebimentos.map(r => `
+    <tr>
+      <td>${formatarDataHora(r.created_at)}</td>
+      <td>${nomeSetorPorId(r.setor_id)}</td>
+      <td>${moeda(r.valor)}</td>
+      <td>${r.observacao || "-"}</td>
+    </tr>
+  `).join("");
+}
+
+function renderFaltantesAdmin() {
+  const tbody = el("tbodyFaltantesAdmin");
+  if (!tbody || sessao?.tipo !== "admin") return;
+
+  const faltantes = congregacoes.filter(c => {
+    return !pedidos.some(p => String(p.congregacao_id) === String(c.id));
+  });
+
+  if (!faltantes.length) {
+    tbody.innerHTML = `<tr><td colspan="2">Todas as congregações já fizeram pedido.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = faltantes.map(c => `
+    <tr>
+      <td>${nomeSetorPorId(c.setor_id)}</td>
+      <td>${c.nome}</td>
+    </tr>
+  `).join("");
+}
+
+function renderTabelasExtras() {
+  if (sessao?.tipo === "setor") {
+    popularSelectCongregacoesSetor();
+    renderCongregacoesSetor();
+    renderPedidosSetor();
+  }
+
+  if (sessao?.tipo === "admin") {
+    popularSelectSetoresAdmin();
+    renderRecebimentosAdmin();
+    renderFaltantesAdmin();
+  }
+}
 /* =========================
    LOGIN
 ========================= */
