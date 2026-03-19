@@ -1086,13 +1086,21 @@ async function registrarRecebimento(event) {
       return;
     }
 
-    const setorId = String(selectSetor.value || "").trim();
+    const setorIdTexto = String(selectSetor.value || "").trim();
     const valorTexto = String(inputValor?.value || "").trim();
     const dataRecebimento = String(inputData?.value || "").trim();
     const observacao = String(inputObs?.value || "").trim();
 
-    if (!setorId) {
+    if (!setorIdTexto) {
       alert("Selecione o setor.");
+      selectSetor.focus();
+      return;
+    }
+
+    const setorId = Number(setorIdTexto);
+
+    if (!Number.isFinite(setorId) || setorId <= 0) {
+      alert("Setor inválido.");
       selectSetor.focus();
       return;
     }
@@ -1122,11 +1130,8 @@ async function registrarRecebimento(event) {
       valor: valor,
       data_recebimento: dataRecebimento,
       observacao: observacao,
-      usuario_id: sessao?.id ?? null,
       data_registro: new Date().toISOString(),
     };
-
-    console.log("Payload enviado para recebimentos:", payload);
 
     const response = await fetch(`${SUPABASE_URL}/rest/v1/recebimentos`, {
       method: "POST",
@@ -1140,11 +1145,9 @@ async function registrarRecebimento(event) {
     });
 
     const texto = await response.text();
-    console.log("Resposta recebimentos status:", response.status);
-    console.log("Resposta recebimentos body:", texto);
 
     if (!response.ok) {
-      alert(`Erro ao registrar: ${texto}`);
+      alert("Erro ao registrar: " + texto);
       return;
     }
 
@@ -1158,7 +1161,7 @@ async function registrarRecebimento(event) {
     renderAdmin();
   } catch (erro) {
     console.error("Erro ao registrar recebimento:", erro);
-    alert(`Não foi possível registrar o recebimento. ${erro.message || erro}`);
+    alert("Não foi possível registrar o recebimento.");
   }
 }
 function renderSetor() {
