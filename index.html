@@ -24,17 +24,17 @@
       box-sizing:border-box;
       margin:0;
       padding:0;
-      font-family:Arial,Helvetica,sans-serif
+      font-family:Arial,Helvetica,sans-serif;
     }
 
     body{
       background:var(--bg);
-      color:var(--text)
+      color:var(--text);
     }
 
     .container{
-      width:min(1400px,95%);
-      margin:24px auto 40px
+      width:min(1450px,95%);
+      margin:24px auto 40px;
     }
 
     .topbar{
@@ -43,18 +43,18 @@
       align-items:center;
       gap:16px;
       flex-wrap:wrap;
-      margin-bottom:22px
+      margin-bottom:22px;
     }
 
     .brand h1{
       font-size:2rem;
       color:var(--primary);
-      font-weight:800
+      font-weight:800;
     }
 
     .brand p{
       color:var(--muted);
-      margin-top:4px
+      margin-top:4px;
     }
 
     .campaign-box{
@@ -63,18 +63,18 @@
       padding:16px 20px;
       border-radius:var(--radius);
       box-shadow:var(--shadow);
-      min-width:290px
+      min-width:290px;
     }
 
     .campaign-box strong{
       display:block;
       font-size:1.05rem;
-      margin-bottom:6px
+      margin-bottom:6px;
     }
 
     .layout{
       display:grid;
-      gap:22px
+      gap:22px;
     }
 
     .card{
@@ -82,19 +82,19 @@
       border-radius:var(--radius);
       box-shadow:var(--shadow);
       border:1px solid var(--border);
-      padding:20px
+      padding:20px;
     }
 
     .section-title{
       font-size:1.25rem;
       font-weight:800;
-      margin-bottom:16px
+      margin-bottom:16px;
     }
 
     .stats{
       display:grid;
       grid-template-columns:repeat(6,minmax(0,1fr));
-      gap:14px
+      gap:14px;
     }
 
     .stat-card{
@@ -102,42 +102,49 @@
       border:1px solid var(--border);
       border-radius:16px;
       padding:18px;
-      box-shadow:var(--shadow)
+      box-shadow:var(--shadow);
     }
 
     .stat-card h3{
       font-size:.95rem;
       color:var(--muted);
       font-weight:700;
-      margin-bottom:10px
+      margin-bottom:10px;
     }
 
     .stat-card .stat-number{
       font-size:1.7rem;
       font-weight:800;
-      color:var(--primary)
+      color:var(--primary);
+    }
+
+    .login-grid,.grid-2,.grid-3{
+      display:grid;
+      gap:22px;
     }
 
     .login-grid,.grid-2{
-      display:grid;
       grid-template-columns:repeat(2,minmax(0,1fr));
-      gap:22px
+    }
+
+    .grid-3{
+      grid-template-columns:repeat(3,minmax(0,1fr));
     }
 
     form{
       display:grid;
-      gap:14px
+      gap:14px;
     }
 
     .field{
       display:flex;
-      flex-direction:column
+      flex-direction:column;
     }
 
     label{
       font-size:.92rem;
       font-weight:700;
-      margin-bottom:6px
+      margin-bottom:6px;
     }
 
     input,select,button,textarea{
@@ -146,49 +153,49 @@
       border:1px solid var(--border);
       padding:12px 14px;
       font-size:.98rem;
-      background:#fff
+      background:#fff;
     }
 
     textarea{
       min-height:90px;
-      resize:vertical
+      resize:vertical;
     }
 
     button{
       cursor:pointer;
       font-weight:700;
-      border:none
+      border:none;
     }
 
     .btn-primary{
       background:var(--primary);
-      color:#fff
+      color:#fff;
     }
 
     .btn-primary:hover{
-      background:var(--primary2)
+      background:var(--primary2);
     }
 
     .btn-secondary{
       background:#e2e8f0;
-      color:#0f172a
+      color:#0f172a;
     }
 
     .btn-danger{
       background:var(--danger);
-      color:#fff
+      color:#fff;
     }
 
     .btn-success{
       background:var(--success);
-      color:#fff
+      color:#fff;
     }
 
     .actions-row{
       display:flex;
       gap:12px;
       flex-wrap:wrap;
-      align-items:center
+      align-items:center;
     }
 
     .panel-header{
@@ -197,17 +204,17 @@
       align-items:flex-start;
       gap:12px;
       flex-wrap:wrap;
-      margin-bottom:18px
+      margin-bottom:18px;
     }
 
     .panel-header .panel-info h2{
       font-size:1.45rem;
       margin-bottom:4px;
-      color:var(--primary)
+      color:var(--primary);
     }
 
     .panel-header .panel-info p{
-      color:var(--muted)
+      color:var(--muted);
     }
 
     .status-pill{
@@ -219,7 +226,7 @@
       padding:10px 14px;
       border-radius:999px;
       font-weight:700;
-      font-size:.92rem
+      font-size:.92rem;
     }
 
     .table-wrap{
@@ -227,38 +234,31 @@
       overflow-x:auto;
       border:1px solid var(--border);
       border-radius:14px;
-      background:#fff
+      background:#fff;
     }
 
     table{
       width:100%;
       border-collapse:collapse;
-      min-width:720px
+      min-width:720px;
     }
 
     th,td{
       padding:12px 14px;
       border-bottom:1px solid var(--border);
       text-align:left;
-      font-size:.94rem
+      font-size:.94rem;
+      vertical-align:top;
     }
 
     th{
       background:#f8fafc;
       color:#334155;
-      font-weight:800
+      font-weight:800;
     }
 
     .hidden{
-      display:none!important
-    }
-
-    .empty-state{
-      padding:16px;
-      border:1px dashed var(--border);
-      border-radius:14px;
-      color:var(--muted);
-      background:#fff
+      display:none !important;
     }
 
     .info-box{
@@ -266,7 +266,15 @@
       border-radius:14px;
       background:#f8fafc;
       border:1px solid var(--border);
-      color:#334155
+      color:#334155;
+    }
+
+    .empty-state{
+      padding:16px;
+      border:1px dashed var(--border);
+      border-radius:14px;
+      color:var(--muted);
+      background:#fff;
     }
 
     .pill-success,
@@ -275,36 +283,68 @@
       padding:6px 10px;
       border-radius:999px;
       font-size:.82rem;
-      font-weight:700
+      font-weight:700;
+      white-space:nowrap;
     }
 
     .pill-success{
       background:#dcfce7;
-      color:#166534
+      color:#166534;
     }
 
     .pill-warning{
       background:#fef3c7;
-      color:#92400e
+      color:#92400e;
+    }
+
+    details{
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:14px;
+      background:#fff;
+    }
+
+    details summary{
+      cursor:pointer;
+      font-weight:800;
+      font-size:1.02rem;
+      list-style:none;
+    }
+
+    details summary::-webkit-details-marker{
+      display:none;
+    }
+
+    .notice{
+      margin-top:10px;
+      font-size:.92rem;
+      color:var(--muted);
+    }
+
+    .muted{
+      color:var(--muted);
     }
 
     @media (max-width:1100px){
       .stats{
-        grid-template-columns:repeat(3,minmax(0,1fr))
+        grid-template-columns:repeat(3,minmax(0,1fr));
+      }
+      .grid-3{
+        grid-template-columns:1fr;
       }
     }
 
     @media (max-width:780px){
       .login-grid,.grid-2,.stats{
-        grid-template-columns:1fr
+        grid-template-columns:1fr;
       }
 
       .campaign-box{
-        width:100%
+        width:100%;
       }
 
       table{
-        min-width:600px
+        min-width:620px;
       }
     }
   </style>
@@ -342,15 +382,16 @@
             <form id="formLoginSetor">
               <div class="field">
                 <label for="loginSetor">Login do setor</label>
-                <input id="loginSetor" type="text" placeholder="Nome, código, sigla ou ID" />
+                <input id="loginSetor" type="text" placeholder="Nome, código, sigla ou ID do setor" />
               </div>
 
               <div class="field">
                 <label for="senhaSetor">Senha</label>
-                <input id="senhaSetor" type="password" placeholder="Digite a senha" />
+                <input id="senhaSetor" type="password" placeholder="Digite a senha do setor" />
               </div>
 
               <button class="btn-primary" type="submit">Entrar como setor</button>
+              <div class="notice">Aceita nome, código, sigla ou ID do setor.</div>
             </form>
           </div>
 
@@ -441,37 +482,41 @@
           </div>
 
           <div class="card">
-            <h3 class="section-title">Congregações do setor</h3>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Congregação</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody id="tbodyCongregacoesSetor"></tbody>
-              </table>
-            </div>
+            <details>
+              <summary>Congregações do setor</summary>
+              <div class="table-wrap" style="margin-top:14px">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Congregação</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbodyCongregacoesSetor"></tbody>
+                </table>
+              </div>
+            </details>
           </div>
         </div>
 
         <div class="card" style="margin-top:22px">
-          <h3 class="section-title">Pedidos lançados</h3>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Congregação</th>
-                  <th>Modelo</th>
-                  <th>Tamanho</th>
-                  <th>Quantidade</th>
-                </tr>
-              </thead>
-              <tbody id="tbodyPedidosSetor"></tbody>
-            </table>
-          </div>
+          <details open>
+            <summary>Pedidos lançados</summary>
+            <div class="table-wrap" style="margin-top:14px">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Congregação</th>
+                    <th>Modelo</th>
+                    <th>Tamanho</th>
+                    <th>Quantidade</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyPedidosSetor"></tbody>
+              </table>
+            </div>
+          </details>
         </div>
       </section>
 
@@ -504,6 +549,49 @@
 
         <div class="grid-2" style="margin-top:22px">
           <div class="card">
+            <h3 class="section-title">Lançar pedido pelo admin</h3>
+            <form id="formPedidoAdmin">
+              <div class="field">
+                <label for="pedidoAdminSetor">Setor</label>
+                <select id="pedidoAdminSetor"></select>
+              </div>
+
+              <div class="field">
+                <label for="pedidoAdminCongregacao">Congregação</label>
+                <select id="pedidoAdminCongregacao"></select>
+              </div>
+
+              <div class="field">
+                <label for="pedidoAdminModelo">Modelo</label>
+                <select id="pedidoAdminModelo">
+                  <option value="Masculino">Masculino</option>
+                  <option value="Baby Look Feminina">Baby Look Feminina</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="pedidoAdminTamanho">Tamanho</label>
+                <select id="pedidoAdminTamanho">
+                  <option value="PP">PP</option>
+                  <option value="P">P</option>
+                  <option value="M">M</option>
+                  <option value="G">G</option>
+                  <option value="GG">GG</option>
+                  <option value="XG">XG</option>
+                  <option value="XXG">XXG</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="pedidoAdminQuantidade">Quantidade</label>
+                <input id="pedidoAdminQuantidade" type="number" min="1" value="1" />
+              </div>
+
+              <button class="btn-success" type="submit">Salvar pedido</button>
+            </form>
+          </div>
+
+          <div class="card">
             <h3 class="section-title">Lançar recebimento</h3>
             <form id="formRecebimentoAdmin">
               <div class="field">
@@ -524,38 +612,61 @@
               <button class="btn-success" type="submit">Salvar recebimento</button>
             </form>
           </div>
+        </div>
+
+        <div class="grid-2" style="margin-top:22px">
+          <div class="card">
+            <details>
+              <summary>Congregações que ainda não pediram</summary>
+              <div class="table-wrap" style="margin-top:14px">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Setor</th>
+                      <th>Congregação</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbodyFaltantesAdmin"></tbody>
+                </table>
+              </div>
+            </details>
+          </div>
 
           <div class="card">
-            <h3 class="section-title">Congregações que ainda não pediram</h3>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Setor</th>
-                    <th>Congregação</th>
-                  </tr>
-                </thead>
-                <tbody id="tbodyFaltantesAdmin"></tbody>
-              </table>
-            </div>
+            <details>
+              <summary>Setores e congregações</summary>
+              <div class="table-wrap" style="margin-top:14px">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Setor</th>
+                      <th>Congregação</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbodyMapaSetoresCongregacoes"></tbody>
+                </table>
+              </div>
+            </details>
           </div>
         </div>
 
         <div class="card" style="margin-top:22px">
-          <h3 class="section-title">Recebimentos lançados</h3>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Setor</th>
-                  <th>Valor</th>
-                  <th>Observação</th>
-                </tr>
-              </thead>
-              <tbody id="tbodyRecebimentosAdmin"></tbody>
-            </table>
-          </div>
+          <details open>
+            <summary>Recebimentos lançados</summary>
+            <div class="table-wrap" style="margin-top:14px">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Setor</th>
+                    <th>Valor</th>
+                    <th>Observação</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyRecebimentosAdmin"></tbody>
+              </table>
+            </div>
+          </details>
         </div>
       </section>
     </div>
@@ -694,7 +805,7 @@
 
     async function carregarPedidos() {
       try {
-        pedidos = await api("pedidos?select=*&order=created_at.desc");
+        pedidos = await api("pedidos?select=*&order=id.desc");
       } catch (e) {
         console.warn("Pedidos não carregados:", e.message);
         pedidos = [];
@@ -703,7 +814,7 @@
 
     async function carregarRecebimentos() {
       try {
-        recebimentos = await api("recebimentos?select=*&order=created_at.desc");
+        recebimentos = await api("recebimentos?select=*&order=id.desc");
       } catch (e) {
         console.warn("Recebimentos não carregados:", e.message);
         recebimentos = [];
@@ -766,15 +877,21 @@
       throw new Error("Usuário ou senha inválidos.");
     }
 
-    function encontrarSetor(login) {
-      const valor = normalizarTexto(login);
+    function encontrarSetor(loginDigitado) {
+      const loginOriginal = String(loginDigitado || "").trim();
+      const login = normalizarTexto(loginOriginal);
 
       return setores.find((s) => {
+        const nome = normalizarTexto(s.nome);
+        const codigo = normalizarTexto(s.codigo);
+        const sigla = normalizarTexto(s.sigla);
+        const id = String(s.id || "").trim();
+
         return (
-          normalizarTexto(s.nome) === valor ||
-          normalizarTexto(s.codigo || "") === valor ||
-          normalizarTexto(s.sigla || "") === valor ||
-          String(s.id || "") === String(login || "").trim()
+          nome === login ||
+          codigo === login ||
+          sigla === login ||
+          id === loginOriginal
         );
       });
     }
@@ -794,7 +911,10 @@
         throw new Error("Setor inválido.");
       }
 
-      if (String(setor.senha || "").trim() !== String(senha || "").trim()) {
+      const senhaBanco = String(setor.senha || "").trim();
+      const senhaDigitada = String(senha || "").trim();
+
+      if (senhaBanco !== senhaDigitada) {
         throw new Error("Senha inválida.");
       }
 
@@ -827,9 +947,42 @@
         body: {
           setor_id: Number(sessao.setor_id),
           congregacao_id: Number(congregacao_id),
-          modelo: modelo,
-          tamanho: tamanho,
-          quantidade: quantidade
+          modelo,
+          tamanho,
+          quantidade,
+          created_at: new Date().toISOString()
+        }
+      });
+    }
+
+    async function salvarPedidoAdmin() {
+      const setor_id = el("pedidoAdminSetor")?.value;
+      const congregacao_id = el("pedidoAdminCongregacao")?.value;
+      const modelo = el("pedidoAdminModelo")?.value;
+      const tamanho = el("pedidoAdminTamanho")?.value;
+      const quantidade = Number(el("pedidoAdminQuantidade")?.value || 0);
+
+      if (!setor_id) {
+        throw new Error("Selecione o setor.");
+      }
+
+      if (!congregacao_id) {
+        throw new Error("Selecione a congregação.");
+      }
+
+      if (!quantidade || quantidade <= 0) {
+        throw new Error("Quantidade inválida.");
+      }
+
+      await api("pedidos", {
+        method: "POST",
+        body: {
+          setor_id: Number(setor_id),
+          congregacao_id: Number(congregacao_id),
+          modelo,
+          tamanho,
+          quantidade,
+          created_at: new Date().toISOString()
         }
       });
     }
@@ -851,8 +1004,9 @@
         method: "POST",
         body: {
           setor_id: Number(setor_id),
-          valor: valor,
-          observacao: observacao
+          valor,
+          observacao,
+          created_at: new Date().toISOString()
         }
       });
     }
@@ -875,18 +1029,43 @@
         .join("");
     }
 
-    function popularSelectSetoresAdmin() {
-      const select = el("recebimentoSetor");
+    function popularSelectCongregacoesAdmin() {
+      const select = el("pedidoAdminCongregacao");
+      const setorId = el("pedidoAdminSetor")?.value;
+
       if (!select) return;
 
-      if (!setores.length) {
-        select.innerHTML = `<option value="">Nenhum setor encontrado</option>`;
+      const lista = congregacoes
+        .filter(c => !setorId || String(c.setor_id) === String(setorId))
+        .sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"));
+
+      if (!lista.length) {
+        select.innerHTML = `<option value="">Nenhuma congregação encontrada</option>`;
         return;
       }
 
-      select.innerHTML = setores
-        .map(s => `<option value="${s.id}">${s.nome}</option>`)
+      select.innerHTML = lista
+        .map(c => `<option value="${c.id}">${c.nome}</option>`)
         .join("");
+    }
+
+    function popularSelectSetoresAdmin() {
+      const selectRecebimento = el("recebimentoSetor");
+      const selectPedidoAdmin = el("pedidoAdminSetor");
+
+      const options = setores.length
+        ? setores.map(s => `<option value="${s.id}">${s.nome}</option>`).join("")
+        : `<option value="">Nenhum setor encontrado</option>`;
+
+      if (selectRecebimento) {
+        selectRecebimento.innerHTML = options;
+      }
+
+      if (selectPedidoAdmin) {
+        selectPedidoAdmin.innerHTML = options;
+      }
+
+      popularSelectCongregacoesAdmin();
     }
 
     function renderCongregacoesSetor() {
@@ -931,7 +1110,7 @@
 
       tbody.innerHTML = lista.map(p => `
         <tr>
-          <td>${formatarDataHora(p.created_at)}</td>
+          <td>${formatarDataHora(p.created_at || p.data || p.createdAt)}</td>
           <td>${nomeCongregacaoPorId(p.congregacao_id)}</td>
           <td>${p.modelo || "-"}</td>
           <td>${p.tamanho || "-"}</td>
@@ -951,10 +1130,10 @@
 
       tbody.innerHTML = recebimentos.map(r => `
         <tr>
-          <td>${formatarDataHora(r.created_at)}</td>
+          <td>${formatarDataHora(r.created_at || r.data || r.data_recebimento)}</td>
           <td>${nomeSetorPorId(r.setor_id)}</td>
           <td>${moeda(r.valor)}</td>
-          <td>${r.observacao || "-"}</td>
+          <td>${r.observacao || r.obs || "-"}</td>
         </tr>
       `).join("");
     }
@@ -972,7 +1151,36 @@
         return;
       }
 
-      tbody.innerHTML = faltantes.map(c => `
+      tbody.innerHTML = faltantes
+        .sort((a, b) => {
+          const setorA = nomeSetorPorId(a.setor_id);
+          const setorB = nomeSetorPorId(b.setor_id);
+          return `${setorA} ${a.nome}`.localeCompare(`${setorB} ${b.nome}`, "pt-BR");
+        })
+        .map(c => `
+          <tr>
+            <td>${nomeSetorPorId(c.setor_id)}</td>
+            <td>${c.nome}</td>
+          </tr>
+        `).join("");
+    }
+
+    function renderMapaSetoresCongregacoes() {
+      const tbody = el("tbodyMapaSetoresCongregacoes");
+      if (!tbody || sessao?.tipo !== "admin") return;
+
+      if (!congregacoes.length) {
+        tbody.innerHTML = `<tr><td colspan="2">Nenhuma congregação cadastrada.</td></tr>`;
+        return;
+      }
+
+      const lista = [...congregacoes].sort((a, b) => {
+        const setorA = nomeSetorPorId(a.setor_id);
+        const setorB = nomeSetorPorId(b.setor_id);
+        return `${setorA} ${a.nome}`.localeCompare(`${setorB} ${b.nome}`, "pt-BR");
+      });
+
+      tbody.innerHTML = lista.map(c => `
         <tr>
           <td>${nomeSetorPorId(c.setor_id)}</td>
           <td>${c.nome}</td>
@@ -991,6 +1199,7 @@
         popularSelectSetoresAdmin();
         renderRecebimentosAdmin();
         renderFaltantesAdmin();
+        renderMapaSetoresCongregacoes();
       }
     }
 
@@ -1028,7 +1237,7 @@
         preencherTexto("statAdminPedidos", pedidos.length);
         preencherTexto(
           "infoAdminDetalhes",
-          `Campanha: ${campanhaAtual?.nome || "Não definida"} • Setores: ${setores.length} • Congregações: ${congregacoes.length} • Pedidos: ${pedidos.length}`
+          `Campanha: ${campanhaAtual?.nome || "Não definida"} • Setores: ${setores.length} • Congregações: ${congregacoes.length} • Pedidos: ${pedidos.length} • Recebido: ${moeda(recebido)}`
         );
       }
 
@@ -1107,6 +1316,24 @@
         } catch (err) {
           alert(err.message || "Erro ao salvar pedido.");
         }
+      });
+
+      el("formPedidoAdmin")?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        try {
+          await salvarPedidoAdmin();
+          await recarregarTudo();
+          renderTela();
+          el("pedidoAdminQuantidade").value = 1;
+          alert("Pedido do admin salvo com sucesso.");
+        } catch (err) {
+          alert(err.message || "Erro ao salvar pedido do admin.");
+        }
+      });
+
+      el("pedidoAdminSetor")?.addEventListener("change", () => {
+        popularSelectCongregacoesAdmin();
       });
 
       el("formRecebimentoAdmin")?.addEventListener("submit", async (e) => {
