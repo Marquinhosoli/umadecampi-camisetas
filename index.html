@@ -609,20 +609,11 @@
     el("btnLogoutSetor")?.addEventListener("click", logout);
   }
 
-  document.addEventListener("DOMContentLoaded", async () => {
-    bindEventos();
-    renderTela();
-
-    try {
-      await recarregarTudo();
-      renderTela();
-      console.log("Supabase conectado com sucesso.");
     } catch (e) {
       console.error("Falha ao carregar dados:", e);
       renderTela();
     }
   });
-</script>
   </script>
 </body>
 </html>
