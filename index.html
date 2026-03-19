@@ -156,11 +156,6 @@
       background:#fff;
     }
 
-    textarea{
-      min-height:90px;
-      resize:vertical;
-    }
-
     button{
       cursor:pointer;
       font-weight:700;
@@ -269,14 +264,6 @@
       color:#334155;
     }
 
-    .empty-state{
-      padding:16px;
-      border:1px dashed var(--border);
-      border-radius:14px;
-      color:var(--muted);
-      background:#fff;
-    }
-
     .pill-success,
     .pill-warning{
       display:inline-block;
@@ -329,6 +316,7 @@
       .stats{
         grid-template-columns:repeat(3,minmax(0,1fr));
       }
+
       .grid-3{
         grid-template-columns:1fr;
       }
@@ -381,17 +369,17 @@
             <h3 class="section-title">Login do Setor</h3>
             <form id="formLoginSetor">
               <div class="field">
-                <label for="loginSetor">Login do setor</label>
-                <input id="loginSetor" type="text" placeholder="Nome, código, sigla ou ID do setor" />
+                <label for="loginSetor">Login</label>
+                <input id="loginSetor" type="text" placeholder="Ex.: setor05" />
               </div>
 
               <div class="field">
                 <label for="senhaSetor">Senha</label>
-                <input id="senhaSetor" type="password" placeholder="Digite a senha do setor" />
+                <input id="senhaSetor" type="password" placeholder="Digite a senha" />
               </div>
 
               <button class="btn-primary" type="submit">Entrar como setor</button>
-              <div class="notice">Aceita nome, código, sigla ou ID do setor.</div>
+              <div class="notice">Use o login da tabela <strong>usuarios</strong>.</div>
             </form>
           </div>
 
@@ -400,12 +388,12 @@
             <form id="formLoginAdmin">
               <div class="field">
                 <label for="loginAdmin">Usuário</label>
-                <input id="loginAdmin" type="text" placeholder="Usuário admin" />
+                <input id="loginAdmin" type="text" placeholder="admin" />
               </div>
 
               <div class="field">
                 <label for="senhaAdmin">Senha</label>
-                <input id="senhaAdmin" type="password" placeholder="Senha do administrador" />
+                <input id="senhaAdmin" type="password" placeholder="Digite a senha" />
               </div>
 
               <button class="btn-primary" type="submit">Entrar como administrador</button>
@@ -678,22 +666,16 @@
     const SESSION_KEY = "umadecampi_sessao_supabase_v1";
 
     const CONFIG = {
-      valorUnitarioCamiseta: 45,
-      adminUsuario: "admin",
-      adminSenha: "123456"
+      valorUnitarioCamiseta: 45
     };
 
     let sessao = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
+    let usuarios = [];
     let setores = [];
     let congregacoes = [];
     let pedidos = [];
     let recebimentos = [];
-    let campanhaAtual = {
-      nome: "Campanha Atual",
-      inicio_pedidos: null,
-      fim_pedidos: null,
-      ativo: true
-    };
+    let campanhaAtual = null;
 
     const el = (id) => document.getElementById(id);
 
@@ -709,7 +691,6 @@
     function mostrar(id, exibir = true) {
       const node = el(id);
       if (!node) return;
-
       if (exibir) {
         node.classList.remove("hidden");
         node.style.display = "";
@@ -734,14 +715,14 @@
     function dataBr(valor) {
       if (!valor) return "-";
       const d = new Date(valor);
-      if (Number.isNaN(d.getTime())) return valor;
+      if (Number.isNaN(d.getTime())) return String(valor);
       return d.toLocaleDateString("pt-BR");
     }
 
     function formatarDataHora(valor) {
       if (!valor) return "-";
       const d = new Date(valor);
-      if (Number.isNaN(d.getTime())) return valor;
+      if (Number.isNaN(d.getTime())) return String(valor);
       return d.toLocaleString("pt-BR");
     }
 
@@ -777,17 +758,25 @@
     async function carregarCampanha() {
       try {
         const lista = await api("campanhas?select=*&ativo=eq.true&order=id.desc&limit=1");
-        if (Array.isArray(lista) && lista.length) {
-          campanhaAtual = lista[0];
-        }
+        campanhaAtual = Array.isArray(lista) && lista.length ? lista[0] : null;
       } catch (e) {
         console.warn("Campanha não carregada:", e.message);
+        campanhaAtual = null;
+      }
+    }
+
+    async function carregarUsuarios() {
+      try {
+        usuarios = await api("usuarios?select=*&order=nome.asc");
+      } catch (e) {
+        console.warn("Usuários não carregados:", e.message);
+        usuarios = [];
       }
     }
 
     async function carregarSetores() {
       try {
-        setores = await api("setores?select=*&order=nome.asc");
+        setores = await api("setores?select=*&order=numero.asc");
       } catch (e) {
         console.warn("Setores não carregados:", e.message);
         setores = [];
@@ -805,7 +794,7 @@
 
     async function carregarPedidos() {
       try {
-        pedidos = await api("pedidos?select=*&order=id.desc");
+        pedidos = await api("pedidos?select=*&order=data.desc");
       } catch (e) {
         console.warn("Pedidos não carregados:", e.message);
         pedidos = [];
@@ -814,7 +803,7 @@
 
     async function carregarRecebimentos() {
       try {
-        recebimentos = await api("recebimentos?select=*&order=id.desc");
+        recebimentos = await api("recebimentos?select=*&order=data_registro.desc");
       } catch (e) {
         console.warn("Recebimentos não carregados:", e.message);
         recebimentos = [];
@@ -824,19 +813,12 @@
     async function recarregarTudo() {
       await Promise.all([
         carregarCampanha(),
+        carregarUsuarios(),
         carregarSetores(),
         carregarCongregacoes(),
         carregarPedidos(),
         carregarRecebimentos()
       ]);
-    }
-
-    function totalPecas(lista = pedidos) {
-      return lista.reduce((acc, p) => acc + Number(p.quantidade || 0), 0);
-    }
-
-    function totalRecebido(lista = recebimentos) {
-      return lista.reduce((acc, r) => acc + Number(r.valor || 0), 0);
     }
 
     function prazoPedidosAberto() {
@@ -850,82 +832,161 @@
       return agora >= inicio && agora <= fim;
     }
 
-    function nomeCongregacaoPorId(id) {
-      const item = congregacoes.find(c => String(c.id) === String(id));
-      return item ? item.nome : "-";
-    }
-
     function nomeSetorPorId(id) {
       const item = setores.find(s => String(s.id) === String(id));
       return item ? item.nome : "-";
     }
 
-    function fazerLoginAdmin(usuario, senha) {
-      if (
-        String(usuario || "").trim() === CONFIG.adminUsuario &&
-        String(senha || "").trim() === CONFIG.adminSenha
-      ) {
-        sessao = {
-          tipo: "admin",
-          nome: "Administrador",
-          login_em: new Date().toISOString()
-        };
-        salvarSessao();
-        return;
-      }
-
-      throw new Error("Usuário ou senha inválidos.");
+    function numeroSetorPorId(id) {
+      const item = setores.find(s => String(s.id) === String(id));
+      return item ? item.numero : "-";
     }
 
-    function encontrarSetor(loginDigitado) {
-      const loginOriginal = String(loginDigitado || "").trim();
-      const login = normalizarTexto(loginOriginal);
-
-      return setores.find((s) => {
-        const nome = normalizarTexto(s.nome);
-        const codigo = normalizarTexto(s.codigo);
-        const sigla = normalizarTexto(s.sigla);
-        const id = String(s.id || "").trim();
-
-        return (
-          nome === login ||
-          codigo === login ||
-          sigla === login ||
-          id === loginOriginal
-        );
-      });
+    function nomeCongregacaoPorId(id) {
+      const item = congregacoes.find(c => String(c.id) === String(id));
+      return item ? item.nome : "-";
     }
 
-    async function fazerLoginSetor(login, senha) {
-      if (!login || !senha) {
-        throw new Error("Informe login e senha.");
-      }
+    function totalPecas(lista = pedidos) {
+      return lista.reduce((acc, p) => acc + Number(p.quantidade || 0), 0);
+    }
 
-      if (!setores.length) {
-        await carregarSetores();
-      }
+    function totalRecebido(lista = recebimentos) {
+      return lista.reduce((acc, r) => acc + Number(r.valor || 0), 0);
+    }
 
-      const setor = encontrarSetor(login);
-
-      if (!setor) {
-        throw new Error("Setor inválido.");
-      }
-
-      const senhaBanco = String(setor.senha || "").trim();
+    function buscarUsuarioPorLoginESenha(login, senha, tipo) {
+      const loginNormalizado = normalizarTexto(login);
       const senhaDigitada = String(senha || "").trim();
 
-      if (senhaBanco !== senhaDigitada) {
-        throw new Error("Senha inválida.");
+      return usuarios.find(u =>
+        normalizarTexto(u.login) === loginNormalizado &&
+        String(u.senha || "").trim() === senhaDigitada &&
+        normalizarTexto(u.tipo) === normalizarTexto(tipo)
+      );
+    }
+
+    function fazerLoginAdmin(login, senha) {
+      const usuario = buscarUsuarioPorLoginESenha(login, senha, "admin");
+
+      if (!usuario) {
+        throw new Error("Usuário ou senha inválidos.");
       }
 
       sessao = {
-        tipo: "setor",
-        setor_id: setor.id,
-        setor_nome: setor.nome,
+        tipo: "admin",
+        usuario_id: usuario.id,
+        usuario_nome: usuario.nome,
         login_em: new Date().toISOString()
       };
 
       salvarSessao();
+    }
+
+    function fazerLoginSetor(login, senha) {
+      const usuario = buscarUsuarioPorLoginESenha(login, senha, "setor");
+
+      if (!usuario) {
+        throw new Error("Login ou senha do setor inválidos.");
+      }
+
+      if (!usuario.setor_id) {
+        throw new Error("Usuário do setor sem setor vinculado.");
+      }
+
+      const setor = setores.find(s => String(s.id) === String(usuario.setor_id));
+
+      if (!setor) {
+        throw new Error("Setor do usuário não encontrado.");
+      }
+
+      sessao = {
+        tipo: "setor",
+        usuario_id: usuario.id,
+        usuario_nome: usuario.nome,
+        setor_id: usuario.setor_id,
+        setor_nome: setor.nome,
+        setor_numero: setor.numero,
+        login_em: new Date().toISOString()
+      };
+
+      salvarSessao();
+    }
+
+    function popularSelectCongregacoesSetor() {
+      const select = el("pedidoCongregacao");
+      if (!select || sessao?.tipo !== "setor") return;
+
+      const lista = congregacoes
+        .filter(c => String(c.setor_id) === String(sessao.setor_id))
+        .sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"));
+
+      if (!lista.length) {
+        select.innerHTML = `<option value="">Nenhuma congregação encontrada</option>`;
+        return;
+      }
+
+      select.innerHTML = lista.map(c => `<option value="${c.id}">${c.nome}</option>`).join("");
+    }
+
+    function popularSelectSetoresAdmin() {
+      const selectRecebimento = el("recebimentoSetor");
+      const selectPedidoAdmin = el("pedidoAdminSetor");
+
+      const options = setores.length
+        ? setores
+            .sort((a, b) => Number(a.numero || 0) - Number(b.numero || 0))
+            .map(s => `<option value="${s.id}">${String(s.numero).padStart(2, "0")} - ${s.nome}</option>`)
+            .join("")
+        : `<option value="">Nenhum setor encontrado</option>`;
+
+      if (selectRecebimento) {
+        selectRecebimento.innerHTML = options;
+      }
+
+      if (selectPedidoAdmin) {
+        selectPedidoAdmin.innerHTML = options;
+      }
+
+      popularSelectCongregacoesAdmin();
+    }
+
+    function popularSelectCongregacoesAdmin() {
+      const select = el("pedidoAdminCongregacao");
+      const setorId = el("pedidoAdminSetor")?.value;
+
+      if (!select) return;
+
+      const lista = congregacoes
+        .filter(c => !setorId || String(c.setor_id) === String(setorId))
+        .sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"));
+
+      if (!lista.length) {
+        select.innerHTML = `<option value="">Nenhuma congregação encontrada</option>`;
+        return;
+      }
+
+      select.innerHTML = lista.map(c => `<option value="${c.id}">${c.nome}</option>`).join("");
+    }
+
+    async function salvarPedido(payload) {
+      if (!campanhaAtual?.id) {
+        throw new Error("Não há campanha ativa cadastrada.");
+      }
+
+      await api("pedidos", {
+        method: "POST",
+        body: {
+          campanha_id: campanhaAtual.id,
+          setor_id: payload.setor_id,
+          congregacao_id: payload.congregacao_id,
+          usuario_id: payload.usuario_id,
+          data: new Date().toISOString(),
+          modelo: payload.modelo,
+          tamanho: payload.tamanho,
+          quantidade: payload.quantidade
+        }
+      });
     }
 
     async function salvarPedidoSetor() {
@@ -942,16 +1003,13 @@
         throw new Error("Quantidade inválida.");
       }
 
-      await api("pedidos", {
-        method: "POST",
-        body: {
-          setor_id: Number(sessao.setor_id),
-          congregacao_id: Number(congregacao_id),
-          modelo,
-          tamanho,
-          quantidade,
-          created_at: new Date().toISOString()
-        }
+      await salvarPedido({
+        setor_id: sessao.setor_id,
+        congregacao_id,
+        usuario_id: sessao.usuario_id,
+        modelo,
+        tamanho,
+        quantidade
       });
     }
 
@@ -974,16 +1032,13 @@
         throw new Error("Quantidade inválida.");
       }
 
-      await api("pedidos", {
-        method: "POST",
-        body: {
-          setor_id: Number(setor_id),
-          congregacao_id: Number(congregacao_id),
-          modelo,
-          tamanho,
-          quantidade,
-          created_at: new Date().toISOString()
-        }
+      await salvarPedido({
+        setor_id,
+        congregacao_id,
+        usuario_id: sessao.usuario_id,
+        modelo,
+        tamanho,
+        quantidade
       });
     }
 
@@ -1003,78 +1058,20 @@
       await api("recebimentos", {
         method: "POST",
         body: {
-          setor_id: Number(setor_id),
+          setor_id,
           valor,
-          observacao,
-          created_at: new Date().toISOString()
+          data_recebimento: new Date().toISOString().slice(0, 10),
+          observacao: observacao || "Lançamento manual",
+          usuario_id: sessao.usuario_id
         }
       });
-    }
-
-    function popularSelectCongregacoesSetor() {
-      const select = el("pedidoCongregacao");
-      if (!select || sessao?.tipo !== "setor") return;
-
-      const lista = congregacoes
-        .filter(c => String(c.setor_id) === String(sessao.setor_id))
-        .sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"));
-
-      if (!lista.length) {
-        select.innerHTML = `<option value="">Nenhuma congregação encontrada</option>`;
-        return;
-      }
-
-      select.innerHTML = lista
-        .map(c => `<option value="${c.id}">${c.nome}</option>`)
-        .join("");
-    }
-
-    function popularSelectCongregacoesAdmin() {
-      const select = el("pedidoAdminCongregacao");
-      const setorId = el("pedidoAdminSetor")?.value;
-
-      if (!select) return;
-
-      const lista = congregacoes
-        .filter(c => !setorId || String(c.setor_id) === String(setorId))
-        .sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"));
-
-      if (!lista.length) {
-        select.innerHTML = `<option value="">Nenhuma congregação encontrada</option>`;
-        return;
-      }
-
-      select.innerHTML = lista
-        .map(c => `<option value="${c.id}">${c.nome}</option>`)
-        .join("");
-    }
-
-    function popularSelectSetoresAdmin() {
-      const selectRecebimento = el("recebimentoSetor");
-      const selectPedidoAdmin = el("pedidoAdminSetor");
-
-      const options = setores.length
-        ? setores.map(s => `<option value="${s.id}">${s.nome}</option>`).join("")
-        : `<option value="">Nenhum setor encontrado</option>`;
-
-      if (selectRecebimento) {
-        selectRecebimento.innerHTML = options;
-      }
-
-      if (selectPedidoAdmin) {
-        selectPedidoAdmin.innerHTML = options;
-      }
-
-      popularSelectCongregacoesAdmin();
     }
 
     function renderCongregacoesSetor() {
       const tbody = el("tbodyCongregacoesSetor");
       if (!tbody || sessao?.tipo !== "setor") return;
 
-      const lista = congregacoes.filter(
-        c => String(c.setor_id) === String(sessao.setor_id)
-      );
+      const lista = congregacoes.filter(c => String(c.setor_id) === String(sessao.setor_id));
 
       if (!lista.length) {
         tbody.innerHTML = `<tr><td colspan="2">Nenhuma congregação cadastrada.</td></tr>`;
@@ -1082,10 +1079,7 @@
       }
 
       tbody.innerHTML = lista.map(c => {
-        const temPedido = pedidos.some(
-          p => String(p.congregacao_id) === String(c.id)
-        );
-
+        const temPedido = pedidos.some(p => String(p.congregacao_id) === String(c.id));
         return `
           <tr>
             <td>${c.nome}</td>
@@ -1099,9 +1093,7 @@
       const tbody = el("tbodyPedidosSetor");
       if (!tbody || sessao?.tipo !== "setor") return;
 
-      const lista = pedidos.filter(
-        p => String(p.setor_id) === String(sessao.setor_id)
-      );
+      const lista = pedidos.filter(p => String(p.setor_id) === String(sessao.setor_id));
 
       if (!lista.length) {
         tbody.innerHTML = `<tr><td colspan="5">Nenhum pedido lançado.</td></tr>`;
@@ -1110,7 +1102,7 @@
 
       tbody.innerHTML = lista.map(p => `
         <tr>
-          <td>${formatarDataHora(p.created_at || p.data || p.createdAt)}</td>
+          <td>${formatarDataHora(p.data)}</td>
           <td>${nomeCongregacaoPorId(p.congregacao_id)}</td>
           <td>${p.modelo || "-"}</td>
           <td>${p.tamanho || "-"}</td>
@@ -1130,10 +1122,10 @@
 
       tbody.innerHTML = recebimentos.map(r => `
         <tr>
-          <td>${formatarDataHora(r.created_at || r.data || r.data_recebimento)}</td>
+          <td>${formatarDataHora(r.data_registro || r.data_recebimento)}</td>
           <td>${nomeSetorPorId(r.setor_id)}</td>
           <td>${moeda(r.valor)}</td>
-          <td>${r.observacao || r.obs || "-"}</td>
+          <td>${r.observacao || "-"}</td>
         </tr>
       `).join("");
     }
@@ -1142,9 +1134,7 @@
       const tbody = el("tbodyFaltantesAdmin");
       if (!tbody || sessao?.tipo !== "admin") return;
 
-      const faltantes = congregacoes.filter(c => {
-        return !pedidos.some(p => String(p.congregacao_id) === String(c.id));
-      });
+      const faltantes = congregacoes.filter(c => !pedidos.some(p => String(p.congregacao_id) === String(c.id)));
 
       if (!faltantes.length) {
         tbody.innerHTML = `<tr><td colspan="2">Todas as congregações já fizeram pedido.</td></tr>`;
@@ -1152,14 +1142,10 @@
       }
 
       tbody.innerHTML = faltantes
-        .sort((a, b) => {
-          const setorA = nomeSetorPorId(a.setor_id);
-          const setorB = nomeSetorPorId(b.setor_id);
-          return `${setorA} ${a.nome}`.localeCompare(`${setorB} ${b.nome}`, "pt-BR");
-        })
+        .sort((a, b) => `${numeroSetorPorId(a.setor_id)} ${a.nome}`.localeCompare(`${numeroSetorPorId(b.setor_id)} ${b.nome}`, "pt-BR"))
         .map(c => `
           <tr>
-            <td>${nomeSetorPorId(c.setor_id)}</td>
+            <td>${String(numeroSetorPorId(c.setor_id)).padStart(2, "0")} - ${nomeSetorPorId(c.setor_id)}</td>
             <td>${c.nome}</td>
           </tr>
         `).join("");
@@ -1174,15 +1160,11 @@
         return;
       }
 
-      const lista = [...congregacoes].sort((a, b) => {
-        const setorA = nomeSetorPorId(a.setor_id);
-        const setorB = nomeSetorPorId(b.setor_id);
-        return `${setorA} ${a.nome}`.localeCompare(`${setorB} ${b.nome}`, "pt-BR");
-      });
+      const lista = [...congregacoes].sort((a, b) => `${numeroSetorPorId(a.setor_id)} ${a.nome}`.localeCompare(`${numeroSetorPorId(b.setor_id)} ${b.nome}`, "pt-BR"));
 
       tbody.innerHTML = lista.map(c => `
         <tr>
-          <td>${nomeSetorPorId(c.setor_id)}</td>
+          <td>${String(numeroSetorPorId(c.setor_id)).padStart(2, "0")} - ${nomeSetorPorId(c.setor_id)}</td>
           <td>${c.nome}</td>
         </tr>
       `).join("");
@@ -1213,7 +1195,7 @@
         "periodoCampanha",
         campanhaAtual?.inicio_pedidos && campanhaAtual?.fim_pedidos
           ? `${dataBr(campanhaAtual.inicio_pedidos)} até ${dataBr(campanhaAtual.fim_pedidos)}`
-          : "Sistema carregado"
+          : "Sem período definido"
       );
 
       preencherTexto("statSetores", setores.length);
@@ -1242,22 +1224,15 @@
       }
 
       if (sessao?.tipo === "setor") {
-        preencherTexto("tituloPainelSetor", sessao.setor_nome || "Setor");
-
-        const pedidosSetor = pedidos.filter(
-          p => String(p.setor_id) === String(sessao.setor_id)
-        );
-        const congregacoesSetor = congregacoes.filter(
-          c => String(c.setor_id) === String(sessao.setor_id)
-        );
-        const recebimentosSetor = recebimentos.filter(
-          r => String(r.setor_id) === String(sessao.setor_id)
-        );
+        const pedidosSetor = pedidos.filter(p => String(p.setor_id) === String(sessao.setor_id));
+        const congregacoesSetor = congregacoes.filter(c => String(c.setor_id) === String(sessao.setor_id));
+        const recebimentosSetor = recebimentos.filter(r => String(r.setor_id) === String(sessao.setor_id));
 
         const pecas = pedidosSetor.reduce((acc, p) => acc + Number(p.quantidade || 0), 0);
         const total = pecas * CONFIG.valorUnitarioCamiseta;
         const recebido = recebimentosSetor.reduce((acc, r) => acc + Number(r.valor || 0), 0);
 
+        preencherTexto("tituloPainelSetor", `Setor ${String(sessao.setor_numero || "").padStart(2, "0")} - ${sessao.setor_nome}`);
         preencherTexto("statSetorCongregacoes", congregacoesSetor.length);
         preencherTexto("statSetorPecas", pecas);
         preencherTexto("statSetorTotal", moeda(total));
@@ -1280,7 +1255,6 @@
     function bindEventos() {
       el("formLoginAdmin")?.addEventListener("submit", async (e) => {
         e.preventDefault();
-
         try {
           fazerLoginAdmin(el("loginAdmin").value, el("senhaAdmin").value);
           await recarregarTudo();
@@ -1293,9 +1267,8 @@
 
       el("formLoginSetor")?.addEventListener("submit", async (e) => {
         e.preventDefault();
-
         try {
-          await fazerLoginSetor(el("loginSetor").value, el("senhaSetor").value);
+          fazerLoginSetor(el("loginSetor").value, el("senhaSetor").value);
           await recarregarTudo();
           renderTela();
           alert("Login setor funcionando.");
@@ -1306,7 +1279,6 @@
 
       el("formPedidoSetor")?.addEventListener("submit", async (e) => {
         e.preventDefault();
-
         try {
           await salvarPedidoSetor();
           await recarregarTudo();
@@ -1320,7 +1292,6 @@
 
       el("formPedidoAdmin")?.addEventListener("submit", async (e) => {
         e.preventDefault();
-
         try {
           await salvarPedidoAdmin();
           await recarregarTudo();
@@ -1338,7 +1309,6 @@
 
       el("formRecebimentoAdmin")?.addEventListener("submit", async (e) => {
         e.preventDefault();
-
         try {
           await salvarRecebimentoAdmin();
           await recarregarTudo();
