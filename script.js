@@ -292,7 +292,6 @@ function preencherSetoresFinanceiro() {
     select.value = valorAtual;
   }
 }
-
 function selecionarTodosSetoresAdmin() {
   const select = el("filtroSetoresAdmin");
   if (!select) return;
@@ -1086,21 +1085,13 @@ async function registrarRecebimento(event) {
       return;
     }
 
-    const setorIdTexto = String(selectSetor.value || "").trim();
+    const setorId = String(selectSetor.value || "").trim();
     const valorTexto = String(inputValor?.value || "").trim();
     const dataRecebimento = String(inputData?.value || "").trim();
     const observacao = String(inputObs?.value || "").trim();
 
-    if (!setorIdTexto) {
+    if (!setorId) {
       alert("Selecione o setor.");
-      selectSetor.focus();
-      return;
-    }
-
-    const setorId = Number(setorIdTexto);
-
-    if (!Number.isFinite(setorId) || setorId <= 0) {
-      alert("Setor inválido.");
       selectSetor.focus();
       return;
     }
@@ -1133,6 +1124,8 @@ async function registrarRecebimento(event) {
       data_registro: new Date().toISOString(),
     };
 
+    console.log("Payload recebimento:", payload);
+
     const response = await fetch(`${SUPABASE_URL}/rest/v1/recebimentos`, {
       method: "POST",
       headers: {
@@ -1145,6 +1138,7 @@ async function registrarRecebimento(event) {
     });
 
     const texto = await response.text();
+    console.log("Resposta recebimentos:", response.status, texto);
 
     if (!response.ok) {
       alert("Erro ao registrar: " + texto);
