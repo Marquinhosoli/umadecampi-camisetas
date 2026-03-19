@@ -1118,7 +1118,6 @@ async function registrarRecebimento(event) {
     }
 
     const payload = {
-      campanha_id: campanhaAtual?.id ?? null,
       setor_id: setorId,
       valor: valor,
       data_recebimento: dataRecebimento,
