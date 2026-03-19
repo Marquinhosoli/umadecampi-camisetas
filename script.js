@@ -206,6 +206,57 @@ async function carregarPedidos() {
 }
 
 async function carregarRecebimentos() {
+  // SALVAR PEDIDO DO SETOR
+async function salvarPedidoSetor() {
+  const congregacao_id = el("pedidoCongregacao").value;
+  const modelo = el("pedidoModelo").value;
+  const tamanho = el("pedidoTamanho").value;
+  const quantidade = Number(el("pedidoQuantidade").value);
+
+  if (!congregacao_id) {
+    throw new Error("Selecione a congregação.");
+  }
+
+  if (!quantidade || quantidade <= 0) {
+    throw new Error("Quantidade inválida.");
+  }
+
+  await api("pedidos", {
+    method: "POST",
+    body: {
+      setor_id: sessao.setor_id,
+      congregacao_id: Number(congregacao_id),
+      modelo: modelo,
+      tamanho: tamanho,
+      quantidade: quantidade
+    }
+  });
+}
+
+
+// SALVAR RECEBIMENTO (ADMIN)
+async function salvarRecebimentoAdmin() {
+  const setor_id = el("recebimentoSetor").value;
+  const valor = Number(el("recebimentoValor").value);
+  const observacao = el("recebimentoObs").value;
+
+  if (!setor_id) {
+    throw new Error("Selecione o setor.");
+  }
+
+  if (!valor || valor <= 0) {
+    throw new Error("Valor inválido.");
+  }
+
+  await api("recebimentos", {
+    method: "POST",
+    body: {
+      setor_id: Number(setor_id),
+      valor: valor,
+      observacao: observacao
+    }
+  });
+}
   try {
     recebimentosCache = await api(`recebimentos?select=*&order=created_at.desc`);
   } catch (e) {
