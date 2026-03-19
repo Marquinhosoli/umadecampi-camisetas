@@ -1072,7 +1072,7 @@ async function atualizarStatusPedidosFiltrados(novoStatus) {
   }
 }
 
-async function registrarRecebimento(event) {
+aasync function registrarRecebimento(event) {
   try {
     if (event) event.preventDefault();
 
@@ -1090,9 +1090,6 @@ async function registrarRecebimento(event) {
     const valorTexto = String(inputValor?.value || "").trim();
     const dataRecebimento = String(inputData?.value || "").trim();
     const observacao = String(inputObs?.value || "").trim();
-
-    console.log("setor selecionado:", setorId);
-    console.log("tipo setor selecionado:", typeof setorId);
 
     if (!setorId) {
       alert("Selecione o setor.");
@@ -1120,24 +1117,37 @@ async function registrarRecebimento(event) {
       return;
     }
 
-   const campanhaId = campanhaAtual?.id || null;
-
     const payload = {
-  campanha_id: campanhaId,
-  setor_id: setorId,
-  valor: valor,
-  data_recebimento: dataRecebimento,
-  observacao: observacao,
-  usuario_id: sessao?.id || null,
-  data_registro: new Date().toISOString(),
-};
+      campanha_id: campanhaAtual?.id ?? null,
+      setor_id: setorId,
+      valor: valor,
+      data_recebimento: dataRecebimento,
+      observacao: observacao,
+      usuario_id: sessao?.id ?? null,
+      data_registro: new Date().toISOString(),
+    };
 
-    console.log("payload recebimento:", payload);
+    console.log("Payload enviado para recebimentos:", payload);
 
-    await api("recebimentos", {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/recebimentos`, {
       method: "POST",
-      body: payload,
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=representation",
+      },
+      body: JSON.stringify(payload),
     });
+
+    const texto = await response.text();
+    console.log("Resposta recebimentos status:", response.status);
+    console.log("Resposta recebimentos body:", texto);
+
+    if (!response.ok) {
+      alert(`Erro ao registrar: ${texto}`);
+      return;
+    }
 
     alert("Recebimento registrado com sucesso.");
 
@@ -1149,7 +1159,7 @@ async function registrarRecebimento(event) {
     renderAdmin();
   } catch (erro) {
     console.error("Erro ao registrar recebimento:", erro);
-    alert("Não foi possível registrar o recebimento.");
+    alert(`Não foi possível registrar o recebimento. ${erro.message || erro}`);
   }
 }
 function renderSetor() {
