@@ -318,6 +318,311 @@
       renderTela();
       console.log("UMADECAMPI carregado com sucesso");
     });
+    <script>
+  const SUPABASE_URL = "https://dqwlhouwoxbwxkcaytja.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_b_tuFrU9PhG3VKYLupMVhg_pWPF6Spj";
+  const SESSION_KEY = "umadecampi_sessao_supabase_v1";
+
+  const CONFIG = {
+    valorUnitarioCamiseta: 45,
+    adminUsuario: "admin",
+    adminSenha: "123456",
+  };
+
+  let sessao = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
+  let setores = [];
+  let congregacoes = [];
+  let pedidos = [];
+  let recebimentos = [];
+  let campanhaAtual = {
+    nome: "Campanha Atual",
+    inicio_pedidos: null,
+    fim_pedidos: null,
+    ativo: true,
+  };
+
+  const el = (id) => document.getElementById(id);
+
+  function salvarSessao() {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(sessao));
+  }
+
+  function limparSessao() {
+    sessao = null;
+    localStorage.removeItem(SESSION_KEY);
+  }
+
+  function mostrar(id, exibir = true) {
+    const node = el(id);
+    if (!node) return;
+    if (exibir) {
+      node.classList.remove("hidden");
+      node.style.display = "";
+    } else {
+      node.classList.add("hidden");
+      node.style.display = "none";
+    }
+  }
+
+  function preencherTexto(id, valor) {
+    const node = el(id);
+    if (node) node.textContent = valor;
+  }
+
+  function moeda(v) {
+    return Number(v || 0).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+  }
+
+  function dataBr(valor) {
+    if (!valor) return "-";
+    const d = new Date(valor);
+    if (Number.isNaN(d.getTime())) return valor;
+    return d.toLocaleDateString("pt-BR");
+  }
+
+  function normalizarTexto(txt) {
+    return String(txt || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toLowerCase();
+  }
+
+  async function api(path, options = {}) {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+      method: options.method || "GET",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: options.prefer || "return=representation",
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+
+    const text = await response.text();
+
+    if (!response.ok) {
+      throw new Error(text || "Erro na comunicação com Supabase.");
+    }
+
+    return text ? JSON.parse(text) : [];
+  }
+
+  async function carregarCampanha() {
+    try {
+      const lista = await api("campanhas?select=*&ativo=eq.true&order=id.desc&limit=1");
+      if (lista.length) {
+        campanhaAtual = lista[0];
+      }
+    } catch (e) {
+      console.warn("Campanha não carregada:", e.message);
+    }
+  }
+
+  async function carregarSetores() {
+    try {
+      setores = await api("setores?select=*&order=nome.asc");
+    } catch (e) {
+      console.warn("Setores não carregados:", e.message);
+      setores = [];
+    }
+  }
+
+  async function carregarCongregacoes() {
+    try {
+      congregacoes = await api("congregacoes?select=*&order=nome.asc");
+    } catch (e) {
+      console.warn("Congregações não carregadas:", e.message);
+      congregacoes = [];
+    }
+  }
+
+  async function carregarPedidos() {
+    try {
+      pedidos = await api("pedidos?select=*&order=created_at.desc");
+    } catch (e) {
+      console.warn("Pedidos não carregados:", e.message);
+      pedidos = [];
+    }
+  }
+
+  async function carregarRecebimentos() {
+    try {
+      recebimentos = await api("recebimentos?select=*&order=created_at.desc");
+    } catch (e) {
+      console.warn("Recebimentos não carregados:", e.message);
+      recebimentos = [];
+    }
+  }
+
+  async function recarregarTudo() {
+    await carregarCampanha();
+    await carregarSetores();
+    await carregarCongregacoes();
+    await carregarPedidos();
+    await carregarRecebimentos();
+  }
+
+  function fazerLoginAdmin(usuario, senha) {
+    if (
+      String(usuario || "").trim() === CONFIG.adminUsuario &&
+      String(senha || "").trim() === CONFIG.adminSenha
+    ) {
+      sessao = {
+        tipo: "admin",
+        nome: "Administrador",
+        login_em: new Date().toISOString(),
+      };
+      salvarSessao();
+      return;
+    }
+
+    throw new Error("Usuário ou senha inválidos.");
+  }
+
+  function encontrarSetor(login) {
+    const valor = normalizarTexto(login);
+    return setores.find((s) => {
+      return (
+        normalizarTexto(s.nome) === valor ||
+        normalizarTexto(s.codigo || "") === valor ||
+        normalizarTexto(s.sigla || "") === valor ||
+        String(s.id || "") === String(login || "").trim()
+      );
+    });
+  }
+
+  async function fazerLoginSetor(login, senha) {
+    if (!login || !senha) throw new Error("Informe login e senha.");
+
+    if (!setores.length) {
+      await carregarSetores();
+    }
+
+    const setor = encontrarSetor(login);
+
+    if (!setor) {
+      throw new Error("Setor inválido.");
+    }
+
+    if (String(setor.senha || "").trim() !== String(senha || "").trim()) {
+      throw new Error("Senha inválida.");
+    }
+
+    sessao = {
+      tipo: "setor",
+      setor_id: setor.id,
+      setor_nome: setor.nome,
+      login_em: new Date().toISOString(),
+    };
+
+    salvarSessao();
+  }
+
+  function logout() {
+    limparSessao();
+    renderTela();
+  }
+
+  function totalPecas() {
+    return pedidos.reduce((acc, p) => acc + Number(p.quantidade || 0), 0);
+  }
+
+  function totalRecebido() {
+    return recebimentos.reduce((acc, r) => acc + Number(r.valor || 0), 0);
+  }
+
+  function renderTela() {
+    mostrar("telaLogin", !sessao);
+    mostrar("painelSetor", sessao?.tipo === "setor");
+    mostrar("painelAdmin", sessao?.tipo === "admin");
+
+    preencherTexto("nomeCampanhaAtual", campanhaAtual?.nome || "Campanha Atual");
+    preencherTexto(
+      "periodoCampanha",
+      campanhaAtual?.inicio_pedidos && campanhaAtual?.fim_pedidos
+        ? `${dataBr(campanhaAtual.inicio_pedidos)} até ${dataBr(campanhaAtual.fim_pedidos)}`
+        : "Sistema carregado"
+    );
+
+    preencherTexto("statSetores", setores.length);
+    preencherTexto("statIgrejas", congregacoes.length);
+    preencherTexto("statPedidos", pedidos.length);
+    preencherTexto("statTopoCampanha", campanhaAtual?.ativo ? "Ativa" : "Inativa");
+    preencherTexto("statTopoPrazo", "Aberto");
+    preencherTexto("statTopoValor", moeda(CONFIG.valorUnitarioCamiseta));
+
+    if (sessao?.tipo === "admin") {
+      preencherTexto("statAdminPecas", totalPecas());
+      preencherTexto("statAdminTotal", moeda(totalPecas() * CONFIG.valorUnitarioCamiseta));
+      preencherTexto("statAdminRecebido", moeda(totalRecebido()));
+      preencherTexto("statAdminSetores", setores.length);
+      preencherTexto("statAdminIgrejas", congregacoes.length);
+      preencherTexto("statAdminPedidos", pedidos.length);
+    }
+
+    if (sessao?.tipo === "setor") {
+      preencherTexto("tituloPainelSetor", sessao.setor_nome || "Setor");
+      const pedidosSetor = pedidos.filter(p => String(p.setor_id) === String(sessao.setor_id));
+      const congregacoesSetor = congregacoes.filter(c => String(c.setor_id) === String(sessao.setor_id));
+      const recebimentosSetor = recebimentos.filter(r => String(r.setor_id) === String(sessao.setor_id));
+      const pecas = pedidosSetor.reduce((acc, p) => acc + Number(p.quantidade || 0), 0);
+      const total = pecas * CONFIG.valorUnitarioCamiseta;
+      const recebido = recebimentosSetor.reduce((acc, r) => acc + Number(r.valor || 0), 0);
+
+      preencherTexto("statSetorCongregacoes", congregacoesSetor.length);
+      preencherTexto("statSetorPecas", pecas);
+      preencherTexto("statSetorTotal", moeda(total));
+      preencherTexto("statSetorRecebido", moeda(recebido));
+      preencherTexto("statSetorSaldo", moeda(total - recebido));
+    }
+  }
+
+  function bindEventos() {
+    el("formLoginAdmin")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        fazerLoginAdmin(el("loginAdmin").value, el("senhaAdmin").value);
+        await recarregarTudo();
+        renderTela();
+      } catch (err) {
+        alert(err.message || "Erro no login admin.");
+      }
+    });
+
+    el("formLoginSetor")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        await fazerLoginSetor(el("loginSetor").value, el("senhaSetor").value);
+        await recarregarTudo();
+        renderTela();
+      } catch (err) {
+        alert(err.message || "Erro no login setor.");
+      }
+    });
+
+    el("btnLogoutAdmin")?.addEventListener("click", logout);
+    el("btnLogoutSetor")?.addEventListener("click", logout);
+  }
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    bindEventos();
+    renderTela();
+
+    try {
+      await recarregarTudo();
+      renderTela();
+      console.log("Supabase conectado com sucesso.");
+    } catch (e) {
+      console.error("Falha ao carregar dados:", e);
+      renderTela();
+    }
+  });
+</script>
   </script>
 </body>
 </html>
