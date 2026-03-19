@@ -1079,15 +1079,11 @@ async function registrarRecebimento(event) {
     const selectSetor = el("financeiroSetor");
     const valorTexto = String(el("financeiroValor")?.value || "").trim();
     const dataRecebimento = String(el("financeiroData")?.value || "").trim();
-    const observacao = String(el("financeiroObs")?.value || "").trim();
+    const observacao = String(el("financeiroObservacao")?.value || "").trim();
 
     const setorValue =
       String(selectSetor?.value || "").trim() ||
       String(selectSetor?.selectedOptions?.[0]?.value || "").trim();
-
-    console.log("financeiroSetor.value =", selectSetor?.value);
-    console.log("selected option value =", selectSetor?.selectedOptions?.[0]?.value);
-    console.log("selected option text =", selectSetor?.selectedOptions?.[0]?.textContent);
 
     if (!setorValue) {
       alert("Selecione o setor.");
@@ -1120,7 +1116,6 @@ async function registrarRecebimento(event) {
 
     if (!campanhaAtual?.id) {
       alert("Campanha não encontrada.");
-      console.log("campanhaAtual:", campanhaAtual);
       return;
     }
 
@@ -1134,32 +1129,15 @@ async function registrarRecebimento(event) {
       data_registro: new Date().toISOString(),
     };
 
-    console.log("ENVIANDO:", payload);
-
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/recebimentos`, {
+    await api("recebimentos", {
       method: "POST",
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        "Content-Type": "application/json",
-        Prefer: "return=representation",
-      },
-      body: JSON.stringify(payload),
+      body: payload,
     });
-
-    const resultText = await response.text();
-    console.log("STATUS:", response.status);
-    console.log("RESPOSTA:", resultText);
-
-    if (!response.ok) {
-      alert("Erro ao registrar. Veja o console.");
-      return;
-    }
 
     alert("Recebimento registrado com sucesso.");
 
     if (el("financeiroValor")) el("financeiroValor").value = "";
-    if (el("financeiroObs")) el("financeiroObs").value = "";
+    if (el("financeiroObservacao")) el("financeiroObservacao").value = "";
 
     await carregarRecebimentos();
     renderAdmin();
@@ -1200,6 +1178,18 @@ function renderSetor() {
   const setorPodeEditar = sessao.tipo === "admin" || podeEditarPedidosNaSessao();
 
   pedidosSetor.forEach((pedido) => {
+    const botoes = [];
+
+    if (sessao.tipo === "admin") {
+      botoes.push(`<button class="secondary" data-edit-item="${pedido.itemId}">Editar</button>`);
+    }
+
+    if (setorPodeEditar) {
+      botoes.push(
+        `<button class="secondary" data-remove-item="${pedido.itemId}" data-remove-pedido="${pedido.id}">Remover</button>`
+      );
+    }
+
     const div = document.createElement("div");
     div.className = "pedido-card";
     div.innerHTML = `
@@ -1211,15 +1201,7 @@ function renderSetor() {
         <span class="pill">${getStatusEnvioLabel(pedido.statusEnvio)}</span>
       </div>
       <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
-       ${
-  sessao.tipo === "admin"
-    ? `<button class="secondary" data-edit-item="${pedido.itemId}">Editar</button>`
-    : ""
-}
-          setorPodeEditar
-            ? `<button class="secondary" data-remove-item="${pedido.itemId}" data-remove-pedido="${pedido.id}">Remover</button>`
-            : ""
-        }
+        ${botoes.join("")}
       </div>
     `;
     lista.appendChild(div);
@@ -1565,16 +1547,16 @@ async function fazerLogin(loginInformado, senhaInformada) {
   if (loginErro) loginErro.textContent = "";
 
   try {
-    const usuarios = await api("usuarios?select=*");
+    const usuarios = await api("usuarios?select=id,nome,login,senha,tipo,setor_id");
+
+    const loginDigitado = String(loginInformado || "").trim().toLowerCase();
+    const senhaDigitada = String(senhaInformada || "").trim();
 
     const usuario = (usuarios || []).find((u) => {
       const loginBanco = String(u.login || "").trim().toLowerCase();
       const senhaBanco = String(u.senha || "").trim();
 
-      return (
-        loginBanco === String(loginInformado).trim().toLowerCase() &&
-        senhaBanco === String(senhaInformada).trim()
-      );
+      return loginBanco === loginDigitado && senhaBanco === senhaDigitada;
     });
 
     if (!usuario) {
@@ -1590,15 +1572,32 @@ async function fazerLogin(loginInformado, senhaInformada) {
         nome: usuario.nome || "Administrador",
         id: usuario.id,
       };
-    } else {
+    } else if (
+      tipoBanco === "setor" ||
+      tipoBanco === "lider_setor" ||
+      tipoBanco === "líder de setor" ||
+      tipoBanco === "lider de setor"
+    ) {
       const setor = setores.find((s) => String(s.id) === String(usuario.setor_id));
+
+      if (!usuario.setor_id || !setor) {
+        if (loginErro) {
+          loginErro.textContent =
+            "Este usuário de setor está sem setor vinculado ou com setor inválido.";
+        }
+        return;
+      }
+
       sessao = {
         tipo: "setor",
         id: usuario.id,
         nome: usuario.nome || "Líder de setor",
-        setor_id: usuario.setor_id,
+        setor_id: String(usuario.setor_id),
         setor_nome: setor?.nome || "Setor",
       };
+    } else {
+      if (loginErro) loginErro.textContent = "Tipo de usuário inválido.";
+      return;
     }
 
     salvarSessao();
@@ -1763,6 +1762,14 @@ async function iniciar() {
     await carregarDadosBase();
     await carregarPedidos();
     await carregarRecebimentos();
+
+    if (sessao?.tipo === "setor") {
+      const setorExiste = setores.some((s) => String(s.id) === String(sessao.setor_id));
+      if (!setorExiste) {
+        sessao = null;
+        salvarSessao();
+      }
+    }
   } catch (error) {
     console.error(error);
     if (el("loginErro")) {
