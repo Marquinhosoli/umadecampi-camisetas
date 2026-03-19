@@ -1091,6 +1091,9 @@ async function registrarRecebimento(event) {
     const dataRecebimento = String(inputData?.value || "").trim();
     const observacao = String(inputObs?.value || "").trim();
 
+    console.log("setor selecionado:", setorId);
+    console.log("tipo setor selecionado:", typeof setorId);
+
     if (!setorId) {
       alert("Selecione o setor.");
       selectSetor.focus();
@@ -1103,8 +1106,7 @@ async function registrarRecebimento(event) {
       return;
     }
 
-    const valorNormalizado = valorTexto.replace(/\./g, "").replace(",", ".");
-    const valor = Number(valorNormalizado);
+    const valor = Number(valorTexto.replace(/\./g, "").replace(",", "."));
 
     if (!Number.isFinite(valor) || valor <= 0) {
       alert("Valor inválido.");
@@ -1123,17 +1125,21 @@ async function registrarRecebimento(event) {
       return;
     }
 
+    const payload = {
+      campanha_id: campanhaAtual.id,
+      setor_id: setorId,
+      valor: valor,
+      data_recebimento: dataRecebimento,
+      observacao: observacao,
+      usuario_id: sessao?.id || null,
+      data_registro: new Date().toISOString(),
+    };
+
+    console.log("payload recebimento:", payload);
+
     await api("recebimentos", {
       method: "POST",
-      body: {
-        campanha_id: campanhaAtual.id,
-        setor_id: Number(setorId),
-        valor,
-        data_recebimento: dataRecebimento,
-        observacao,
-        usuario_id: sessao?.id || null,
-        data_registro: new Date().toISOString(),
-      },
+      body: payload,
     });
 
     alert("Recebimento registrado com sucesso.");
@@ -1149,7 +1155,6 @@ async function registrarRecebimento(event) {
     alert("Não foi possível registrar o recebimento.");
   }
 }
-
 function renderSetor() {
   const lista = el("listaSetor");
   if (!lista) return;
