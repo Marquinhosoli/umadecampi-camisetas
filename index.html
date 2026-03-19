@@ -1,413 +1,734 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistema Oficial - Pedidos UMADECAMPI</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --text: #18202a;
+      --muted: #64748b;
+      --primary: #1d4ed8;
+      --primary-2: #2563eb;
+      --danger: #dc2626;
+      --success: #16a34a;
+      --warning: #d97706;
+      --border: #e2e8f0;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      --radius: 18px;
+    }
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, Helvetica, sans-serif;
+    }
 
-<title>Pedidos UMADECAMPI</title>
+    body {
+      background: var(--bg);
+      color: var(--text);
+    }
 
-<link rel="stylesheet" href="styles.css">
+    .container {
+      width: min(1400px, 95%);
+      margin: 24px auto 40px;
+    }
 
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 22px;
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .brand h1 {
+      font-size: 2rem;
+      color: var(--primary);
+      font-weight: 800;
+    }
+
+    .brand p {
+      color: var(--muted);
+      font-size: 0.96rem;
+    }
+
+    .campaign-box {
+      background: linear-gradient(135deg, #1d4ed8, #2563eb);
+      color: #fff;
+      padding: 16px 20px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      min-width: 290px;
+    }
+
+    .campaign-box strong {
+      display: block;
+      font-size: 1.05rem;
+      margin-bottom: 6px;
+    }
+
+    .layout {
+      display: grid;
+      gap: 22px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      padding: 20px;
+    }
+
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .grid-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .grid-4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .stat-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .stat-card h3 {
+      font-size: 0.95rem;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .stat-card .stat-number {
+      font-size: 1.7rem;
+      font-weight: 800;
+      color: var(--primary);
+    }
+
+    form {
+      display: grid;
+      gap: 14px;
+    }
+
+    label {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+      display: inline-block;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+    }
+
+    input,
+    select,
+    button,
+    textarea {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 12px 14px;
+      font-size: 0.98rem;
+      outline: none;
+      background: #fff;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
+    }
+
+    button {
+      cursor: pointer;
+      font-weight: 700;
+      border: none;
+      transition: 0.2s ease;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-2);
+    }
+
+    .btn-secondary {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+
+    .btn-secondary:hover {
+      background: #cbd5e1;
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: white;
+    }
+
+    .btn-danger:hover {
+      filter: brightness(0.95);
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: white;
+    }
+
+    .btn-success:hover {
+      filter: brightness(0.95);
+    }
+
+    .actions-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .login-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 22px;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .panel-header .panel-info h2 {
+      font-size: 1.45rem;
+      margin-bottom: 4px;
+      color: var(--primary);
+    }
+
+    .panel-header .panel-info p {
+      color: var(--muted);
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #eff6ff;
+      color: var(--primary);
+      border: 1px solid #bfdbfe;
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 0.92rem;
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: white;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 720px;
+    }
+
+    th,
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      font-size: 0.94rem;
+    }
+
+    th {
+      background: #f8fafc;
+      color: #334155;
+      font-weight: 800;
+    }
+
+    tr:hover td {
+      background: #fafcff;
+    }
+
+    .empty-state {
+      padding: 16px;
+      border: 1px dashed var(--border);
+      border-radius: 14px;
+      color: var(--muted);
+      background: #fff;
+    }
+
+    .pendentes-box {
+      display: grid;
+      gap: 10px;
+    }
+
+    .item-pendente {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+    }
+
+    .item-pendente strong {
+      color: var(--text);
+    }
+
+    .item-pendente span {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .full-width {
+      grid-column: 1 / -1;
+    }
+
+    @media (max-width: 1100px) {
+      .stats {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .grid-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 780px) {
+      .login-grid,
+      .grid-2,
+      .grid-3,
+      .grid-4,
+      .stats {
+        grid-template-columns: 1fr;
+      }
+
+      .container {
+        width: min(96%, 96%);
+      }
+
+      .campaign-box {
+        width: 100%;
+      }
+
+      table {
+        min-width: 600px;
+      }
+    }
+  </style>
 </head>
-
 <body>
-
-<div class="container">
-
-
-<div class="card hero-card">
-
-<div class="hero-info">
-
-<h1>SISTEMA OFICIAL</h1>
-<h2>Pedidos UMADECAMPI</h2>
-
-<p>Lançamento de pedidos de camisetas por setor e congregação.</p>
-
-</div>
-
-<div class="stats">
-
-<div class="card">
-<span class="stat">21</span>
-<p>Setores</p>
-</div>
-
-<div class="card">
-<span class="stat">105</span>
-<p>Igrejas</p>
-</div>
-
-</div>
-</div>
-
-
-
-<div id="login-card" class="card">
-
-<h3>Acesso ao sistema</h3>
-
-<p>Entre como administrador ou líder de setor.</p>
-
-<div class="grid-2">
-
-<div>
-<label>Login</label>
-<input id="login">
-</div>
-
-<div>
-<label>Senha</label>
-<input id="senha" type="password">
-</div>
-
-</div>
-
-<button id="btnEntrar" class="primary full">Entrar</button>
-
-<p id="loginErro"></p>
-
-</div>
-
-
-
-<div id="app" class="hidden">
-
-<div class="card hero-card">
-
-<div class="hero-info">
-
-<h2 id="welcomeTitle"></h2>
-
-<p id="welcomeText"></p>
-
-</div>
-
-<div>
-
-<button id="btnSair" class="secondary">Sair</button>
-
-</div>
-
-</div>
-
-
-<div class="tabs-wrap">
-
-<button class="tab active" data-tab="setor">Área do setor</button>
-
-<button class="tab" data-tab="admin">Painel administrativo</button>
-
-</div>
-
-
-
-<section id="tab-setor" class="tab-content active">
-
-<div id="avisoPeriodoPedidos" class="card aviso hidden"></div>
-
-<div class="grid-2">
-
-<div class="card">
-
-<h3>Novo pedido</h3>
-
-<div id="adminSetorWrapper" class="hidden">
-
-<label>Setor</label>
-
-<select id="setorAdminPedido"></select>
-
-</div>
-
-<label>Congregação</label>
-
-<select id="congregacao"></select>
-
-<div class="grid-3">
-
-<div>
-<label>Modelo</label>
-<select id="modelo">
-<option value="masculino">Masculino</option>
-<option value="babylook">Baby Look Feminina</option>
-</select>
-</div>
-
-<div>
-<label>Tamanho</label>
-<select id="tamanho"></select>
-</div>
-
-<div>
-<label>Quantidade</label>
-<input id="quantidade" type="number" min="1" value="1">
-</div>
-
-</div>
-
-<button id="btnAdicionar" class="primary full">Adicionar pedido</button>
-
-</div>
-
-
-
-<div class="card">
-
-<h3>Pedidos do setor</h3>
-
-<div id="listaSetor" class="cards-list"></div>
-
-</div>
-
-</div>
-
-</section>
-
-
-
-
-<section id="tab-admin" class="tab-content">
-
-
-<div class="card">
-
-<h3>Totais gerais</h3>
-
-<div id="totaisGeraisAdmin" class="grid-3"></div>
-
-</div>
-
-
-
-<div class="grid-2">
-
-
-<div class="card">
-
-<h3>Resumo geral</h3>
-
-<div id="resumoCards" class="cards-list"></div>
-
-</div>
-
-
-<div class="card">
-
-<h3>Ferramentas</h3>
-
-<label>Buscar</label>
-<input id="busca">
-
-<label>Status</label>
-
-<select id="filtroStatusAdmin">
-
-<option value="todos">Todos</option>
-
-<option value="pendente">Pendentes</option>
-
-<option value="enviado">Enviados</option>
-
-</select>
-
-<label>Setores</label>
-
-<select id="filtroSetoresAdmin" multiple></select>
-
-<button id="btnTodosSetores">Selecionar todos</button>
-
-<button id="btnLimparSetores">Limpar setores</button>
-
-<button id="btnExportarPedidos">Exportar pedidos</button>
-
-<button id="btnExportarResumo">Exportar resumo</button>
-
-<button id="btnMarcarEnviados">Marcar enviados</button>
-
-<button id="btnVoltarPendentes">Voltar pendentes</button>
-
-</div>
-
-</div>
-
-
-
-<div class="card">
-
-<h3>Ranking dos setores</h3>
-
-<div id="rankingSetoresAdmin" class="cards-list"></div>
-
-</div>
-
-
-
-<div class="card">
-
-<h3>Congregações que ainda não pediram</h3>
-
-<div id="congregacoesSemPedidosResumo"></div>
-
-</div>
-
-
-
-<div class="card">
-
-<h3>Financeiro por setor (estimado)</h3>
-
-<div id="financeiroPorSetorAdmin" class="cards-list"></div>
-
-</div>
-
-
-
-<div class="card">
-
-<h3>Lançar recebimento</h3>
-
-<div class="grid-2">
-
-<div>
-
-<label>Setor</label>
-
-<select id="financeiroSetor"></select>
-
-</div>
-
-<div>
-
-<label>Valor recebido</label>
-
-<input id="financeiroValor" type="number" step="0.01">
-
-</div>
-
-</div>
-
-<div class="grid-2">
-
-<div>
-
-<label>Data</label>
-
-<input id="financeiroData" type="date">
-
-</div>
-
-<div>
-
-<label>Observação</label>
-
-<input id="financeiroObservacao">
-
-</div>
-
-</div>
-
-<button id="btnRegistrarRecebimento" class="primary full">Registrar recebimento</button>
-
-</div>
-
-
-
-<div class="card">
-
-<h3>Resumo financeiro por setor</h3>
-
-<div id="financeiroResumoSetores" class="cards-list"></div>
-
-</div>
-
-
-
-<div class="card">
-
-<h3>Histórico de recebimentos</h3>
-
-<table>
-
-<thead>
-
-<tr>
-<th>Data</th>
-<th>Setor</th>
-<th>Valor</th>
-<th>Observação</th>
-<th>Responsável</th>
-</tr>
-
-</thead>
-
-<tbody id="tbodyRecebimentos"></tbody>
-
-</table>
-
-</div>
-
-
-
-<div class="card">
-
-<h3>Pedidos lançados</h3>
-
-<table>
-
-<thead>
-
-<tr>
-<th>Setor</th>
-<th>Congregação</th>
-<th>Modelo</th>
-<th>Tamanho</th>
-<th>Qtd</th>
-<th>Status</th>
-<th>Editar</th>
-<th>Remover</th>
-</tr>
-
-</thead>
-
-<tbody id="tbodyPedidos"></tbody>
-
-</table>
-
-</div>
-
-</section>
-
-</div>
-
-</div>
-
-
-
-
-<div id="modalCongregacoesSemPedidos" class="modal hidden">
-
-<div class="modal-box">
-
-<div class="modal-header">
-
-<h3>Congregações sem pedidos</h3>
-
-<button id="fecharModalCongregacoes">Fechar</button>
-
-</div>
-
-<div id="congregacoesSemPedidosAdmin" class="cards-list"></div>
-
-</div>
-
-</div>
-
-
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-
-<script src="script.js"></script>
-
+  <div class="container">
+    <div class="topbar">
+      <div class="brand">
+        <h1>SISTEMA OFICIAL</h1>
+        <p>Pedidos UMADECAMPI • Controle por setor, congregação e financeiro</p>
+      </div>
+
+      <div class="campaign-box">
+        <strong id="nomeCampanhaAtual">Campanha Atual</strong>
+        <span id="periodoCampanha">Carregando período...</span>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div class="stats">
+        <div class="stat-card">
+          <h3>Setores</h3>
+          <div class="stat-number" id="statSetores">0</div>
+        </div>
+        <div class="stat-card">
+          <h3>Igrejas</h3>
+          <div class="stat-number" id="statIgrejas">0</div>
+        </div>
+        <div class="stat-card">
+          <h3>Pedidos</h3>
+          <div class="stat-number" id="statPedidos">0</div>
+        </div>
+        <div class="stat-card">
+          <h3>Setores</h3>
+          <div class="stat-number" id="statAdminSetores">0</div>
+        </div>
+        <div class="stat-card">
+          <h3>Igrejas</h3>
+          <div class="stat-number" id="statAdminIgrejas">0</div>
+        </div>
+        <div class="stat-card">
+          <h3>Pedidos</h3>
+          <div class="stat-number" id="statAdminPedidos">0</div>
+        </div>
+      </div>
+
+      <section id="telaLogin" class="card">
+        <h2 class="section-title">Acesso ao sistema</h2>
+
+        <div class="login-grid">
+          <div class="card">
+            <h3 class="section-title">Login do Setor</h3>
+            <form id="formLoginSetor">
+              <div class="field">
+                <label for="loginSetor">Login do setor</label>
+                <input id="loginSetor" type="text" placeholder="Nome, código, sigla ou ID" />
+              </div>
+
+              <div class="field">
+                <label for="senhaSetor">Senha</label>
+                <input id="senhaSetor" type="password" placeholder="Digite a senha" />
+              </div>
+
+              <button class="btn-primary" type="submit">Entrar como setor</button>
+            </form>
+          </div>
+
+          <div class="card">
+            <h3 class="section-title">Login Administrativo</h3>
+            <form id="formLoginAdmin">
+              <div class="field">
+                <label for="loginAdmin">Usuário</label>
+                <input id="loginAdmin" type="text" placeholder="Usuário admin" />
+              </div>
+
+              <div class="field">
+                <label for="senhaAdmin">Senha</label>
+                <input id="senhaAdmin" type="password" placeholder="Senha do administrador" />
+              </div>
+
+              <button class="btn-primary" type="submit">Entrar como administrador</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section id="painelSetor" class="hidden">
+        <div class="card">
+          <div class="panel-header">
+            <div class="panel-info">
+              <h2 id="tituloPainelSetor">Painel do Setor</h2>
+              <p>Lançamento e acompanhamento dos pedidos do setor</p>
+            </div>
+
+            <div class="actions-row">
+              <div class="status-pill" id="mensagemPrazoPedidos">Pedidos liberados.</div>
+              <button id="btnLogoutSetor" type="button" class="btn-danger">Sair</button>
+            </div>
+          </div>
+
+          <div class="stats">
+            <div class="stat-card">
+              <h3>Congregações</h3>
+              <div class="stat-number" id="statSetorCongregacoes">0</div>
+            </div>
+            <div class="stat-card">
+              <h3>Peças</h3>
+              <div class="stat-number" id="statSetorPecas">0</div>
+            </div>
+            <div class="stat-card">
+              <h3>Total</h3>
+              <div class="stat-number" id="statSetorTotal">R$ 0,00</div>
+            </div>
+            <div class="stat-card">
+              <h3>Recebido</h3>
+              <div class="stat-number" id="statSetorRecebido">R$ 0,00</div>
+            </div>
+            <div class="stat-card">
+              <h3>Saldo</h3>
+              <div class="stat-number" id="statSetorSaldo">R$ 0,00</div>
+            </div>
+            <div class="stat-card">
+              <h3>Valor Unitário</h3>
+              <div class="stat-number">R$ 45,00</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-2">
+          <div class="card">
+            <h3 class="section-title">Lançar pedido</h3>
+            <form id="formPedido">
+              <div class="field">
+                <label for="congregacaoPedido">Congregação</label>
+                <select id="congregacaoPedido"></select>
+              </div>
+
+              <div class="field">
+                <label for="modeloPedido">Modelo</label>
+                <select id="modeloPedido"></select>
+              </div>
+
+              <div class="field">
+                <label for="tamanhoPedido">Tamanho</label>
+                <select id="tamanhoPedido"></select>
+              </div>
+
+              <div class="field">
+                <label for="quantidadePedido">Quantidade</label>
+                <input id="quantidadePedido" type="number" min="1" placeholder="Digite a quantidade" />
+              </div>
+
+              <button class="btn-success" type="submit">Salvar pedido</button>
+            </form>
+          </div>
+
+          <div class="card">
+            <h3 class="section-title">Congregações do setor</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Congregação</th>
+                    <th>Peças</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyCongregacoesSetor"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card full-width">
+            <h3 class="section-title">Pedidos lançados</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Congregação</th>
+                    <th>Modelo</th>
+                    <th>Tamanho</th>
+                    <th>Quantidade</th>
+                    <th>Total</th>
+                    <th>Data</th>
+                    <th>Ação</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyPedidosSetor"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card full-width">
+            <h3 class="section-title">Recebimentos do setor</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Valor</th>
+                    <th>Observação</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyRecebimentosSetor"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="painelAdmin" class="hidden">
+        <div class="card">
+          <div class="panel-header">
+            <div class="panel-info">
+              <h2>Painel Administrativo</h2>
+              <p>Visão geral dos pedidos, financeiro e congregações pendentes</p>
+            </div>
+
+            <div class="actions-row">
+              <button id="btnAtualizarDados" type="button" class="btn-secondary">Atualizar dados</button>
+              <button id="btnLogoutAdmin" type="button" class="btn-danger">Sair</button>
+            </div>
+          </div>
+
+          <div class="stats">
+            <div class="stat-card">
+              <h3>Peças</h3>
+              <div class="stat-number" id="statAdminPecas">0</div>
+            </div>
+            <div class="stat-card">
+              <h3>Total Geral</h3>
+              <div class="stat-number" id="statAdminTotal">R$ 0,00</div>
+            </div>
+            <div class="stat-card">
+              <h3>Recebido</h3>
+              <div class="stat-number" id="statAdminRecebido">R$ 0,00</div>
+            </div>
+            <div class="stat-card">
+              <h3>Setores</h3>
+              <div class="stat-number" id="statAdminSetores">0</div>
+            </div>
+            <div class="stat-card">
+              <h3>Igrejas</h3>
+              <div class="stat-number" id="statAdminIgrejas">0</div>
+            </div>
+            <div class="stat-card">
+              <h3>Pedidos</h3>
+              <div class="stat-number" id="statAdminPedidos">0</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-2">
+          <div class="card">
+            <h3 class="section-title">Filtro por setor</h3>
+            <div class="field">
+              <label for="filtroSetorAdmin">Setor</label>
+              <select id="filtroSetorAdmin"></select>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="section-title">Registrar recebimento</h3>
+            <form id="formRecebimento">
+              <div class="field">
+                <label for="recebimentoSetor">Setor</label>
+                <select id="recebimentoSetor"></select>
+              </div>
+
+              <div class="field">
+                <label for="recebimentoValor">Valor</label>
+                <input id="recebimentoValor" type="number" step="0.01" min="0" placeholder="0,00" />
+              </div>
+
+              <div class="field">
+                <label for="recebimentoData">Data</label>
+                <input id="recebimentoData" type="date" />
+              </div>
+
+              <div class="field">
+                <label for="recebimentoObservacao">Observação</label>
+                <input id="recebimentoObservacao" type="text" placeholder="Ex.: Entrada parcial" />
+              </div>
+
+              <button class="btn-success" type="submit">Salvar recebimento</button>
+            </form>
+          </div>
+
+          <div class="card full-width">
+            <h3 class="section-title">Resumo por setor</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Setor</th>
+                    <th>Congregações</th>
+                    <th>Peças</th>
+                    <th>Total</th>
+                    <th>Recebido</th>
+                    <th>Saldo</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyResumoSetores"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card full-width">
+            <h3 class="section-title">Pedidos gerais</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Setor</th>
+                    <th>Congregação</th>
+                    <th>Modelo</th>
+                    <th>Tamanho</th>
+                    <th>Quantidade</th>
+                    <th>Total</th>
+                    <th>Data</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyPedidosAdmin"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card full-width">
+            <h3 class="section-title">Recebimentos lançados</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Setor</th>
+                    <th>Data</th>
+                    <th>Valor</th>
+                    <th>Observação</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyRecebimentosAdmin"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card full-width">
+            <h3 class="section-title">Congregações que ainda não pediram</h3>
+            <div id="listaCongregacoesPendentes" class="pendentes-box"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
 </body>
 </html>
