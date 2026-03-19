@@ -1211,12 +1211,11 @@ function renderSetor() {
         <span class="pill">${getStatusEnvioLabel(pedido.statusEnvio)}</span>
       </div>
       <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
-        ${
-          sessao.type === "admin"
-            ? `<button class="secondary" data-edit-item="${pedido.itemId}">Editar</button>`
-            : ""
-        }
-        ${
+       ${
+  sessao.tipo === "admin"
+    ? `<button class="secondary" data-edit-item="${pedido.itemId}">Editar</button>`
+    : ""
+}
           setorPodeEditar
             ? `<button class="secondary" data-remove-item="${pedido.itemId}" data-remove-pedido="${pedido.id}">Remover</button>`
             : ""
@@ -1571,9 +1570,10 @@ async function fazerLogin(loginInformado, senhaInformada) {
     const usuario = (usuarios || []).find((u) => {
       const loginBanco = String(u.login || "").trim().toLowerCase();
       const senhaBanco = String(u.senha || "").trim();
+
       return (
         loginBanco === String(loginInformado).trim().toLowerCase() &&
-        senhaBanco === String(senhaInformado).trim()
+        senhaBanco === String(senhaInformada).trim()
       );
     });
 
