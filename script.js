@@ -1205,7 +1205,7 @@ async function iniciarSistema() {
     validarSessaoAtual();
     renderTela();
     console.log("UMADECAMPI carregado com sucesso");
-    console.log("Se aparecer mensagem 'Não há campanha cadastrada no banco.', existe script antigo ainda rodando.");
+    console.log("Se aparecer mensagem , existe script antigo ainda rodando.");
   } catch (e) {
     console.error("Erro ao iniciar sistema:", e);
     renderTela();
