@@ -1077,40 +1077,44 @@ async function registrarRecebimento(event) {
     if (event) event.preventDefault();
 
     const selectSetor = el("financeiroSetor");
-    const valorTexto = String(el("financeiroValor")?.value || "").trim();
-    const dataRecebimento = String(el("financeiroData")?.value || "").trim();
-    const observacao = String(el("financeiroObservacao")?.value || "").trim();
+    const inputValor = el("financeiroValor");
+    const inputData = el("financeiroData");
+    const inputObs = el("financeiroObservacao");
 
-    const setorValue =
-      String(selectSetor?.value || "").trim() ||
-      String(selectSetor?.selectedOptions?.[0]?.value || "").trim();
-
-    if (!setorValue) {
-      alert("Selecione o setor.");
+    if (!selectSetor) {
+      alert("Campo de setor não encontrado.");
       return;
     }
 
-    const setorId = Number(setorValue);
+    const setorId = String(selectSetor.value || "").trim();
+    const valorTexto = String(inputValor?.value || "").trim();
+    const dataRecebimento = String(inputData?.value || "").trim();
+    const observacao = String(inputObs?.value || "").trim();
 
-    if (!Number.isFinite(setorId) || setorId <= 0) {
-      alert("Setor inválido.");
+    if (!setorId) {
+      alert("Selecione o setor.");
+      selectSetor.focus();
       return;
     }
 
     if (!valorTexto) {
       alert("Digite o valor.");
+      inputValor?.focus();
       return;
     }
 
-    const valor = Number(valorTexto.replace(/\./g, "").replace(",", "."));
+    const valorNormalizado = valorTexto.replace(/\./g, "").replace(",", ".");
+    const valor = Number(valorNormalizado);
 
     if (!Number.isFinite(valor) || valor <= 0) {
       alert("Valor inválido.");
+      inputValor?.focus();
       return;
     }
 
     if (!dataRecebimento) {
       alert("Informe a data.");
+      inputData?.focus();
       return;
     }
 
@@ -1119,31 +1123,30 @@ async function registrarRecebimento(event) {
       return;
     }
 
-    const payload = {
-      campanha_id: campanhaAtual.id,
-      setor_id: setorId,
-      valor,
-      data_recebimento: dataRecebimento,
-      observacao,
-      usuario_id: sessao?.id || null,
-      data_registro: new Date().toISOString(),
-    };
-
     await api("recebimentos", {
       method: "POST",
-      body: payload,
+      body: {
+        campanha_id: campanhaAtual.id,
+        setor_id: Number(setorId),
+        valor,
+        data_recebimento: dataRecebimento,
+        observacao,
+        usuario_id: sessao?.id || null,
+        data_registro: new Date().toISOString(),
+      },
     });
 
     alert("Recebimento registrado com sucesso.");
 
-    if (el("financeiroValor")) el("financeiroValor").value = "";
-    if (el("financeiroObservacao")) el("financeiroObservacao").value = "";
+    selectSetor.value = "";
+    if (inputValor) inputValor.value = "";
+    if (inputObs) inputObs.value = "";
 
     await carregarRecebimentos();
     renderAdmin();
   } catch (erro) {
     console.error("Erro ao registrar recebimento:", erro);
-    alert("Não foi possível registrar.");
+    alert("Não foi possível registrar o recebimento.");
   }
 }
 
