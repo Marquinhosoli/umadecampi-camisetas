@@ -1072,7 +1072,7 @@ async function atualizarStatusPedidosFiltrados(novoStatus) {
   }
 }
 
-aasync function registrarRecebimento(event) {
+async function registrarRecebimento(event) {
   try {
     if (event) event.preventDefault();
 
