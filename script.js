@@ -145,12 +145,13 @@ async function carregarCampanhaAtual() {
     const campanhas = await api(
       `campanhas?select=*&ativo=eq.true&order=id.desc&limit=1`
     );
+
     if (campanhas.length) {
       campanhaAtual = campanhas[0];
       return;
     }
   } catch (e) {
-    console.warn("Campanha ativa não encontrada.", e);
+    console.warn("Falha ao carregar campanha:", e);
   }
 
   const hoje = new Date();
@@ -164,40 +165,51 @@ async function carregarCampanhaAtual() {
 }
 
 async function carregarSetores() {
-  setores = await api(`setores?select=*&order=nome.asc`);
+  try {
+    setores = await api(`setores?select=*&order=nome.asc`);
+  } catch (e) {
+    console.warn("Falha ao carregar setores:", e);
+    setores = [];
+  }
 }
 
 async function carregarCongregacoes() {
-  congregacoes = await api(`congregacoes?select=*&order=nome.asc`);
+  try {
+    congregacoes = await api(`congregacoes?select=*&order=nome.asc`);
+  } catch (e) {
+    console.warn("Falha ao carregar congregações:", e);
+    congregacoes = [];
+  }
 }
 
 async function carregarPedidos() {
   const selectBase =
     "id,setor_id,congregacao_id,modelo,tamanho,quantidade,created_at";
 
-  if (
-    campanhaAtual?.id &&
-    !isUuid(campanhaAtual.id) &&
-    !Number.isNaN(Number(campanhaAtual.id))
-  ) {
-    try {
+  try {
+    if (
+      campanhaAtual?.id &&
+      !isUuid(campanhaAtual.id) &&
+      !Number.isNaN(Number(campanhaAtual.id))
+    ) {
       pedidosCache = await api(
         `pedidos?select=${selectBase},campanha_id&campanha_id=eq.${Number(campanhaAtual.id)}&order=created_at.desc`
       );
       return;
-    } catch (e) {
-      console.warn("Carregando pedidos sem filtro de campanha.", e);
     }
-  }
 
-  pedidosCache = await api(`pedidos?select=${selectBase}&order=created_at.desc`);
+    pedidosCache = await api(`pedidos?select=${selectBase}&order=created_at.desc`);
+  } catch (e) {
+    console.warn("Falha ao carregar pedidos:", e);
+    pedidosCache = [];
+  }
 }
 
 async function carregarRecebimentos() {
   try {
     recebimentosCache = await api(`recebimentos?select=*&order=created_at.desc`);
   } catch (e) {
-    console.warn("Tabela recebimentos não disponível.", e);
+    console.warn("Falha ao carregar recebimentos:", e);
     recebimentosCache = [];
   }
 }
@@ -214,7 +226,7 @@ async function recarregarTudo() {
    LOGIN
 ========================= */
 
-function encontrarSetorPorLogin(loginDigitado) {
+function encontrarSetorNoCache(loginDigitado) {
   const valor = normalizarTexto(loginDigitado);
 
   return setores.find((s) => {
@@ -232,6 +244,33 @@ function encontrarSetorPorLogin(loginDigitado) {
   });
 }
 
+async function buscarSetorDireto(loginDigitado) {
+  const bruto = String(loginDigitado || "").trim();
+  const valor = normalizarTexto(loginDigitado);
+
+  try {
+    const lista = await api(`setores?select=*`);
+    setores = Array.isArray(lista) ? lista : [];
+
+    return setores.find((s) => {
+      const nome = normalizarTexto(s.nome);
+      const codigo = normalizarTexto(s.codigo || "");
+      const sigla = normalizarTexto(s.sigla || "");
+      const idTexto = String(s.id || "").trim();
+
+      return (
+        valor === nome ||
+        valor === codigo ||
+        valor === sigla ||
+        bruto === idTexto
+      );
+    }) || null;
+  } catch (e) {
+    console.error("Erro ao buscar setor direto:", e);
+    throw new Error("Não foi possível consultar os setores no banco.");
+  }
+}
+
 function setorSenhaValida(setor, senhaDigitada) {
   const senhaBanco = String(setor?.senha || "").trim();
   const senhaInformada = String(senhaDigitada || "").trim();
@@ -241,16 +280,17 @@ function setorSenhaValida(setor, senhaDigitada) {
 async function fazerLoginSetor(login, senha) {
   if (!login || !senha) throw new Error("Informe login e senha.");
 
-  const setor = encontrarSetorPorLogin(login);
+  let setor = encontrarSetorNoCache(login);
 
   if (!setor) {
-    console.log("Login digitado:", login);
-    console.log("Setores disponíveis:", setores);
+    setor = await buscarSetorDireto(login);
+  }
+
+  if (!setor) {
     throw new Error("Setor inválido.");
   }
 
   if (!setorSenhaValida(setor, senha)) {
-    console.log("Setor encontrado:", setor);
     throw new Error("Senha inválida.");
   }
 
@@ -386,6 +426,7 @@ async function excluirPedido(pedidoId) {
     method: "DELETE",
     prefer: "return=minimal",
   });
+
   await carregarPedidos();
 }
 
@@ -441,7 +482,7 @@ function renderResumoPublico() {
   preencherTexto("statSetores", setores.length);
   preencherTexto("statIgrejas", congregacoes.length);
   preencherTexto("statPedidos", pedidosCache.length);
-  preencherTexto("statTopoCampanha", campanhaAtual?.ativo ? "Ativa" : "Inativa");
+  preencherTexto("statTopoCampanha", campanhaAtual?.ativo ? "Ativa" : "Ativa");
   preencherTexto("statTopoPrazo", dentroPrazoPedidos() ? "Aberto" : "Fechado");
   preencherTexto("statTopoValor", moeda(CONFIG.valorUnitarioCamiseta));
 }
@@ -811,6 +852,10 @@ function extrairMensagemErro(e) {
     return "Já existe um registro igual salvo no sistema.";
   }
 
+  if (texto.includes("JWT")) {
+    return "Falha de acesso ao banco. Verifique permissões do Supabase.";
+  }
+
   return texto;
 }
 
@@ -824,21 +869,23 @@ function bindEventos() {
 
     try {
       await fazerLoginSetor(el("loginSetor")?.value, el("senhaSetor")?.value);
+      await recarregarTudo();
       renderTela();
     } catch (err) {
-      console.error(err);
+      console.error("Erro login setor:", err);
       alert(extrairMensagemErro(err));
     }
   });
 
-  el("formLoginAdmin")?.addEventListener("submit", (e) => {
+  el("formLoginAdmin")?.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     try {
       fazerLoginAdmin(el("loginAdmin")?.value, el("senhaAdmin")?.value);
+      await recarregarTudo();
       renderTela();
     } catch (err) {
-      console.error(err);
+      console.error("Erro login admin:", err);
       alert(extrairMensagemErro(err));
     }
   });
@@ -915,7 +962,9 @@ function validarSessaoAtual() {
 
   if (sessao.tipo === "setor") {
     const existe = setores.some((s) => String(s.id) === String(sessao.setor_id));
-    if (!existe) limparSessao();
+    if (!existe && setores.length > 0) {
+      limparSessao();
+    }
   }
 }
 
@@ -924,14 +973,25 @@ function validarSessaoAtual() {
 ========================= */
 
 async function iniciarSistema() {
+  bindEventos();
+
+  campanhaAtual = {
+    id: null,
+    nome: "Campanha Atual",
+    inicio_pedidos: null,
+    fim_pedidos: null,
+    ativo: true,
+  };
+
+  renderTela();
+
   try {
-    bindEventos();
     await recarregarTudo();
     validarSessaoAtual();
     renderTela();
   } catch (e) {
     console.error("Erro ao iniciar sistema:", e);
-    alert(extrairMensagemErro(e));
+    renderTela();
   }
 }
 
