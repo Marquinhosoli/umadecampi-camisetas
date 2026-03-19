@@ -702,7 +702,7 @@
 
     function preencherTexto(id, valor) {
       const node = el(id);
-      if (node) node.textContent = String(valor);
+      if (node) node.textContent = String(valor ?? "");
     }
 
     function moeda(v) {
@@ -734,6 +734,15 @@
         .toLowerCase();
     }
 
+    function campanhaAtivaPorConteudo(c) {
+      if (!c) return false;
+
+      if (c.ativo === true || c.ativa === true) return true;
+
+      const status = normalizarTexto(c.status || "");
+      return ["ativa", "ativo", "aberta", "aberto", "andamento", "em andamento"].includes(status);
+    }
+
     async function api(path, options = {}) {
       const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
         method: options.method || "GET",
@@ -756,13 +765,43 @@
     }
 
     async function carregarCampanha() {
-      try {
-        const lista = await api("campanhas?select=*&ativo=eq.true&order=id.desc&limit=1");
-        campanhaAtual = Array.isArray(lista) && lista.length ? lista[0] : null;
-      } catch (e) {
-        console.warn("Campanha não carregada:", e.message);
-        campanhaAtual = null;
+      const consultas = [
+        "campanhas?select=*&ativo=eq.true&order=id.desc&limit=1",
+        "campanhas?select=*&ativa=eq.true&order=id.desc&limit=1",
+        "campanhas?select=*&status=eq.Ativa&order=id.desc&limit=1",
+        "campanhas?select=*&status=eq.ativa&order=id.desc&limit=1",
+        "campanhas?select=*&order=id.desc&limit=50"
+      ];
+
+      for (const rota of consultas) {
+        try {
+          const lista = await api(rota);
+
+          if (!Array.isArray(lista) || !lista.length) {
+            continue;
+          }
+
+          let campanha = null;
+
+          if (rota.includes("limit=50")) {
+            campanha = lista.find(c => campanhaAtivaPorConteudo(c)) || lista[0];
+          } else {
+            campanha = lista[0];
+          }
+
+          if (campanha) {
+            campanhaAtual = {
+              ...campanha,
+              ativo: campanhaAtivaPorConteudo(campanha) || true
+            };
+            return;
+          }
+        } catch (e) {
+          console.warn("Tentativa de carregar campanha falhou:", rota, e.message);
+        }
       }
+
+      campanhaAtual = null;
     }
 
     async function carregarUsuarios() {
@@ -825,9 +864,8 @@
       if (!campanhaAtual?.inicio_pedidos || !campanhaAtual?.fim_pedidos) return true;
 
       const agora = new Date();
-      const inicio = new Date(campanhaAtual.inicio_pedidos);
-      const fim = new Date(campanhaAtual.fim_pedidos);
-      fim.setHours(23, 59, 59, 999);
+      const inicio = new Date(`${campanhaAtual.inicio_pedidos}T00:00:00`);
+      const fim = new Date(`${campanhaAtual.fim_pedidos}T23:59:59`);
 
       return agora >= inicio && agora <= fim;
     }
@@ -934,7 +972,7 @@
       const selectPedidoAdmin = el("pedidoAdminSetor");
 
       const options = setores.length
-        ? setores
+        ? [...setores]
             .sort((a, b) => Number(a.numero || 0) - Number(b.numero || 0))
             .map(s => `<option value="${s.id}">${String(s.numero).padStart(2, "0")} - ${s.nome}</option>`)
             .join("")
@@ -971,7 +1009,7 @@
 
     async function salvarPedido(payload) {
       if (!campanhaAtual?.id) {
-        throw new Error("Não há campanha ativa cadastrada.");
+        throw new Error("Não há campanha cadastrada no banco.");
       }
 
       await api("pedidos", {
@@ -1102,7 +1140,7 @@
 
       tbody.innerHTML = lista.map(p => `
         <tr>
-          <td>${formatarDataHora(p.data)}</td>
+          <td>${formatarDataHora(p.data || p.created_at)}</td>
           <td>${nomeCongregacaoPorId(p.congregacao_id)}</td>
           <td>${p.modelo || "-"}</td>
           <td>${p.tamanho || "-"}</td>
@@ -1122,7 +1160,7 @@
 
       tbody.innerHTML = recebimentos.map(r => `
         <tr>
-          <td>${formatarDataHora(r.data_registro || r.data_recebimento)}</td>
+          <td>${formatarDataHora(r.data_registro || r.data_recebimento || r.created_at)}</td>
           <td>${nomeSetorPorId(r.setor_id)}</td>
           <td>${moeda(r.valor)}</td>
           <td>${r.observacao || "-"}</td>
@@ -1190,7 +1228,7 @@
       mostrar("painelSetor", sessao?.tipo === "setor");
       mostrar("painelAdmin", sessao?.tipo === "admin");
 
-      preencherTexto("nomeCampanhaAtual", campanhaAtual?.nome || "Campanha Atual");
+      preencherTexto("nomeCampanhaAtual", campanhaAtual?.nome || "Campanha não definida");
       preencherTexto(
         "periodoCampanha",
         campanhaAtual?.inicio_pedidos && campanhaAtual?.fim_pedidos
@@ -1201,7 +1239,7 @@
       preencherTexto("statSetores", setores.length);
       preencherTexto("statIgrejas", congregacoes.length);
       preencherTexto("statPedidos", pedidos.length);
-      preencherTexto("statTopoCampanha", campanhaAtual?.ativo ? "Ativa" : "Inativa");
+      preencherTexto("statTopoCampanha", campanhaAtual ? "Ativa" : "Inativa");
       preencherTexto("statTopoPrazo", prazoPedidosAberto() ? "Aberto" : "Fechado");
       preencherTexto("statTopoValor", moeda(CONFIG.valorUnitarioCamiseta));
       preencherTexto("statValorUnitarioSetor", moeda(CONFIG.valorUnitarioCamiseta));
