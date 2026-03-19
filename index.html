@@ -37,7 +37,7 @@
     form{display:grid;gap:14px}
     .field{display:flex;flex-direction:column}
     label{font-size:.92rem;font-weight:700;margin-bottom:6px}
-    input,select,button{width:100%;border-radius:12px;border:1px solid var(--border);padding:12px 14px;font-size:.98rem;background:#fff}
+    input,select,button,textarea{width:100%;border-radius:12px;border:1px solid var(--border);padding:12px 14px;font-size:.98rem;background:#fff}
     button{cursor:pointer;font-weight:700;border:none}
     .btn-primary{background:var(--primary);color:#fff}
     .btn-primary:hover{background:var(--primary2)}
@@ -56,6 +56,7 @@
     .hidden{display:none!important}
     .full-width{grid-column:1 / -1}
     .empty-state{padding:16px;border:1px dashed var(--border);border-radius:14px;color:var(--muted);background:#fff}
+    .info-box{padding:14px 16px;border-radius:14px;background:#f8fafc;border:1px solid var(--border);color:#334155}
     @media (max-width:1100px){.stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
     @media (max-width:780px){
       .login-grid,.grid-2,.stats{grid-template-columns:1fr}
@@ -141,7 +142,11 @@
             <div class="stat-card"><h3>Total</h3><div class="stat-number" id="statSetorTotal">R$ 0,00</div></div>
             <div class="stat-card"><h3>Recebido</h3><div class="stat-number" id="statSetorRecebido">R$ 0,00</div></div>
             <div class="stat-card"><h3>Saldo</h3><div class="stat-number" id="statSetorSaldo">R$ 0,00</div></div>
-            <div class="stat-card"><h3>Valor Unitário</h3><div class="stat-number">R$ 45,00</div></div>
+            <div class="stat-card"><h3>Valor Unitário</h3><div class="stat-number" id="statValorUnitarioSetor">R$ 45,00</div></div>
+          </div>
+
+          <div class="card" style="margin-top:18px">
+            <div class="info-box" id="infoSetorDetalhes">Nenhum dado carregado.</div>
           </div>
         </div>
       </section>
@@ -151,7 +156,7 @@
           <div class="panel-header">
             <div class="panel-info">
               <h2>Painel Administrativo</h2>
-              <p>Login administrativo funcionando</p>
+              <p>Controle geral do sistema</p>
             </div>
             <div class="actions-row">
               <button id="btnLogoutAdmin" type="button" class="btn-danger">Sair</button>
@@ -168,7 +173,7 @@
           </div>
 
           <div class="card" style="margin-top:18px">
-            <div class="empty-state">Se esta tela abrir, o login está resolvido. Depois a gente reconecta o Supabase com segurança.</div>
+            <div class="info-box" id="infoAdminDetalhes">Sistema pronto.</div>
           </div>
         </div>
       </section>
@@ -176,7 +181,10 @@
   </div>
 
   <script>
+    const SUPABASE_URL = "https://dqwlhouwoxbwxkcaytja.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_b_tuFrU9PhG3VKYLupMVhg_pWPF6Spj";
     const SESSION_KEY = "umadecampi_sessao_supabase_v1";
+
     const CONFIG = {
       valorUnitarioCamiseta: 45,
       adminUsuario: "admin",
@@ -184,6 +192,16 @@
     };
 
     let sessao = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
+    let setores = [];
+    let congregacoes = [];
+    let pedidos = [];
+    let recebimentos = [];
+    let campanhaAtual = {
+      nome: "Campanha Atual",
+      inicio_pedidos: null,
+      fim_pedidos: null,
+      ativo: true,
+    };
 
     const el = (id) => document.getElementById(id);
 
@@ -210,7 +228,7 @@
 
     function preencherTexto(id, valor) {
       const node = el(id);
-      if (node) node.textContent = valor;
+      if (node) node.textContent = String(valor);
     }
 
     function moeda(v) {
@@ -220,37 +238,97 @@
       });
     }
 
-    function renderTela() {
-      mostrar("telaLogin", !sessao);
-      mostrar("painelSetor", sessao?.tipo === "setor");
-      mostrar("painelAdmin", sessao?.tipo === "admin");
+    function dataBr(valor) {
+      if (!valor) return "-";
+      const d = new Date(valor);
+      if (Number.isNaN(d.getTime())) return valor;
+      return d.toLocaleDateString("pt-BR");
+    }
 
-      preencherTexto("nomeCampanhaAtual", "Campanha Atual");
-      preencherTexto("periodoCampanha", "Sistema carregado");
-      preencherTexto("statSetores", "0");
-      preencherTexto("statIgrejas", "0");
-      preencherTexto("statPedidos", "0");
-      preencherTexto("statTopoCampanha", "Ativa");
-      preencherTexto("statTopoPrazo", "Aberto");
-      preencherTexto("statTopoValor", moeda(CONFIG.valorUnitarioCamiseta));
+    function normalizarTexto(txt) {
+      return String(txt || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim()
+        .toLowerCase();
+    }
 
-      if (sessao?.tipo === "setor") {
-        preencherTexto("tituloPainelSetor", sessao.setor_nome || "Setor");
-        preencherTexto("statSetorCongregacoes", "0");
-        preencherTexto("statSetorPecas", "0");
-        preencherTexto("statSetorTotal", moeda(0));
-        preencherTexto("statSetorRecebido", moeda(0));
-        preencherTexto("statSetorSaldo", moeda(0));
+    async function api(path, options = {}) {
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+        method: options.method || "GET",
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json",
+          Prefer: options.prefer || "return=representation",
+        },
+        body: options.body ? JSON.stringify(options.body) : undefined,
+      });
+
+      const text = await response.text();
+
+      if (!response.ok) {
+        throw new Error(text || "Erro na comunicação com Supabase.");
       }
 
-      if (sessao?.tipo === "admin") {
-        preencherTexto("statAdminPecas", "0");
-        preencherTexto("statAdminTotal", moeda(0));
-        preencherTexto("statAdminRecebido", moeda(0));
-        preencherTexto("statAdminSetores", "0");
-        preencherTexto("statAdminIgrejas", "0");
-        preencherTexto("statAdminPedidos", "0");
+      return text ? JSON.parse(text) : [];
+    }
+
+    async function carregarCampanha() {
+      try {
+        const lista = await api("campanhas?select=*&ativo=eq.true&order=id.desc&limit=1");
+        if (Array.isArray(lista) && lista.length) {
+          campanhaAtual = lista[0];
+        }
+      } catch (e) {
+        console.warn("Campanha não carregada:", e.message);
       }
+    }
+
+    async function carregarSetores() {
+      try {
+        setores = await api("setores?select=*&order=nome.asc");
+      } catch (e) {
+        console.warn("Setores não carregados:", e.message);
+        setores = [];
+      }
+    }
+
+    async function carregarCongregacoes() {
+      try {
+        congregacoes = await api("congregacoes?select=*&order=nome.asc");
+      } catch (e) {
+        console.warn("Congregações não carregadas:", e.message);
+        congregacoes = [];
+      }
+    }
+
+    async function carregarPedidos() {
+      try {
+        pedidos = await api("pedidos?select=*&order=created_at.desc");
+      } catch (e) {
+        console.warn("Pedidos não carregados:", e.message);
+        pedidos = [];
+      }
+    }
+
+    async function carregarRecebimentos() {
+      try {
+        recebimentos = await api("recebimentos?select=*&order=created_at.desc");
+      } catch (e) {
+        console.warn("Recebimentos não carregados:", e.message);
+        recebimentos = [];
+      }
+    }
+
+    async function recarregarTudo() {
+      await Promise.all([
+        carregarCampanha(),
+        carregarSetores(),
+        carregarCongregacoes(),
+        carregarPedidos(),
+        carregarRecebimentos(),
+      ]);
     }
 
     function fazerLoginAdmin(usuario, senha) {
@@ -266,18 +344,48 @@
         salvarSessao();
         return;
       }
+
       throw new Error("Usuário ou senha inválidos.");
     }
 
-    function fazerLoginSetor(login, senha) {
-      if (!login || !senha) throw new Error("Informe login e senha.");
+    function encontrarSetor(login) {
+      const valor = normalizarTexto(login);
+      return setores.find((s) => {
+        return (
+          normalizarTexto(s.nome) === valor ||
+          normalizarTexto(s.codigo || "") === valor ||
+          normalizarTexto(s.sigla || "") === valor ||
+          String(s.id || "") === String(login || "").trim()
+        );
+      });
+    }
+
+    async function fazerLoginSetor(login, senha) {
+      if (!login || !senha) {
+        throw new Error("Informe login e senha.");
+      }
+
+      if (!setores.length) {
+        await carregarSetores();
+      }
+
+      const setor = encontrarSetor(login);
+
+      if (!setor) {
+        throw new Error("Setor inválido.");
+      }
+
+      if (String(setor.senha || "").trim() !== String(senha || "").trim()) {
+        throw new Error("Senha inválida.");
+      }
 
       sessao = {
         tipo: "setor",
-        setor_id: 1,
-        setor_nome: String(login).trim(),
+        setor_id: setor.id,
+        setor_nome: setor.nome,
         login_em: new Date().toISOString(),
       };
+
       salvarSessao();
     }
 
@@ -286,11 +394,93 @@
       renderTela();
     }
 
+    function totalPecas(lista = pedidos) {
+      return lista.reduce((acc, p) => acc + Number(p.quantidade || 0), 0);
+    }
+
+    function totalRecebido(lista = recebimentos) {
+      return lista.reduce((acc, r) => acc + Number(r.valor || 0), 0);
+    }
+
+    function prazoPedidosAberto() {
+      if (!campanhaAtual?.inicio_pedidos || !campanhaAtual?.fim_pedidos) return true;
+
+      const agora = new Date();
+      const inicio = new Date(campanhaAtual.inicio_pedidos);
+      const fim = new Date(campanhaAtual.fim_pedidos);
+      fim.setHours(23, 59, 59, 999);
+
+      return agora >= inicio && agora <= fim;
+    }
+
+    function renderTela() {
+      mostrar("telaLogin", !sessao);
+      mostrar("painelSetor", sessao?.tipo === "setor");
+      mostrar("painelAdmin", sessao?.tipo === "admin");
+
+      preencherTexto("nomeCampanhaAtual", campanhaAtual?.nome || "Campanha Atual");
+      preencherTexto(
+        "periodoCampanha",
+        campanhaAtual?.inicio_pedidos && campanhaAtual?.fim_pedidos
+          ? `${dataBr(campanhaAtual.inicio_pedidos)} até ${dataBr(campanhaAtual.fim_pedidos)}`
+          : "Sistema carregado"
+      );
+
+      preencherTexto("statSetores", setores.length);
+      preencherTexto("statIgrejas", congregacoes.length);
+      preencherTexto("statPedidos", pedidos.length);
+      preencherTexto("statTopoCampanha", campanhaAtual?.ativo ? "Ativa" : "Inativa");
+      preencherTexto("statTopoPrazo", prazoPedidosAberto() ? "Aberto" : "Fechado");
+      preencherTexto("statTopoValor", moeda(CONFIG.valorUnitarioCamiseta));
+      preencherTexto("statValorUnitarioSetor", moeda(CONFIG.valorUnitarioCamiseta));
+      preencherTexto("mensagemPrazoPedidos", prazoPedidosAberto() ? "Pedidos liberados." : "Prazo encerrado.");
+
+      if (sessao?.tipo === "admin") {
+        const pecas = totalPecas();
+        const recebido = totalRecebido();
+
+        preencherTexto("statAdminPecas", pecas);
+        preencherTexto("statAdminTotal", moeda(pecas * CONFIG.valorUnitarioCamiseta));
+        preencherTexto("statAdminRecebido", moeda(recebido));
+        preencherTexto("statAdminSetores", setores.length);
+        preencherTexto("statAdminIgrejas", congregacoes.length);
+        preencherTexto("statAdminPedidos", pedidos.length);
+        preencherTexto(
+          "infoAdminDetalhes",
+          `Campanha: ${campanhaAtual?.nome || "Não definida"} • Setores: ${setores.length} • Congregações: ${congregacoes.length} • Pedidos: ${pedidos.length}`
+        );
+      }
+
+      if (sessao?.tipo === "setor") {
+        preencherTexto("tituloPainelSetor", sessao.setor_nome || "Setor");
+
+        const pedidosSetor = pedidos.filter((p) => String(p.setor_id) === String(sessao.setor_id));
+        const congregacoesSetor = congregacoes.filter((c) => String(c.setor_id) === String(sessao.setor_id));
+        const recebimentosSetor = recebimentos.filter((r) => String(r.setor_id) === String(sessao.setor_id));
+
+        const pecas = totalPecas(pedidosSetor);
+        const total = pecas * CONFIG.valorUnitarioCamiseta;
+        const recebido = totalRecebido(recebimentosSetor);
+        const saldo = total - recebido;
+
+        preencherTexto("statSetorCongregacoes", congregacoesSetor.length);
+        preencherTexto("statSetorPecas", pecas);
+        preencherTexto("statSetorTotal", moeda(total));
+        preencherTexto("statSetorRecebido", moeda(recebido));
+        preencherTexto("statSetorSaldo", moeda(saldo));
+        preencherTexto(
+          "infoSetorDetalhes",
+          `Setor: ${sessao.setor_nome} • Congregações: ${congregacoesSetor.length} • Pedidos: ${pedidosSetor.length} • Recebimentos: ${recebimentosSetor.length}`
+        );
+      }
+    }
+
     function bindEventos() {
-      el("formLoginAdmin")?.addEventListener("submit", (e) => {
+      el("formLoginAdmin")?.addEventListener("submit", async (e) => {
         e.preventDefault();
         try {
           fazerLoginAdmin(el("loginAdmin").value, el("senhaAdmin").value);
+          await recarregarTudo();
           renderTela();
           alert("Login admin funcionando.");
         } catch (err) {
@@ -298,10 +488,11 @@
         }
       });
 
-      el("formLoginSetor")?.addEventListener("submit", (e) => {
+      el("formLoginSetor")?.addEventListener("submit", async (e) => {
         e.preventDefault();
         try {
-          fazerLoginSetor(el("loginSetor").value, el("senhaSetor").value);
+          await fazerLoginSetor(el("loginSetor").value, el("senhaSetor").value);
+          await recarregarTudo();
           renderTela();
           alert("Login setor funcionando.");
         } catch (err) {
@@ -313,307 +504,18 @@
       el("btnLogoutSetor")?.addEventListener("click", logout);
     }
 
-    document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", async () => {
       bindEventos();
+
+      try {
+        await recarregarTudo();
+      } catch (e) {
+        console.error("Falha ao carregar dados:", e);
+      }
+
       renderTela();
       console.log("UMADECAMPI carregado com sucesso");
     });
-    <script>
-  const SUPABASE_URL = "https://dqwlhouwoxbwxkcaytja.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_b_tuFrU9PhG3VKYLupMVhg_pWPF6Spj";
-  const SESSION_KEY = "umadecampi_sessao_supabase_v1";
-
-  const CONFIG = {
-    valorUnitarioCamiseta: 45,
-    adminUsuario: "admin",
-    adminSenha: "123456",
-  };
-
-  let sessao = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
-  let setores = [];
-  let congregacoes = [];
-  let pedidos = [];
-  let recebimentos = [];
-  let campanhaAtual = {
-    nome: "Campanha Atual",
-    inicio_pedidos: null,
-    fim_pedidos: null,
-    ativo: true,
-  };
-
-  const el = (id) => document.getElementById(id);
-
-  function salvarSessao() {
-    localStorage.setItem(SESSION_KEY, JSON.stringify(sessao));
-  }
-
-  function limparSessao() {
-    sessao = null;
-    localStorage.removeItem(SESSION_KEY);
-  }
-
-  function mostrar(id, exibir = true) {
-    const node = el(id);
-    if (!node) return;
-    if (exibir) {
-      node.classList.remove("hidden");
-      node.style.display = "";
-    } else {
-      node.classList.add("hidden");
-      node.style.display = "none";
-    }
-  }
-
-  function preencherTexto(id, valor) {
-    const node = el(id);
-    if (node) node.textContent = valor;
-  }
-
-  function moeda(v) {
-    return Number(v || 0).toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    });
-  }
-
-  function dataBr(valor) {
-    if (!valor) return "-";
-    const d = new Date(valor);
-    if (Number.isNaN(d.getTime())) return valor;
-    return d.toLocaleDateString("pt-BR");
-  }
-
-  function normalizarTexto(txt) {
-    return String(txt || "")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .trim()
-      .toLowerCase();
-  }
-
-  async function api(path, options = {}) {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-      method: options.method || "GET",
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        "Content-Type": "application/json",
-        Prefer: options.prefer || "return=representation",
-      },
-      body: options.body ? JSON.stringify(options.body) : undefined,
-    });
-
-    const text = await response.text();
-
-    if (!response.ok) {
-      throw new Error(text || "Erro na comunicação com Supabase.");
-    }
-
-    return text ? JSON.parse(text) : [];
-  }
-
-  async function carregarCampanha() {
-    try {
-      const lista = await api("campanhas?select=*&ativo=eq.true&order=id.desc&limit=1");
-      if (lista.length) {
-        campanhaAtual = lista[0];
-      }
-    } catch (e) {
-      console.warn("Campanha não carregada:", e.message);
-    }
-  }
-
-  async function carregarSetores() {
-    try {
-      setores = await api("setores?select=*&order=nome.asc");
-    } catch (e) {
-      console.warn("Setores não carregados:", e.message);
-      setores = [];
-    }
-  }
-
-  async function carregarCongregacoes() {
-    try {
-      congregacoes = await api("congregacoes?select=*&order=nome.asc");
-    } catch (e) {
-      console.warn("Congregações não carregadas:", e.message);
-      congregacoes = [];
-    }
-  }
-
-  async function carregarPedidos() {
-    try {
-      pedidos = await api("pedidos?select=*&order=created_at.desc");
-    } catch (e) {
-      console.warn("Pedidos não carregados:", e.message);
-      pedidos = [];
-    }
-  }
-
-  async function carregarRecebimentos() {
-    try {
-      recebimentos = await api("recebimentos?select=*&order=created_at.desc");
-    } catch (e) {
-      console.warn("Recebimentos não carregados:", e.message);
-      recebimentos = [];
-    }
-  }
-
-  async function recarregarTudo() {
-    await carregarCampanha();
-    await carregarSetores();
-    await carregarCongregacoes();
-    await carregarPedidos();
-    await carregarRecebimentos();
-  }
-
-  function fazerLoginAdmin(usuario, senha) {
-    if (
-      String(usuario || "").trim() === CONFIG.adminUsuario &&
-      String(senha || "").trim() === CONFIG.adminSenha
-    ) {
-      sessao = {
-        tipo: "admin",
-        nome: "Administrador",
-        login_em: new Date().toISOString(),
-      };
-      salvarSessao();
-      return;
-    }
-
-    throw new Error("Usuário ou senha inválidos.");
-  }
-
-  function encontrarSetor(login) {
-    const valor = normalizarTexto(login);
-    return setores.find((s) => {
-      return (
-        normalizarTexto(s.nome) === valor ||
-        normalizarTexto(s.codigo || "") === valor ||
-        normalizarTexto(s.sigla || "") === valor ||
-        String(s.id || "") === String(login || "").trim()
-      );
-    });
-  }
-
-  async function fazerLoginSetor(login, senha) {
-    if (!login || !senha) throw new Error("Informe login e senha.");
-
-    if (!setores.length) {
-      await carregarSetores();
-    }
-
-    const setor = encontrarSetor(login);
-
-    if (!setor) {
-      throw new Error("Setor inválido.");
-    }
-
-    if (String(setor.senha || "").trim() !== String(senha || "").trim()) {
-      throw new Error("Senha inválida.");
-    }
-
-    sessao = {
-      tipo: "setor",
-      setor_id: setor.id,
-      setor_nome: setor.nome,
-      login_em: new Date().toISOString(),
-    };
-
-    salvarSessao();
-  }
-
-  function logout() {
-    limparSessao();
-    renderTela();
-  }
-
-  function totalPecas() {
-    return pedidos.reduce((acc, p) => acc + Number(p.quantidade || 0), 0);
-  }
-
-  function totalRecebido() {
-    return recebimentos.reduce((acc, r) => acc + Number(r.valor || 0), 0);
-  }
-
-  function renderTela() {
-    mostrar("telaLogin", !sessao);
-    mostrar("painelSetor", sessao?.tipo === "setor");
-    mostrar("painelAdmin", sessao?.tipo === "admin");
-
-    preencherTexto("nomeCampanhaAtual", campanhaAtual?.nome || "Campanha Atual");
-    preencherTexto(
-      "periodoCampanha",
-      campanhaAtual?.inicio_pedidos && campanhaAtual?.fim_pedidos
-        ? `${dataBr(campanhaAtual.inicio_pedidos)} até ${dataBr(campanhaAtual.fim_pedidos)}`
-        : "Sistema carregado"
-    );
-
-    preencherTexto("statSetores", setores.length);
-    preencherTexto("statIgrejas", congregacoes.length);
-    preencherTexto("statPedidos", pedidos.length);
-    preencherTexto("statTopoCampanha", campanhaAtual?.ativo ? "Ativa" : "Inativa");
-    preencherTexto("statTopoPrazo", "Aberto");
-    preencherTexto("statTopoValor", moeda(CONFIG.valorUnitarioCamiseta));
-
-    if (sessao?.tipo === "admin") {
-      preencherTexto("statAdminPecas", totalPecas());
-      preencherTexto("statAdminTotal", moeda(totalPecas() * CONFIG.valorUnitarioCamiseta));
-      preencherTexto("statAdminRecebido", moeda(totalRecebido()));
-      preencherTexto("statAdminSetores", setores.length);
-      preencherTexto("statAdminIgrejas", congregacoes.length);
-      preencherTexto("statAdminPedidos", pedidos.length);
-    }
-
-    if (sessao?.tipo === "setor") {
-      preencherTexto("tituloPainelSetor", sessao.setor_nome || "Setor");
-      const pedidosSetor = pedidos.filter(p => String(p.setor_id) === String(sessao.setor_id));
-      const congregacoesSetor = congregacoes.filter(c => String(c.setor_id) === String(sessao.setor_id));
-      const recebimentosSetor = recebimentos.filter(r => String(r.setor_id) === String(sessao.setor_id));
-      const pecas = pedidosSetor.reduce((acc, p) => acc + Number(p.quantidade || 0), 0);
-      const total = pecas * CONFIG.valorUnitarioCamiseta;
-      const recebido = recebimentosSetor.reduce((acc, r) => acc + Number(r.valor || 0), 0);
-
-      preencherTexto("statSetorCongregacoes", congregacoesSetor.length);
-      preencherTexto("statSetorPecas", pecas);
-      preencherTexto("statSetorTotal", moeda(total));
-      preencherTexto("statSetorRecebido", moeda(recebido));
-      preencherTexto("statSetorSaldo", moeda(total - recebido));
-    }
-  }
-
-  function bindEventos() {
-    el("formLoginAdmin")?.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      try {
-        fazerLoginAdmin(el("loginAdmin").value, el("senhaAdmin").value);
-        await recarregarTudo();
-        renderTela();
-      } catch (err) {
-        alert(err.message || "Erro no login admin.");
-      }
-    });
-
-    el("formLoginSetor")?.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      try {
-        await fazerLoginSetor(el("loginSetor").value, el("senhaSetor").value);
-        await recarregarTudo();
-        renderTela();
-      } catch (err) {
-        alert(err.message || "Erro no login setor.");
-      }
-    });
-
-    el("btnLogoutAdmin")?.addEventListener("click", logout);
-    el("btnLogoutSetor")?.addEventListener("click", logout);
-  }
-
-    } catch (e) {
-      console.error("Falha ao carregar dados:", e);
-      renderTela();
-    }
-  });
   </script>
 </body>
 </html>
