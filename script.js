@@ -1120,20 +1120,17 @@ async function registrarRecebimento(event) {
       return;
     }
 
-    if (!campanhaAtual?.id) {
-      alert("Campanha não encontrada.");
-      return;
-    }
+   const campanhaId = campanhaAtual?.id || null;
 
     const payload = {
-      campanha_id: campanhaAtual.id,
-      setor_id: setorId,
-      valor: valor,
-      data_recebimento: dataRecebimento,
-      observacao: observacao,
-      usuario_id: sessao?.id || null,
-      data_registro: new Date().toISOString(),
-    };
+  campanha_id: campanhaId,
+  setor_id: setorId,
+  valor: valor,
+  data_recebimento: dataRecebimento,
+  observacao: observacao,
+  usuario_id: sessao?.id || null,
+  data_registro: new Date().toISOString(),
+};
 
     console.log("payload recebimento:", payload);
 
