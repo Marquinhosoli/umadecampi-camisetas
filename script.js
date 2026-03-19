@@ -26,7 +26,6 @@ let recebimentosCache = [];
 let usuariosCache = [];
 
 const el = (id) => document.getElementById(id);
-const els = (selector) => Array.from(document.querySelectorAll(selector));
 
 function salvarSessao() {
   localStorage.setItem(SESSION_KEY, JSON.stringify(sessao));
@@ -104,11 +103,6 @@ function preencherTexto(id, valor) {
   if (node) node.textContent = String(valor ?? "");
 }
 
-function preencherHtml(id, valor) {
-  const node = el(id);
-  if (node) node.innerHTML = valor;
-}
-
 function preencherSelect(selectId, options, getValue, getLabel, placeholder = "Selecione") {
   const select = el(selectId);
   if (!select) return;
@@ -125,6 +119,8 @@ function preencherSelect(selectId, options, getValue, getLabel, placeholder = "S
 
   if (options.some((o) => String(getValue(o)) === String(valorAtual))) {
     select.value = valorAtual;
+  } else if (!select.value && options.length) {
+    select.value = String(getValue(options[0]));
   }
 }
 
@@ -160,7 +156,7 @@ function criarCampanhaFallback() {
 
   return {
     id: null,
-    nome: "Campanha cadastrada",
+    nome: "Campanha provisória",
     inicio_pedidos: `${ano}-${mes}-${String(CONFIG.inicioPedidos).padStart(2, "0")}`,
     fim_pedidos: `${ano}-${mes}-${String(CONFIG.fimPedidos).padStart(2, "0")}`,
     ativo: true,
@@ -222,21 +218,40 @@ async function carregarUsuarios() {
 }
 
 async function carregarSetores() {
-  try {
-    setores = await api("setores?select=*&order=nome.asc");
-  } catch (e) {
-    console.warn("Falha ao carregar setores:", e);
-    setores = [];
+  const tentativas = [
+    "setores?select=*&order=numero.asc.nullslast,nome.asc",
+    "setores?select=*&order=nome.asc",
+    "setores?select=*",
+  ];
+
+  for (const rota of tentativas) {
+    try {
+      setores = await api(rota);
+      return;
+    } catch (e) {
+      console.warn("Falha ao carregar setores:", rota, e);
+    }
   }
+
+  setores = [];
 }
 
 async function carregarCongregacoes() {
-  try {
-    congregacoes = await api("congregacoes?select=*&order=nome.asc");
-  } catch (e) {
-    console.warn("Falha ao carregar congregações:", e);
-    congregacoes = [];
+  const tentativas = [
+    "congregacoes?select=*&order=nome.asc",
+    "congregacoes?select=*",
+  ];
+
+  for (const rota of tentativas) {
+    try {
+      congregacoes = await api(rota);
+      return;
+    } catch (e) {
+      console.warn("Falha ao carregar congregações:", rota, e);
+    }
   }
+
+  congregacoes = [];
 }
 
 async function carregarPedidos() {
@@ -258,7 +273,7 @@ async function carregarPedidos() {
       ) {
         try {
           pedidosCache = await api(
-            `pedidos?select=${selectBase}&campanha_id=eq.${Number(campanhaAtual.id)}&order=created_at.desc.nullslast,data.desc.nullslast,id.desc`
+            `pedidos?select=${selectBase}&campanha_id=eq.${Number(campanhaAtual.id)}&order=id.desc`
           );
           return;
         } catch (e) {
@@ -266,9 +281,7 @@ async function carregarPedidos() {
         }
       }
 
-      pedidosCache = await api(
-        `pedidos?select=${selectBase}&order=created_at.desc.nullslast,data.desc.nullslast,id.desc`
-      );
+      pedidosCache = await api(`pedidos?select=${selectBase}&order=id.desc`);
       return;
     } catch (e) {
       console.warn("Falha ao carregar pedidos:", selectBase, e);
@@ -295,7 +308,7 @@ async function carregarRecebimentos() {
       ) {
         try {
           recebimentosCache = await api(
-            `recebimentos?select=${selectBase}&campanha_id=eq.${Number(campanhaAtual.id)}&order=created_at.desc.nullslast,data_registro.desc.nullslast,id.desc`
+            `recebimentos?select=${selectBase}&campanha_id=eq.${Number(campanhaAtual.id)}&order=id.desc`
           );
           return;
         } catch (e) {
@@ -303,9 +316,7 @@ async function carregarRecebimentos() {
         }
       }
 
-      recebimentosCache = await api(
-        `recebimentos?select=${selectBase}&order=created_at.desc.nullslast,data_registro.desc.nullslast,id.desc`
-      );
+      recebimentosCache = await api(`recebimentos?select=${selectBase}&order=id.desc`);
       return;
     } catch (e) {
       console.warn("Falha ao carregar recebimentos:", selectBase, e);
@@ -399,28 +410,32 @@ function usuarioSetorPorLoginESenha(login, senha) {
   const loginN = normalizarTexto(login);
   const senhaN = String(senha || "").trim();
 
-  return usuariosCache.find((u) => {
-    const tipo = normalizarTexto(u.tipo || "");
-    return (
-      ["setor", "usuario", "usuário"].includes(tipo) &&
-      normalizarTexto(u.login || "") === loginN &&
-      String(u.senha || "").trim() === senhaN
-    );
-  }) || null;
+  return (
+    usuariosCache.find((u) => {
+      const tipo = normalizarTexto(u.tipo || "");
+      return (
+        ["setor", "usuario", "usuário"].includes(tipo) &&
+        normalizarTexto(u.login || "") === loginN &&
+        String(u.senha || "").trim() === senhaN
+      );
+    }) || null
+  );
 }
 
 function usuarioAdminPorLoginESenha(login, senha) {
   const loginN = normalizarTexto(login);
   const senhaN = String(senha || "").trim();
 
-  return usuariosCache.find((u) => {
-    const tipo = normalizarTexto(u.tipo || "");
-    return (
-      tipo === "admin" &&
-      normalizarTexto(u.login || "") === loginN &&
-      String(u.senha || "").trim() === senhaN
-    );
-  }) || null;
+  return (
+    usuariosCache.find((u) => {
+      const tipo = normalizarTexto(u.tipo || "");
+      return (
+        tipo === "admin" &&
+        normalizarTexto(u.login || "") === loginN &&
+        String(u.senha || "").trim() === senhaN
+      );
+    }) || null
+  );
 }
 
 /* =========================
@@ -593,14 +608,15 @@ async function salvarPedido({ setor_id, congregacao_id, modelo, tamanho, quantid
     throw new Error("Período de pedidos encerrado.");
   }
 
+  const modeloNormalizado = normalizarTexto(modelo);
   const modeloCorrigido =
-    normalizarTexto(modelo) === "masculino"
+    modeloNormalizado === "masculino"
       ? "masculino"
-      : normalizarTexto(modelo).includes("baby")
+      : modeloNormalizado.includes("baby")
       ? "babylook"
       : modelo;
 
-  const payload = {
+  const payloadBase = {
     setor_id: Number(setor_id),
     congregacao_id: Number(congregacao_id),
     modelo: modeloCorrigido,
@@ -609,42 +625,56 @@ async function salvarPedido({ setor_id, congregacao_id, modelo, tamanho, quantid
     data: new Date().toISOString(),
   };
 
-  if (usuario_id) payload.usuario_id = Number(usuario_id);
+  if (usuario_id && !Number.isNaN(Number(usuario_id))) {
+    payloadBase.usuario_id = Number(usuario_id);
+  }
 
   if (
     campanhaAtual?.id &&
     !isUuid(campanhaAtual.id) &&
     !Number.isNaN(Number(campanhaAtual.id))
   ) {
-    payload.campanha_id = Number(campanhaAtual.id);
+    payloadBase.campanha_id = Number(campanhaAtual.id);
   }
 
-  try {
-    await api("pedidos", {
-      method: "POST",
-      body: payload,
-    });
-  } catch (e) {
-    const msg = String(e.message || "");
+  const variantes = [
+    ["usuario_id", "data", "campanha_id"],
+    ["data", "campanha_id"],
+    ["usuario_id", "campanha_id"],
+    ["usuario_id", "data"],
+    ["campanha_id"],
+    ["data"],
+    ["usuario_id"],
+    [],
+  ];
 
-    if (msg.includes("Could not find the 'usuario_id' column")) {
-      delete payload.usuario_id;
+  let ultimoErro = null;
+
+  for (const campos of variantes) {
+    const payload = {};
+    campos.forEach((campo) => {
+      if (payloadBase[campo] !== undefined) payload[campo] = payloadBase[campo];
+    });
+
+    payload.setor_id = payloadBase.setor_id;
+    payload.congregacao_id = payloadBase.congregacao_id;
+    payload.modelo = payloadBase.modelo;
+    payload.tamanho = payloadBase.tamanho;
+    payload.quantidade = payloadBase.quantidade;
+
+    try {
       await api("pedidos", {
         method: "POST",
         body: payload,
       });
-    } else if (msg.includes("Could not find the 'data' column")) {
-      delete payload.data;
-      await api("pedidos", {
-        method: "POST",
-        body: payload,
-      });
-    } else {
-      throw e;
+      await carregarPedidos();
+      return;
+    } catch (e) {
+      ultimoErro = e;
     }
   }
 
-  await carregarPedidos();
+  throw ultimoErro || new Error("Não foi possível salvar o pedido.");
 }
 
 async function excluirPedido(pedidoId) {
@@ -664,56 +694,89 @@ async function registrarRecebimento({ setor_id, valor, observacao, data_pagament
   if (!setor_id) throw new Error("Setor não informado.");
   if (!valor) throw new Error("Informe o valor recebido.");
 
-  const payload = {
+  const base = {
     setor_id: Number(setor_id),
     valor: numero(valor),
     observacao: observacao || null,
     data_pagamento: data_pagamento || new Date().toISOString().slice(0, 10),
   };
 
-  if (usuario_id) payload.usuario_id = Number(usuario_id);
+  if (usuario_id && !Number.isNaN(Number(usuario_id))) {
+    base.usuario_id = Number(usuario_id);
+  }
 
   if (
     campanhaAtual?.id &&
     !isUuid(campanhaAtual.id) &&
     !Number.isNaN(Number(campanhaAtual.id))
   ) {
-    payload.campanha_id = Number(campanhaAtual.id);
+    base.campanha_id = Number(campanhaAtual.id);
   }
 
-  try {
-    await api("recebimentos", {
-      method: "POST",
-      body: payload,
-    });
-  } catch (e) {
-    const msg = String(e.message || "");
+  const tentativas = [
+    { ...base },
+    (() => {
+      const p = { ...base };
+      delete p.campanha_id;
+      return p;
+    })(),
+    (() => {
+      const p = { ...base };
+      delete p.usuario_id;
+      return p;
+    })(),
+    (() => {
+      const p = { ...base };
+      delete p.data_pagamento;
+      p.data_recebimento = new Date().toISOString().slice(0, 10);
+      return p;
+    })(),
+    (() => {
+      const p = { ...base };
+      delete p.usuario_id;
+      delete p.campanha_id;
+      return p;
+    })(),
+    (() => {
+      const p = { ...base };
+      delete p.usuario_id;
+      delete p.data_pagamento;
+      p.data_recebimento = new Date().toISOString().slice(0, 10);
+      return p;
+    })(),
+    (() => {
+      const p = { ...base };
+      delete p.campanha_id;
+      delete p.data_pagamento;
+      p.data_recebimento = new Date().toISOString().slice(0, 10);
+      return p;
+    })(),
+    (() => {
+      const p = { ...base };
+      delete p.usuario_id;
+      delete p.campanha_id;
+      delete p.data_pagamento;
+      p.data_recebimento = new Date().toISOString().slice(0, 10);
+      return p;
+    })(),
+  ];
 
-    if (msg.includes("Could not find the 'campanha_id' column of 'recebimentos'")) {
-      delete payload.campanha_id;
+  let ultimoErro = null;
+
+  for (const payload of tentativas) {
+    try {
       await api("recebimentos", {
         method: "POST",
         body: payload,
       });
-    } else if (msg.includes("Could not find the 'usuario_id' column")) {
-      delete payload.usuario_id;
-      await api("recebimentos", {
-        method: "POST",
-        body: payload,
-      });
-    } else if (msg.includes("Could not find the 'data_pagamento' column")) {
-      delete payload.data_pagamento;
-      payload.data_recebimento = new Date().toISOString().slice(0, 10);
-      await api("recebimentos", {
-        method: "POST",
-        body: payload,
-      });
-    } else {
-      throw e;
+      await carregarRecebimentos();
+      return;
+    } catch (e) {
+      ultimoErro = e;
     }
   }
 
-  await carregarRecebimentos();
+  throw ultimoErro || new Error("Não foi possível registrar o recebimento.");
 }
 
 /* =========================
@@ -969,7 +1032,7 @@ function renderTela() {
     renderPainelSetor();
   }
 
-  if (sessao.tipo === "admin") {
+  if (sessao.type === "admin" || sessao.tipo === "admin") {
     renderPainelAdmin();
   }
 }
@@ -1049,7 +1112,7 @@ function bindEventos() {
         usuario_id: sessao?.usuario_id,
       });
 
-      el("pedidoQuantidade").value = 1;
+      if (el("pedidoQuantidade")) el("pedidoQuantidade").value = 1;
       await recarregarTudo();
       renderTela();
       alert("Pedido salvo com sucesso.");
@@ -1072,7 +1135,7 @@ function bindEventos() {
         usuario_id: sessao?.usuario_id,
       });
 
-      el("pedidoAdminQuantidade").value = 1;
+      if (el("pedidoAdminQuantidade")) el("pedidoAdminQuantidade").value = 1;
       await recarregarTudo();
       renderTela();
       alert("Pedido do admin salvo com sucesso.");
@@ -1100,8 +1163,8 @@ function bindEventos() {
         usuario_id: sessao?.usuario_id,
       });
 
-      el("recebimentoValor").value = "";
-      el("recebimentoObs").value = "";
+      if (el("recebimentoValor")) el("recebimentoValor").value = "";
+      if (el("recebimentoObs")) el("recebimentoObs").value = "";
       await recarregarTudo();
       renderTela();
       alert("Recebimento salvo com sucesso.");
@@ -1142,6 +1205,7 @@ async function iniciarSistema() {
     validarSessaoAtual();
     renderTela();
     console.log("UMADECAMPI carregado com sucesso");
+    console.log("Se aparecer mensagem 'Não há campanha cadastrada no banco.', existe script antigo ainda rodando.");
   } catch (e) {
     console.error("Erro ao iniciar sistema:", e);
     renderTela();
