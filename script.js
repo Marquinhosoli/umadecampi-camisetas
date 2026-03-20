@@ -119,8 +119,6 @@ function preencherSelect(selectId, options, getValue, getLabel, placeholder = "S
 
   if (options.some((o) => String(getValue(o)) === String(valorAtual))) {
     select.value = valorAtual;
-  } else if (!select.value && options.length) {
-    select.value = String(getValue(options[0]));
   }
 }
 
@@ -146,7 +144,7 @@ async function api(path, options = {}) {
 }
 
 /* =========================
-   CARREGAMENTO
+   CAMPANHA
 ========================= */
 
 function criarCampanhaFallback() {
@@ -160,15 +158,58 @@ function criarCampanhaFallback() {
     inicio_pedidos: `${ano}-${mes}-${String(CONFIG.inicioPedidos).padStart(2, "0")}`,
     fim_pedidos: `${ano}-${mes}-${String(CONFIG.fimPedidos).padStart(2, "0")}`,
     ativo: true,
+    _fallback: true,
   };
 }
 
-function campanhaEstaAtivaLocalmente(campanha) {
+function campanhaEstaMarcadaComoAtiva(campanha) {
   if (!campanha) return false;
-  if (campanha.ativo === true || campanha.ativa === true) return true;
 
-  const status = normalizarTexto(campanha.status || "");
+  if (campanha.ativo === true) return true;
+  if (campanha.ativa === true) return true;
+  if (numero(campanha.ativo) === 1) return true;
+  if (numero(campanha.ativa) === 1) return true;
+
+  const status = normalizarTexto(campanha.status || campanha.situacao || "");
   return ["ativa", "ativo", "aberta", "aberto", "em andamento", "andamento"].includes(status);
+}
+
+function campanhaTemPeriodoValido(campanha) {
+  if (!campanha) return false;
+  if (!campanha.inicio_pedidos || !campanha.fim_pedidos) return true;
+
+  const agora = new Date();
+  const inicio = new Date(`${campanha.inicio_pedidos}T00:00:00`);
+  const fim = new Date(`${campanha.fim_pedidos}T23:59:59`);
+
+  if (Number.isNaN(inicio.getTime()) || Number.isNaN(fim.getTime())) return true;
+
+  return agora >= inicio && agora <= fim;
+}
+
+function campanhaExiste() {
+  return !!campanhaAtual;
+}
+
+function campanhaEstaAtiva() {
+  if (!campanhaAtual) return false;
+  if (campanhaAtual._fallback) return true;
+  return campanhaEstaMarcadaComoAtiva(campanhaAtual);
+}
+
+function campanhaDisponivelParaSetor() {
+  if (!campanhaEstaAtiva()) return false;
+  return campanhaTemPeriodoValido(campanhaAtual);
+}
+
+function campanhaDisponivelParaAdmin() {
+  if (!campanhaAtual) return false;
+  if (campanhaAtual._fallback) return true;
+
+  if (!campanhaEstaAtiva()) return false;
+  if (CONFIG.adminPodeEditarForaPrazo) return true;
+
+  return campanhaTemPeriodoValido(campanhaAtual);
 }
 
 async function carregarCampanhaAtual() {
@@ -177,6 +218,8 @@ async function carregarCampanhaAtual() {
     "campanhas?select=*&ativa=eq.true&order=id.desc&limit=1",
     "campanhas?select=*&status=eq.Ativa&order=id.desc&limit=1",
     "campanhas?select=*&status=eq.ativa&order=id.desc&limit=1",
+    "campanhas?select=*&situacao=eq.Ativa&order=id.desc&limit=1",
+    "campanhas?select=*&situacao=eq.ativa&order=id.desc&limit=1",
     "campanhas?select=*&order=id.desc&limit=50",
   ];
 
@@ -188,7 +231,10 @@ async function carregarCampanhaAtual() {
       let campanha = null;
 
       if (rota.includes("limit=50")) {
-        campanha = data.find((c) => campanhaEstaAtivaLocalmente(c)) || data[0] || null;
+        campanha =
+          data.find((c) => campanhaEstaMarcadaComoAtiva(c)) ||
+          data[0] ||
+          null;
       } else {
         campanha = data[0] || null;
       }
@@ -196,7 +242,7 @@ async function carregarCampanhaAtual() {
       if (campanha) {
         campanhaAtual = {
           ...campanha,
-          ativo: true,
+          _fallback: false,
         };
         return;
       }
@@ -207,6 +253,10 @@ async function carregarCampanhaAtual() {
 
   campanhaAtual = criarCampanhaFallback();
 }
+
+/* =========================
+   CARREGAMENTO
+========================= */
 
 async function carregarUsuarios() {
   try {
@@ -586,13 +636,11 @@ function logout() {
 ========================= */
 
 function dentroPrazoPedidos() {
-  if (sessao?.tipo === "admin" && CONFIG.adminPodeEditarForaPrazo) return true;
-  if (!campanhaAtual?.inicio_pedidos || !campanhaAtual?.fim_pedidos) return true;
+  if (sessao?.tipo === "admin") {
+    return campanhaDisponivelParaAdmin();
+  }
 
-  const agora = new Date();
-  const inicio = new Date(`${campanhaAtual.inicio_pedidos}T00:00:00`);
-  const fim = new Date(`${campanhaAtual.fim_pedidos}T23:59:59`);
-  return agora >= inicio && agora <= fim;
+  return campanhaDisponivelParaSetor();
 }
 
 /* =========================
@@ -600,6 +648,14 @@ function dentroPrazoPedidos() {
 ========================= */
 
 async function salvarPedido({ setor_id, congregacao_id, modelo, tamanho, quantidade, usuario_id }) {
+  if (!campanhaExiste()) {
+    throw new Error("Nenhuma campanha encontrada.");
+  }
+
+  if (!campanhaEstaAtiva()) {
+    throw new Error("A campanha está inativa.");
+  }
+
   if (!setor_id || !congregacao_id || !modelo || !tamanho || !quantidade) {
     throw new Error("Preencha todos os campos do pedido.");
   }
@@ -787,7 +843,7 @@ function renderResumoPublico() {
   preencherTexto("statSetores", setores.length);
   preencherTexto("statIgrejas", congregacoes.length);
   preencherTexto("statPedidos", pedidosCache.length);
-  preencherTexto("statTopoCampanha", campanhaAtual ? "Ativa" : "Inativa");
+  preencherTexto("statTopoCampanha", campanhaEstaAtiva() ? "Ativa" : "Inativa");
   preencherTexto("statTopoPrazo", dentroPrazoPedidos() ? "Aberto" : "Fechado");
   preencherTexto("statTopoValor", moeda(CONFIG.valorUnitarioCamiseta));
   preencherTexto("nomeCampanhaAtual", campanhaAtual?.nome || "Campanha não definida");
@@ -947,7 +1003,11 @@ function renderPainelSetor() {
   preencherTexto("statValorUnitarioSetor", moeda(CONFIG.valorUnitarioCamiseta));
   preencherTexto(
     "mensagemPrazoPedidos",
-    dentroPrazoPedidos() ? "Pedidos liberados." : "Período de pedidos encerrado."
+    campanhaEstaAtiva()
+      ? dentroPrazoPedidos()
+        ? "Pedidos liberados."
+        : "Período de pedidos encerrado."
+      : "Campanha inativa."
   );
   preencherTexto(
     "infoSetorDetalhes",
@@ -978,7 +1038,7 @@ function renderPainelAdmin() {
   preencherTexto("statAdminRecebido", moeda(totalRecebido));
   preencherTexto(
     "infoAdminDetalhes",
-    `Campanha: ${campanhaAtual?.nome || "Não definida"} • Setores: ${setores.length} • Congregações: ${congregacoes.length} • Pedidos: ${pedidosCache.length} • Recebido: ${moeda(totalRecebido)}`
+    `Campanha: ${campanhaAtual?.nome || "Não definida"} • Status: ${campanhaEstaAtiva() ? "Ativa" : "Inativa"} • Setores: ${setores.length} • Congregações: ${congregacoes.length} • Pedidos: ${pedidosCache.length} • Recebido: ${moeda(totalRecebido)}`
   );
 
   const setoresOrdenados = [...setores].sort(
@@ -1032,7 +1092,7 @@ function renderTela() {
     renderPainelSetor();
   }
 
-  if (sessao.type === "admin" || sessao.tipo === "admin") {
+  if (sessao.tipo === "admin") {
     renderPainelAdmin();
   }
 }
@@ -1205,7 +1265,7 @@ async function iniciarSistema() {
     validarSessaoAtual();
     renderTela();
     console.log("UMADECAMPI carregado com sucesso");
-    console.log("Se aparecer mensagem , existe script antigo ainda rodando.");
+    console.log("Se aparecer mensagem, existe script antigo ainda rodando.");
   } catch (e) {
     console.error("Erro ao iniciar sistema:", e);
     renderTela();
