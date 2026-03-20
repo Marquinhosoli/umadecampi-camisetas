@@ -148,17 +148,10 @@
       line-height:1.15;
     }
 
-    .login-grid,.grid-2,.grid-3{
+    .login-grid,.grid-2{
       display:grid;
       gap:22px;
-    }
-
-    .login-grid,.grid-2{
       grid-template-columns:repeat(2,minmax(0,1fr));
-    }
-
-    .grid-3{
-      grid-template-columns:repeat(3,minmax(0,1fr));
     }
 
     form{
@@ -177,18 +170,13 @@
       margin-bottom:6px;
     }
 
-    input,select,button,textarea{
+    input,select,button{
       width:100%;
       border-radius:12px;
       border:1px solid var(--border);
       padding:12px 14px;
       font-size:.98rem;
       background:#fff;
-    }
-
-    textarea{
-      resize:vertical;
-      min-height:90px;
     }
 
     button{
@@ -202,29 +190,10 @@
       transform:translateY(-1px);
     }
 
-    .btn-primary{
-      background:var(--primary);
-      color:#fff;
-    }
-
-    .btn-primary:hover{
-      background:var(--primary2);
-    }
-
-    .btn-secondary{
-      background:#e2e8f0;
-      color:#0f172a;
-    }
-
-    .btn-danger{
-      background:var(--danger);
-      color:#fff;
-    }
-
-    .btn-success{
-      background:var(--success);
-      color:#fff;
-    }
+    .btn-primary{ background:var(--primary); color:#fff; }
+    .btn-primary:hover{ background:var(--primary2); }
+    .btn-danger{ background:var(--danger); color:#fff; }
+    .btn-success{ background:var(--success); color:#fff; }
 
     .actions-row{
       display:flex;
@@ -322,9 +291,7 @@
       color:#334155;
     }
 
-    .pill-success,
-    .pill-warning,
-    .pill-danger{
+    .pill-success,.pill-warning{
       display:inline-block;
       padding:6px 10px;
       border-radius:999px;
@@ -341,11 +308,6 @@
     .pill-warning{
       background:var(--yellow-soft);
       color:var(--yellow-text);
-    }
-
-    .pill-danger{
-      background:var(--red-soft);
-      color:var(--red-text);
     }
 
     details{
@@ -375,10 +337,6 @@
     @media (max-width:1100px){
       .stats{
         grid-template-columns:repeat(3,minmax(0,1fr));
-      }
-
-      .grid-3{
-        grid-template-columns:1fr;
       }
     }
 
@@ -846,8 +804,17 @@
         select.appendChild(option);
       });
 
-      if (options.some((o) => String(getValue(o)) === String(valorAtual))) {
+      if (options.length === 0) {
+        select.value = "";
+        return;
+      }
+
+      const existeValorAtual = options.some((o) => String(getValue(o)) === String(valorAtual));
+
+      if (existeValorAtual) {
         select.value = valorAtual;
+      } else {
+        select.value = String(getValue(options[0]));
       }
     }
 
@@ -983,14 +950,15 @@
 
     async function carregarSetores() {
       const tentativas = [
-        "setores?select=*&order=numero.asc.nullslast,nome.asc",
+        "setores?select=*&order=numero.asc,nome.asc",
         "setores?select=*&order=nome.asc",
         "setores?select=*",
       ];
 
       for (const rota of tentativas) {
         try {
-          setores = await api(rota);
+          const lista = await api(rota);
+          setores = Array.isArray(lista) ? lista : [];
           return;
         } catch (e) {
           console.warn("Falha ao carregar setores:", rota, e);
@@ -1008,7 +976,8 @@
 
       for (const rota of tentativas) {
         try {
-          congregacoes = await api(rota);
+          const lista = await api(rota);
+          congregacoes = Array.isArray(lista) ? lista : [];
           return;
         } catch (e) {
           console.warn("Falha ao carregar congregações:", rota, e);
@@ -1677,14 +1646,6 @@
       preencherTexto("statSetorSaldo", moeda(saldoDoSetor(setorId)));
       preencherTexto("statValorUnitarioSetor", moeda(CONFIG.valorUnitarioCamiseta));
       preencherTexto(
-        "mensagemPrazoPedidos",
-        campanhaEstaAtiva()
-          ? dentroPrazoPedidos()
-            ? "Pedidos liberados."
-            : "Período de pedidos encerrado."
-          : "Campanha inativa."
-      );
-      preencherTexto(
         "infoSetorDetalhes",
         `Setor: ${setor?.nome || sessao?.setor_nome || "-"} • Congregações: ${congregacoesSetor.length} • Pedidos: ${pedidosSetor.length} • Recebimentos: ${recebimentosSetor.length}`
       );
@@ -1930,8 +1891,18 @@
 
       el("pedidoAdminSetor")?.addEventListener("change", () => {
         if (sessao?.tipo === "admin") {
-          renderPainelAdmin();
-          atualizarBadgesVisuais();
+          const setorEscolhido = el("pedidoAdminSetor")?.value || "";
+          const congregacoesFiltradas = congregacoes
+            .filter((c) => !setorEscolhido || String(c.setor_id) === String(setorEscolhido))
+            .sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"));
+
+          preencherSelect(
+            "pedidoAdminCongregacao",
+            congregacoesFiltradas,
+            (c) => c.id,
+            (c) => c.nome,
+            "Selecione a congregação"
+          );
         }
       });
 
