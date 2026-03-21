@@ -485,6 +485,10 @@ function dentroPrazoPedidos() {
   return campanhaDisponivelParaSetor();
 }
 
+// ---------------------------------------------------------
+// REQUISIÇÕES E CADASTROS
+// ---------------------------------------------------------
+
 async function salvarPedido({ setor_id, congregacao_id, modelo, tamanho, quantidade, usuario_id }) {
   if (!campanhaExiste()) throw new Error("Nenhuma campanha encontrada.");
   if (!campanhaEstaAtiva()) throw new Error("A campanha está inativa.");
@@ -573,6 +577,30 @@ async function registrarRecebimento({ setor_id, congregacao_id, valor, observaca
   throw ultimoErro || new Error("Não foi possível registrar o recebimento.");
 }
 
+async function deletarPedidoBanco(id) {
+  if(!confirm("⚠️ Tem certeza que deseja EXCLUIR este pedido permanentemente?")) return;
+  try {
+    await api(`pedidos?id=eq.${id}`, { method: "DELETE" });
+    await carregarPedidos();
+    renderTela();
+    alert("Pedido excluído com sucesso.");
+  } catch(e) {
+    alert("Erro ao excluir: " + extrairMensagemErro(e));
+  }
+}
+
+async function deletarRecebimentoBanco(id) {
+  if(!confirm("⚠️ Tem certeza que deseja EXCLUIR este recebimento permanentemente?")) return;
+  try {
+    await api(`recebimentos?id=eq.${id}`, { method: "DELETE" });
+    await carregarRecebimentos();
+    renderTela();
+    alert("Recebimento excluído com sucesso.");
+  } catch(e) {
+    alert("Erro ao excluir: " + extrairMensagemErro(e));
+  }
+}
+
 async function prorrogarPrazoAdmin(diasExtras) {
   if (!campanhaAtual || campanhaAtual._fallback) {
     alert("Nenhuma campanha oficial rodando no banco de dados para prorrogar. Crie uma na tabela 'campanhas'.");
@@ -604,8 +632,40 @@ async function prorrogarPrazoAdmin(diasExtras) {
 }
 
 // ---------------------------------------------------------
-// NOVO: Função para Exportar Relatório de Fábrica (Várias Abas .xlsx)
+// MODAL E EDIÇÃO
 // ---------------------------------------------------------
+
+function abrirModalEdicao(tipo, id) {
+  const modal = el("modalEdit");
+  el("editId").value = id;
+  el("editType").value = tipo;
+
+  mostrar("fieldsPedido", tipo === 'pedido');
+  mostrar("fieldsRecebimento", tipo === 'recebimento');
+
+  if (tipo === 'pedido') {
+    const ped = pedidosCache.find(p => String(p.id) === String(id));
+    el("modalEditTitle").textContent = "Editar Pedido";
+    el("editQtd").value = ped.quantidade;
+    el("editTamanho").value = ped.tamanho;
+  } else {
+    const rec = recebimentosCache.find(r => String(r.id) === String(id));
+    el("modalEditTitle").textContent = "Editar Recebimento";
+    el("editValor").value = rec.valor;
+    el("editObs").value = rec.observacao || "";
+  }
+  
+  modal.classList.remove("hidden");
+}
+
+function fecharModal() {
+  el("modalEdit").classList.add("hidden");
+}
+
+// ---------------------------------------------------------
+// EXPORTAÇÃO E EXCEL
+// ---------------------------------------------------------
+
 function exportarParaExcel() {
   if (typeof XLSX === "undefined") {
     alert("A biblioteca do Excel ainda está carregando ou ocorreu um erro de internet. Aguarde alguns segundos e tente novamente.");
@@ -614,7 +674,6 @@ function exportarParaExcel() {
 
   const wb = XLSX.utils.book_new();
 
-  // 1. PREPARAÇÃO DAS ESTRUTURAS
   const prodGeral = [
     { Modelo: "Masculino", PP: 0, P: 0, M: 0, G: 0, GG: 0, XG: 0, XXG: 0, TOTAL: 0 },
     { Modelo: "Baby Look", PP: 0, P: 0, M: 0, G: 0, GG: 0, XG: 0, XXG: 0, TOTAL: 0 }
@@ -630,7 +689,6 @@ function exportarParaExcel() {
     babySetorMap[s.id] = { Setor: nomeSetor, PP: 0, P: 0, M: 0, G: 0, GG: 0, XG: 0, XXG: 0, TOTAL: 0 };
   });
 
-  // 2. PROCESSAMENTO DOS PEDIDOS
   pedidosCache.forEach(p => {
     const setor = getSetorById(p.setor_id);
     const nomeSetor = setor ? `${String(setor.numero || "").padStart(2, "0")} - ${setor.nome}` : "-";
@@ -669,7 +727,6 @@ function exportarParaExcel() {
   const mascArr = Object.values(mascSetorMap).filter(s => s.TOTAL > 0);
   const babyArr = Object.values(babySetorMap).filter(s => s.TOTAL > 0);
 
-  // 3. ABA "POR SETOR"
   const totalPorSetor = setoresOrdenados().map(s => {
     const nomeSetor = `${String(s.numero || "").padStart(2, "0")} - ${s.nome}`;
     const totalMasc = mascSetorMap[s.id] ? mascSetorMap[s.id].TOTAL : 0;
@@ -680,7 +737,6 @@ function exportarParaExcel() {
     };
   }).filter(s => s["Total Peças"] > 0);
 
-  // 4. ABA "FINANCEIRO"
   const resumoFin = montarResumoIgrejasDetalhado().map(x => ({
     Setor: x.setorNome,
     Congregação: x.congregacaoNome,
@@ -691,7 +747,6 @@ function exportarParaExcel() {
     "Status Pagamento": x.status
   }));
 
-  // 5. MONTAR E SALVAR ARQUIVO EXCEL
   const wsGeral = XLSX.utils.json_to_sheet(prodGeral);
   const wsMasc = XLSX.utils.json_to_sheet(mascArr);
   const wsBaby = XLSX.utils.json_to_sheet(babyArr);
@@ -709,6 +764,10 @@ function exportarParaExcel() {
   const hoje = new Date().toISOString().split("T")[0];
   XLSX.writeFile(wb, `Relatorio_Fabrica_UMADECAMPI_${hoje}.xlsx`);
 }
+
+// ---------------------------------------------------------
+// RENDERIZAÇÃO
+// ---------------------------------------------------------
 
 function dataPedido(item) {
   return item?.created_at || item?.data || null;
@@ -823,7 +882,7 @@ function renderTabelaRecebimentosAdmin() {
   if (!corpo) return;
 
   if (!recebimentosCache.length) {
-    corpo.innerHTML = `<tr><td colspan="5">Nenhum recebimento encontrado.</td></tr>`;
+    corpo.innerHTML = `<tr><td colspan="6">Nenhum recebimento encontrado.</td></tr>`;
     return;
   }
 
@@ -837,10 +896,44 @@ function renderTabelaRecebimentosAdmin() {
         <td>${escapeHtml(congregacao?.nome || "-")}</td>
         <td>${moeda(r.valor)}</td>
         <td>${escapeHtml(r.observacao || "-")}</td>
+        <td class="td-actions">
+          <button class="primary btn-sm" onclick="abrirModalEdicao('recebimento', ${r.id})">✏️</button>
+          <button class="danger btn-sm" onclick="deletarRecebimentoBanco(${r.id})">🗑️</button>
+        </td>
       </tr>
     `;
   }).join("");
 }
+
+function renderTabelaPedidosAdmin() {
+  const corpo = el("tbodyGerenciarPedidosAdmin");
+  if (!corpo) return;
+
+  if (!pedidosCache.length) {
+    corpo.innerHTML = `<tr><td colspan="7">Nenhum pedido encontrado.</td></tr>`;
+    return;
+  }
+
+  corpo.innerHTML = pedidosCache.map((p) => {
+    const setor = getSetorById(p.setor_id);
+    const congregacao = getCongregacaoById(p.congregacao_id);
+    return `
+      <tr>
+        <td>${formatarDataHora(dataPedido(p))}</td>
+        <td>${escapeHtml(setor?.nome || "-")}</td>
+        <td>${escapeHtml(congregacao?.nome || "-")}</td>
+        <td>${escapeHtml(modelos[p.modelo] || p.modelo || "-")}</td>
+        <td>${escapeHtml(p.tamanho || "-")}</td>
+        <td>${numero(p.quantidade)}</td>
+        <td class="td-actions">
+          <button class="primary btn-sm" onclick="abrirModalEdicao('pedido', ${p.id})">✏️</button>
+          <button class="danger btn-sm" onclick="deletarPedidoBanco(${p.id})">🗑️</button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
 
 function renderFaltantesAdmin() {
   const tbody = el("tbodyFaltantesAdmin");
@@ -961,6 +1054,7 @@ function atualizarBadgeCampanha() {
 function popularTamanhos() {
   preencherSelect("pedidoTamanho", tamanhos, (x) => x, (x) => x, "Selecione");
   preencherSelect("pedidoAdminTamanho", tamanhos, (x) => x, (x) => x, "Selecione");
+  preencherSelect("editTamanho", tamanhos, (x) => x, (x) => x, "Selecione");
 }
 
 function setoresOrdenados() {
@@ -1080,6 +1174,7 @@ function renderPainelAdmin() {
   atualizarCongregacoesPedidoAdmin();
   atualizarCongregacoesRecebimentoAdmin();
   renderResumoIgrejas();
+  renderTabelaPedidosAdmin();
   renderTabelaRecebimentosAdmin();
   renderFaltantesAdmin();
   renderVisualizacaoRapida();
@@ -1193,6 +1288,40 @@ function bindEventos() {
       alert(extrairMensagemErro(err));
     }
   });
+
+  // Evento do FORMULARIO DE EDIÇÃO (Modal)
+  el("formEdit")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const id = el("editId").value;
+    const tipo = el("editType").value;
+
+    try {
+      if (tipo === 'pedido') {
+        await api(`pedidos?id=eq.${id}`, {
+          method: "PATCH",
+          body: {
+            quantidade: numero(el("editQtd").value),
+            tamanho: el("editTamanho").value
+          }
+        });
+        await carregarPedidos();
+      } else {
+        await api(`recebimentos?id=eq.${id}`, {
+          method: "PATCH",
+          body: {
+            valor: numero(el("editValor").value),
+            observacao: el("editObs").value
+          }
+        });
+        await carregarRecebimentos();
+      }
+      fecharModal();
+      renderTela();
+      alert("Registro atualizado com sucesso!");
+    } catch(err) {
+      alert(extrairMensagemErro(err));
+    }
+  });
   
   el("btnProrrogar")?.addEventListener("click", () => {
     const dias = el("diasProrrogacao")?.value;
@@ -1201,7 +1330,6 @@ function bindEventos() {
     }
   });
   
-  // EVENTO DE GERAR EXCEL COM ABAS
   el("btnExportarExcel")?.addEventListener("click", exportarParaExcel);
 
   el("pedidoAdminSetor")?.addEventListener("change", atualizarCongregacoesPedidoAdmin);
