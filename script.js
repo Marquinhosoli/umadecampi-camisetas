@@ -1365,3 +1365,12 @@ async function iniciarSistema() {
 }
 
 document.addEventListener("DOMContentLoaded", iniciarSistema);
+
+// REGISTRO DO SERVICE WORKER (Para virar Aplicativo)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('App PWA ativado com sucesso!'))
+      .catch(err => console.error('Erro ao ativar PWA:', err));
+  });
+}
