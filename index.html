@@ -184,11 +184,6 @@
       background:#fff;
     }
 
-    textarea{
-      resize:vertical;
-      min-height:90px;
-    }
-
     button{
       cursor:pointer;
       font-weight:700;
@@ -385,6 +380,14 @@
       font-weight:800;
     }
 
+    .toolbar{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:14px;
+      margin-top:14px;
+      margin-bottom:14px;
+    }
+
     @media (max-width:1100px){
       .stats{
         grid-template-columns:repeat(3,minmax(0,1fr));
@@ -397,10 +400,14 @@
       .mini-grid{
         grid-template-columns:repeat(2,minmax(0,1fr));
       }
+
+      .toolbar{
+        grid-template-columns:1fr;
+      }
     }
 
     @media (max-width:780px){
-      .login-grid,.grid-2,.grid-3,.stats,.mini-grid{
+      .login-grid,.grid-2,.grid-3,.stats,.mini-grid,.toolbar{
         grid-template-columns:1fr;
       }
 
@@ -686,88 +693,36 @@
         </div>
 
         <div class="card" style="margin-top:22px">
-          <details open>
-            <summary>Resumo por setor</summary>
-            <div class="table-wrap" style="margin-top:14px">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Setor</th>
-                    <th>Congregações</th>
-                    <th>Peças</th>
-                    <th>Total</th>
-                    <th>Recebido</th>
-                    <th>Saldo</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody id="tbodyResumoSetores"></tbody>
-              </table>
-            </div>
-          </details>
-        </div>
+          <h3 class="section-title">Visualização rápida</h3>
 
-        <div class="card" style="margin-top:22px">
-          <details open>
-            <summary>Resumo por congregação</summary>
-            <div class="table-wrap" style="margin-top:14px">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Setor</th>
-                    <th>Congregação</th>
-                    <th>Peças</th>
-                    <th>Total</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody id="tbodyResumoCongregacoes"></tbody>
-              </table>
+          <div class="toolbar">
+            <div class="field">
+              <label for="tipoVisualizacaoAdmin">Mostrar</label>
+              <select id="tipoVisualizacaoAdmin">
+                <option value="pediram">Setores / congregações que pediram</option>
+                <option value="pagaram">Setores / congregações que pagaram</option>
+                <option value="faltamPagar">Setores que faltam pagar</option>
+                <option value="semPedido">Congregações sem pedido</option>
+              </select>
             </div>
-          </details>
-        </div>
 
-        <div class="grid-2" style="margin-top:22px">
-          <div class="card">
-            <details>
-              <summary>Congregações que ainda não pediram</summary>
-              <div class="table-wrap" style="margin-top:14px">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Setor</th>
-                      <th>Congregação</th>
-                    </tr>
-                  </thead>
-                  <tbody id="tbodyFaltantesAdmin"></tbody>
-                </table>
-              </div>
-            </details>
+            <div class="field">
+              <label for="filtroSetorVisualizacao">Filtrar setor</label>
+              <select id="filtroSetorVisualizacao"></select>
+            </div>
+
+            <div class="field">
+              <label for="buscaVisualizacao">Buscar nome</label>
+              <input id="buscaVisualizacao" type="text" placeholder="Digite setor ou congregação" />
+            </div>
           </div>
 
-          <div class="card">
-            <details>
-              <summary>Setores e congregações</summary>
-              <div class="table-wrap" style="margin-top:14px">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Setor</th>
-                      <th>Congregação</th>
-                    </tr>
-                  </thead>
-                  <tbody id="tbodyMapaSetoresCongregacoes"></tbody>
-                </table>
-              </div>
-            </details>
+          <div class="table-wrap">
+            <table>
+              <thead id="theadVisualizacaoAdmin"></thead>
+              <tbody id="tbodyVisualizacaoAdmin"></tbody>
+            </table>
           </div>
-        </div>
-
-        <div class="card" style="margin-top:22px">
-          <details open>
-            <summary>Setores que fizeram pagamento</summary>
-            <div class="mini-grid" id="cardsSetoresPagantes"></div>
-          </details>
         </div>
 
         <div class="card" style="margin-top:22px">
@@ -1093,13 +1048,13 @@
     }
 
     function nomeSetorPorId(id) {
-      const item = getSetorById(id);
-      return item ? item.nome : "-";
+      const setor = getSetorById(id);
+      return setor ? setor.nome : "-";
     }
 
     function numeroSetorPorId(id) {
-      const item = getSetorById(id);
-      return item ? item.numero : "-";
+      const setor = getSetorById(id);
+      return setor ? setor.numero : "-";
     }
 
     function congregacoesDoSetor(setorId) {
@@ -1111,7 +1066,10 @@
     }
 
     function recebimentosDoSetor(setorId) {
-      return recebimentosCache.filter((r) => idComparavel(r.setor_id) === idComparavel(setorId));
+      return recebimentosCache.filter((r) =>
+        idComparavel(r.setor_id) === idComparavel(setorId) ||
+        idComparavel(r.setor) === idComparavel(setorId)
+      );
     }
 
     function pedidosDaCongregacao(congregacaoId) {
@@ -1253,9 +1211,15 @@
           ? "babylook"
           : modelo;
 
+      const setor = getSetorById(setor_id);
+      const congregacao = getCongregacaoById(congregacao_id);
+
       const payload = {
         setor_id: numero(setor_id) || setor_id,
+        setor: numero(setor_id) || setor_id,
+        setor_nome: setor?.nome || null,
         congregacao_id: numero(congregacao_id) || congregacao_id,
+        congregacao_nome: congregacao?.nome || null,
         modelo: modeloCorrigido,
         tamanho,
         quantidade: numero(quantidade),
@@ -1265,10 +1229,20 @@
       if (usuario_id) payload.usuario_id = numero(usuario_id) || usuario_id;
       if (campanhaAtual?.id) payload.campanha_id = numero(campanhaAtual.id) || campanhaAtual.id;
 
-      await api("pedidos", {
-        method: "POST",
-        body: payload,
-      });
+      try {
+        await api("pedidos", {
+          method: "POST",
+          body: payload,
+        });
+      } catch (e) {
+        delete payload.setor_nome;
+        delete payload.congregacao_nome;
+        delete payload.setor;
+        await api("pedidos", {
+          method: "POST",
+          body: payload,
+        });
+      }
 
       await carregarPedidos();
     }
@@ -1277,8 +1251,12 @@
       if (!setor_id) throw new Error("Setor não informado.");
       if (!valor) throw new Error("Informe o valor recebido.");
 
+      const setor = getSetorById(setor_id);
+
       const payload = {
         setor_id: numero(setor_id) || setor_id,
+        setor: numero(setor_id) || setor_id,
+        setor_nome: setor?.nome || null,
         valor: numero(valor),
         observacao: observacao || null,
         data_pagamento: data_pagamento || new Date().toISOString().slice(0, 10),
@@ -1287,20 +1265,63 @@
       if (usuario_id) payload.usuario_id = numero(usuario_id) || usuario_id;
       if (campanhaAtual?.id) payload.campanha_id = numero(campanhaAtual.id) || campanhaAtual.id;
 
-      try {
-        await api("recebimentos", {
-          method: "POST",
-          body: payload,
-        });
-      } catch (e) {
-        delete payload.campanha_id;
-        await api("recebimentos", {
-          method: "POST",
-          body: payload,
-        });
+      const tentativas = [
+        { ...payload },
+        (() => {
+          const p = { ...payload };
+          delete p.campanha_id;
+          return p;
+        })(),
+        (() => {
+          const p = { ...payload };
+          delete p.setor_nome;
+          return p;
+        })(),
+        (() => {
+          const p = { ...payload };
+          delete p.setor;
+          return p;
+        })(),
+        (() => {
+          const p = { ...payload };
+          delete p.setor_nome;
+          delete p.setor;
+          return p;
+        })(),
+        (() => {
+          const p = { ...payload };
+          delete p.campanha_id;
+          delete p.setor_nome;
+          delete p.setor;
+          return p;
+        })(),
+      ];
+
+      let ultimoErro = null;
+
+      for (const tentativa of tentativas) {
+        try {
+          await api("recebimentos", {
+            method: "POST",
+            body: tentativa,
+          });
+          await carregarRecebimentos();
+          return;
+        } catch (e) {
+          ultimoErro = e;
+        }
       }
 
-      await carregarRecebimentos();
+      throw ultimoErro || new Error("Não foi possível registrar o recebimento.");
+    }
+
+    function obterSetorDoRecebimento(r) {
+      return (
+        getSetorById(r.setor_id) ||
+        getSetorById(r.setor) ||
+        setores.find((s) => normalizarTexto(s.nome) === normalizarTexto(r.setor_nome || "")) ||
+        null
+      );
     }
 
     function statusFinanceiroDoSetor(setorId) {
@@ -1335,7 +1356,7 @@
           return `
             <tr>
               <td>${formatarDataHora(p.created_at || p.data)}</td>
-              <td>${escapeHtml(congregacao?.nome || "-")}</td>
+              <td>${escapeHtml(congregacao?.nome || p.congregacao_nome || "-")}</td>
               <td>${escapeHtml(modelos[p.modelo] || p.modelo || "-")}</td>
               <td>${escapeHtml(p.tamanho || "-")}</td>
               <td>${numero(p.quantidade)}</td>
@@ -1377,11 +1398,11 @@
 
       corpo.innerHTML = recebimentosCache
         .map((r) => {
-          const setor = getSetorById(r.setor_id);
+          const setor = obterSetorDoRecebimento(r);
           return `
             <tr>
               <td>${formatarDataHora(r.data_pagamento || r.data_recebimento || r.data_registro || r.created_at)}</td>
-              <td>${escapeHtml(setor?.nome || nomeSetorPorId(r.setor_id) || `ID ${r.setor_id || "-"}`)}</td>
+              <td>${escapeHtml(setor?.nome || r.setor_nome || `ID ${r.setor_id || r.setor || "-"}`)}</td>
               <td>${moeda(r.valor)}</td>
               <td>${escapeHtml(r.observacao || "-")}</td>
             </tr>
@@ -1390,152 +1411,221 @@
         .join("");
     }
 
-    function renderResumoSetores() {
-      const tbody = el("tbodyResumoSetores");
-      if (!tbody) return;
+    function renderVisualizacaoRapida() {
+      const tipo = el("tipoVisualizacaoAdmin")?.value || "pediram";
+      const filtroSetor = el("filtroSetorVisualizacao")?.value || "";
+      const busca = normalizarTexto(el("buscaVisualizacao")?.value || "");
+      const thead = el("theadVisualizacaoAdmin");
+      const tbody = el("tbodyVisualizacaoAdmin");
+      if (!thead || !tbody) return;
 
-      if (!setores.length) {
-        tbody.innerHTML = `<tr><td colspan="7">Nenhum setor encontrado.</td></tr>`;
-        return;
-      }
-
-      const linhas = [...setores]
-        .sort((a, b) => numero(a.numero) - numero(b.numero) || String(a.nome).localeCompare(String(b.nome), "pt-BR"))
-        .map((setor) => {
-          const congs = congregacoesDoSetor(setor.id).length;
-          const pecas = totalPecasDoSetor(setor.id);
-          const total = totalFinanceiroDoSetor(setor.id);
-          const recebido = totalRecebidoDoSetor(setor.id);
-          const saldo = total - recebido;
-
-          return `
-            <tr>
-              <td>${String(setor.numero || "").padStart(2, "0")} - ${escapeHtml(setor.nome || "-")}</td>
-              <td>${congs}</td>
-              <td>${pecas}</td>
-              <td>${moeda(total)}</td>
-              <td>${moeda(recebido)}</td>
-              <td>${moeda(saldo)}</td>
-              <td>${statusFinanceiroDoSetor(setor.id)}</td>
-            </tr>
-          `;
-        });
-
-      tbody.innerHTML = linhas.join("");
-    }
-
-    function renderResumoCongregacoes() {
-      const tbody = el("tbodyResumoCongregacoes");
-      if (!tbody) return;
-
-      if (!congregacoes.length) {
-        tbody.innerHTML = `<tr><td colspan="5">Nenhuma congregação encontrada.</td></tr>`;
-        return;
-      }
-
-      const linhas = [...congregacoes]
-        .sort((a, b) =>
-          `${numeroSetorPorId(a.setor_id)} ${a.nome}`.localeCompare(
-            `${numeroSetorPorId(b.setor_id)} ${b.nome}`,
-            "pt-BR"
-          )
-        )
-        .map((c) => {
-          const pecas = pedidosDaCongregacao(c.id).reduce((acc, p) => acc + numero(p.quantidade), 0);
-          const total = pecas * CONFIG.valorUnitarioCamiseta;
-
-          return `
-            <tr>
-              <td>${String(numeroSetorPorId(c.setor_id)).padStart(2, "0")} - ${escapeHtml(nomeSetorPorId(c.setor_id))}</td>
-              <td>${escapeHtml(c.nome)}</td>
-              <td>${pecas}</td>
-              <td>${moeda(total)}</td>
-              <td>${statusPedidoDaCongregacao(c.id)}</td>
-            </tr>
-          `;
-        });
-
-      tbody.innerHTML = linhas.join("");
-    }
-
-    function renderSetoresPagantes() {
-      const box = el("cardsSetoresPagantes");
-      if (!box) return;
-
-      const pagantes = [...setores]
-        .map((setor) => {
-          const recebido = totalRecebidoDoSetor(setor.id);
-          return { setor, recebido };
-        })
-        .filter((item) => item.recebido > 0)
-        .sort((a, b) => b.recebido - a.recebido);
-
-      if (!pagantes.length) {
-        box.innerHTML = `<div class="info-box">Nenhum setor com pagamento lançado.</div>`;
-        return;
-      }
-
-      box.innerHTML = pagantes.map(({ setor, recebido }) => {
-        const total = totalFinanceiroDoSetor(setor.id);
-        const saldo = total - recebido;
-        return `
-          <div class="mini-card">
-            <div class="label">${String(setor.numero || "").padStart(2, "0")} - ${escapeHtml(setor.nome || "-")}</div>
-            <div class="value">${moeda(recebido)}</div>
-            <div class="notice" style="margin-top:8px">Total: ${moeda(total)} • Saldo: ${moeda(saldo)}</div>
-          </div>
-        `;
-      }).join("");
-    }
-
-    function renderFaltantesAdmin() {
-      const tbody = el("tbodyFaltantesAdmin");
-      if (!tbody) return;
-
-      const faltantes = congregacoesQueAindaNaoPediram();
-
-      if (!faltantes.length) {
-        tbody.innerHTML = `<tr><td colspan="2">Todas as congregações já fizeram pedido.</td></tr>`;
-        return;
-      }
-
-      tbody.innerHTML = faltantes
-        .sort((a, b) =>
-          `${numeroSetorPorId(a.setor_id)} ${a.nome}`.localeCompare(
-            `${numeroSetorPorId(b.setor_id)} ${b.nome}`,
-            "pt-BR"
-          )
-        )
-        .map((c) => `
+      if (tipo === "pediram") {
+        thead.innerHTML = `
           <tr>
-            <td>${String(numeroSetorPorId(c.setor_id)).padStart(2, "0")} - ${escapeHtml(nomeSetorPorId(c.setor_id))}</td>
-            <td>${escapeHtml(c.nome)}</td>
+            <th>Setor</th>
+            <th>Congregação</th>
+            <th>Peças</th>
+            <th>Total</th>
+            <th>Status</th>
           </tr>
-        `)
-        .join("");
-    }
+        `;
 
-    function renderMapaSetoresCongregacoes() {
-      const tbody = el("tbodyMapaSetoresCongregacoes");
-      if (!tbody) return;
+        let linhas = congregacoes
+          .map((c) => {
+            const setor = getSetorById(c.setor_id);
+            const pecas = pedidosDaCongregacao(c.id).reduce((acc, p) => acc + numero(p.quantidade), 0);
+            return {
+              setorId: c.setor_id,
+              setorNome: `${String(setor?.numero || "").padStart(2, "0")} - ${setor?.nome || "-"}`,
+              congregacaoNome: c.nome || "-",
+              pecas,
+              total: pecas * CONFIG.valorUnitarioCamiseta,
+              comPedido: pecas > 0,
+            };
+          })
+          .filter((x) => x.comPedido);
 
-      if (!congregacoes.length) {
-        tbody.innerHTML = `<tr><td colspan="2">Nenhuma congregação cadastrada.</td></tr>`;
+        if (filtroSetor) {
+          linhas = linhas.filter((x) => idComparavel(x.setorId) === idComparavel(filtroSetor));
+        }
+        if (busca) {
+          linhas = linhas.filter((x) =>
+            normalizarTexto(x.setorNome).includes(busca) ||
+            normalizarTexto(x.congregacaoNome).includes(busca)
+          );
+        }
+
+        if (!linhas.length) {
+          tbody.innerHTML = `<tr><td colspan="5">Nenhum resultado encontrado.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = linhas
+          .sort((a, b) => `${a.setorNome} ${a.congregacaoNome}`.localeCompare(`${b.setorNome} ${b.congregacaoNome}`, "pt-BR"))
+          .map((x) => `
+            <tr>
+              <td>${escapeHtml(x.setorNome)}</td>
+              <td>${escapeHtml(x.congregacaoNome)}</td>
+              <td>${x.pecas}</td>
+              <td>${moeda(x.total)}</td>
+              <td><span class="pill-success">Com pedido</span></td>
+            </tr>
+          `)
+          .join("");
         return;
       }
 
-      const lista = [...congregacoes].sort((a, b) =>
-        `${numeroSetorPorId(a.setor_id)} ${a.nome}`.localeCompare(
-          `${numeroSetorPorId(b.setor_id)} ${b.nome}`,
-          "pt-BR"
-        )
-      );
-
-      tbody.innerHTML = lista
-        .map((c) => `
+      if (tipo === "pagaram") {
+        thead.innerHTML = `
           <tr>
-            <td>${String(numeroSetorPorId(c.setor_id)).padStart(2, "0")} - ${escapeHtml(nomeSetorPorId(c.setor_id))}</td>
-            <td>${escapeHtml(c.nome)}</td>
+            <th>Setor</th>
+            <th>Recebido</th>
+            <th>Total</th>
+            <th>Saldo</th>
+            <th>Status</th>
+          </tr>
+        `;
+
+        let linhas = setores
+          .map((setor) => {
+            const recebido = totalRecebidoDoSetor(setor.id);
+            return {
+              setorId: setor.id,
+              setorNome: `${String(setor.numero || "").padStart(2, "0")} - ${setor.nome || "-"}`,
+              recebido,
+              total: totalFinanceiroDoSetor(setor.id),
+              saldo: saldoDoSetor(setor.id),
+            };
+          })
+          .filter((x) => x.recebido > 0);
+
+        if (filtroSetor) {
+          linhas = linhas.filter((x) => idComparavel(x.setorId) === idComparavel(filtroSetor));
+        }
+        if (busca) {
+          linhas = linhas.filter((x) => normalizarTexto(x.setorNome).includes(busca));
+        }
+
+        if (!linhas.length) {
+          tbody.innerHTML = `<tr><td colspan="5">Nenhum setor com pagamento encontrado.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = linhas
+          .sort((a, b) => b.recebido - a.recebido)
+          .map((x) => `
+            <tr>
+              <td>${escapeHtml(x.setorNome)}</td>
+              <td>${moeda(x.recebido)}</td>
+              <td>${moeda(x.total)}</td>
+              <td>${moeda(x.saldo)}</td>
+              <td>${x.recebido >= x.total && x.total > 0 ? '<span class="pill-success">Pago</span>' : '<span class="pill-neutral">Parcial</span>'}</td>
+            </tr>
+          `)
+          .join("");
+        return;
+      }
+
+      if (tipo === "faltamPagar") {
+        thead.innerHTML = `
+          <tr>
+            <th>Setor</th>
+            <th>Total</th>
+            <th>Recebido</th>
+            <th>Saldo</th>
+            <th>Status</th>
+          </tr>
+        `;
+
+        let linhas = setores
+          .map((setor) => {
+            const total = totalFinanceiroDoSetor(setor.id);
+            const recebido = totalRecebidoDoSetor(setor.id);
+            return {
+              setorId: setor.id,
+              setorNome: `${String(setor.numero || "").padStart(2, "0")} - ${setor.nome || "-"}`,
+              total,
+              recebido,
+              saldo: total - recebido,
+            };
+          })
+          .filter((x) => x.total > 0 && x.saldo > 0);
+
+        if (filtroSetor) {
+          linhas = linhas.filter((x) => idComparavel(x.setorId) === idComparavel(filtroSetor));
+        }
+        if (busca) {
+          linhas = linhas.filter((x) => normalizarTexto(x.setorNome).includes(busca));
+        }
+
+        if (!linhas.length) {
+          tbody.innerHTML = `<tr><td colspan="5">Nenhum setor pendente encontrado.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = linhas
+          .sort((a, b) => b.saldo - a.saldo)
+          .map((x) => `
+            <tr>
+              <td>${escapeHtml(x.setorNome)}</td>
+              <td>${moeda(x.total)}</td>
+              <td>${moeda(x.recebido)}</td>
+              <td>${moeda(x.saldo)}</td>
+              <td>${x.recebido > 0 ? '<span class="pill-neutral">Parcial</span>' : '<span class="pill-warning">Sem pagamento</span>'}</td>
+            </tr>
+          `)
+          .join("");
+        return;
+      }
+
+      thead.innerHTML = `
+        <tr>
+          <th>Setor</th>
+          <th>Congregação</th>
+          <th>Peças</th>
+          <th>Total</th>
+          <th>Status</th>
+        </tr>
+      `;
+
+      let linhas = congregacoes
+        .map((c) => {
+          const setor = getSetorById(c.setor_id);
+          const pecas = pedidosDaCongregacao(c.id).reduce((acc, p) => acc + numero(p.quantidade), 0);
+          return {
+            setorId: c.setor_id,
+            setorNome: `${String(setor?.numero || "").padStart(2, "0")} - ${setor?.nome || "-"}`,
+            congregacaoNome: c.nome || "-",
+            pecas,
+            total: pecas * CONFIG.valorUnitarioCamiseta,
+          };
+        })
+        .filter((x) => x.pecas === 0);
+
+      if (filtroSetor) {
+        linhas = linhas.filter((x) => idComparavel(x.setorId) === idComparavel(filtroSetor));
+      }
+      if (busca) {
+        linhas = linhas.filter((x) =>
+          normalizarTexto(x.setorNome).includes(busca) ||
+          normalizarTexto(x.congregacaoNome).includes(busca)
+        );
+      }
+
+      if (!linhas.length) {
+        tbody.innerHTML = `<tr><td colspan="5">Nenhum resultado encontrado.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = linhas
+        .sort((a, b) => `${a.setorNome} ${a.congregacaoNome}`.localeCompare(`${b.setorNome} ${b.congregacaoNome}`, "pt-BR"))
+        .map((x) => `
+          <tr>
+            <td>${escapeHtml(x.setorNome)}</td>
+            <td>${escapeHtml(x.congregacaoNome)}</td>
+            <td>${x.pecas}</td>
+            <td>${moeda(x.total)}</td>
+            <td><span class="pill-warning">Sem pedido</span></td>
           </tr>
         `)
         .join("");
@@ -1555,16 +1645,6 @@
           ? `${dataBr(campanhaAtual.inicio_pedidos)} até ${dataBr(campanhaAtual.fim_pedidos)}`
           : "Sem período definido"
       );
-    }
-
-    function nomeSetorPorId(id) {
-      const setor = getSetorById(id);
-      return setor ? setor.nome : "-";
-    }
-
-    function numeroSetorPorId(id) {
-      const setor = getSetorById(id);
-      return setor ? setor.numero : "-";
     }
 
     function renderPainelSetor() {
@@ -1636,6 +1716,14 @@
         "Selecione o setor"
       );
 
+      preencherSelect(
+        "filtroSetorVisualizacao",
+        setoresOrdenados,
+        (s) => s.id,
+        (s) => `${String(s.numero || "").padStart(2, "0")} - ${s.nome}`,
+        "Todos os setores"
+      );
+
       const setorEscolhido = el("pedidoAdminSetor")?.value || "";
       const congregacoesFiltradas = congregacoes
         .filter((c) => idComparavel(c.setor_id) === idComparavel(setorEscolhido))
@@ -1650,11 +1738,7 @@
       );
 
       renderTabelaRecebimentosAdmin();
-      renderResumoSetores();
-      renderResumoCongregacoes();
-      renderSetoresPagantes();
-      renderFaltantesAdmin();
-      renderMapaSetoresCongregacoes();
+      renderVisualizacaoRapida();
     }
 
     function aplicarClasseStatus(id, tipo) {
@@ -1797,6 +1881,10 @@
         renderPainelAdmin();
         atualizarBadgesVisuais();
       });
+
+      el("tipoVisualizacaoAdmin")?.addEventListener("change", renderVisualizacaoRapida);
+      el("filtroSetorVisualizacao")?.addEventListener("change", renderVisualizacaoRapida);
+      el("buscaVisualizacao")?.addEventListener("input", renderVisualizacaoRapida);
 
       el("formRecebimentoAdmin")?.addEventListener("submit", async (e) => {
         e.preventDefault();
