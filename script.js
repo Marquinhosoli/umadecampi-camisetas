@@ -9,8 +9,8 @@ const modelos = {
 };
 
 const CONFIG = {
-  inicioPedidos: 1,
-  fimPedidos: 20,
+  inicioPedidos: 1, // usado apenas caso não exista campanha no banco
+  fimPedidos: 20,   // usado apenas caso não exista campanha no banco
   adminPodeEditarForaPrazo: true,
   valorUnitarioCamiseta: 45,
   adminUsuario: "admin",
@@ -60,6 +60,9 @@ function dataBr(valor) {
   if (!valor) return "-";
   const d = new Date(valor);
   if (Number.isNaN(d.getTime())) return String(valor);
+  
+  // Adiciona o timezone local para evitar que dia 20 vire dia 19
+  d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
   return d.toLocaleDateString("pt-BR");
 }
 
@@ -571,12 +574,79 @@ async function registrarRecebimento({ setor_id, congregacao_id, valor, observaca
   throw ultimoErro || new Error("Não foi possível registrar o recebimento.");
 }
 
+// ---------------------------------------------------------
+// NOVO: Função para Prorrogar Prazo pelo Admin
+// ---------------------------------------------------------
+async function prorrogarPrazoAdmin(diasExtras) {
+  if (!campanhaAtual || campanhaAtual._fallback) {
+    alert("Nenhuma campanha oficial rodando no banco de dados para prorrogar. Crie uma na tabela 'campanhas'.");
+    return;
+  }
+  
+  // Pegamos a data atual de vencimento ou hoje (o que for maior)
+  let dataBase = new Date(campanhaAtual.fim_pedidos + "T23:59:59");
+  let hoje = new Date();
+  
+  if (Number.isNaN(dataBase.getTime()) || dataBase < hoje) {
+      dataBase = hoje; 
+  }
+  
+  // Adicionamos os dias
+  dataBase.setDate(dataBase.getDate() + Number(diasExtras));
+  let novoFimStr = dataBase.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+  
+  try {
+    await api(`campanhas?id=eq.${campanhaAtual.id}`, {
+      method: "PATCH",
+      body: { fim_pedidos: novoFimStr }
+    });
+    
+    await carregarCampanhaAtual(); // Recarrega os dados do banco
+    renderTela(); // Atualiza a tela
+    alert(`Sucesso! O prazo foi prorrogado para o dia ${dataBr(novoFimStr)}.`);
+  } catch (err) {
+    alert("Erro ao prorrogar prazo: " + extrairMensagemErro(err));
+  }
+}
+
+// ---------------------------------------------------------
+// NOVO: Função para Exportar Excel (CSV com BOM para acentos)
+// ---------------------------------------------------------
+function exportarParaExcel() {
+  const linhas = montarResumoIgrejasDetalhado();
+  
+  // BOM (\uFEFF) garante que o Excel do Windows leia os acentos corretamente
+  let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+  
+  // Cabeçalhos
+  csvContent += "Setor;Congregação;Peças;Total (R$);Recebido (R$);Saldo (R$);Status\n";
+
+  // Preenche os dados
+  linhas.forEach(x => {
+    // Tratando valores monetários com vírgula para o Excel entender em português
+    let valTotal = x.total.toFixed(2).replace('.', ',');
+    let valRecebido = x.recebido.toFixed(2).replace('.', ',');
+    let valSaldo = x.saldo.toFixed(2).replace('.', ',');
+    
+    let row = `${x.setorNome};${x.congregacaoNome};${x.qtd};${valTotal};${valRecebido};${valSaldo};${x.status}`;
+    csvContent += row + "\n";
+  });
+
+  // Download
+  var encodedUri = encodeURI(csvContent);
+  var link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", "Relatorio_UMADECAMPI.csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
 function dataPedido(item) {
   return item?.created_at || item?.data || null;
 }
 
 function dataRecebimento(item) {
-  // Extração segura da Data do banco de dados (Cobre vários nomes de colunas possíveis)
   return item?.data_recebimento || item?.data_pagamento || item?.created_at || item?.data || "-";
 }
 
@@ -597,13 +667,13 @@ function montarResumoIgrejasDetalhado() {
     if (qtd > 0) {
       if (recebido <= 0) {
         status = "Pendente";
-        statusClass = "pill-danger"; // Vermelho para inadimplência total
-      } else if (recebido > 0 && recebido < (total - 0.05)) { // Margem de erro de 5 centavos
+        statusClass = "pill-danger"; 
+      } else if (recebido > 0 && recebido < (total - 0.05)) { 
         status = "Parcial";
-        statusClass = "pill-warning"; // Amarelo
+        statusClass = "pill-warning"; 
       } else {
         status = "Quitado";
-        statusClass = "pill-success"; // Verde
+        statusClass = "pill-success"; 
       }
     }
 
@@ -816,6 +886,9 @@ function atualizarBadgeCampanha() {
       ? (dentroPrazoPedidos() ? "Pedidos liberados." : "Período de pedidos encerrado.")
       : "Campanha inativa."
   );
+  
+  // Atualiza também a label do controle de prazo do Admin
+  preencherTexto("msgVencimentoAtual", campanhaAtual?.fim_pedidos ? `Vencimento: ${dataBr(campanhaAtual.fim_pedidos)}` : "Sem data de vencimento");
 }
 
 function popularTamanhos() {
@@ -975,7 +1048,6 @@ function bindEventos() {
       await recarregarTudo();
       await fazerLoginSetor(el("loginSetor")?.value, el("senhaSetor")?.value);
       renderTela();
-      alert("Login efetuado com sucesso.");
     } catch (err) {
       alert(extrairMensagemErro(err));
     }
@@ -987,7 +1059,6 @@ function bindEventos() {
       await recarregarTudo();
       fazerLoginAdmin(el("loginAdmin")?.value, el("senhaAdmin")?.value);
       renderTela();
-      alert("Administrador logado com sucesso.");
     } catch (err) {
       alert(extrairMensagemErro(err));
     }
@@ -1055,6 +1126,17 @@ function bindEventos() {
       alert(extrairMensagemErro(err));
     }
   });
+  
+  // NOVO: Evento do botão de Prorrogar
+  el("btnProrrogar")?.addEventListener("click", () => {
+    const dias = el("diasProrrogacao")?.value;
+    if (dias && dias > 0) {
+      prorrogarPrazoAdmin(dias);
+    }
+  });
+  
+  // NOVO: Evento do botão de Exportar
+  el("btnExportarExcel")?.addEventListener("click", exportarParaExcel);
 
   el("pedidoAdminSetor")?.addEventListener("change", atualizarCongregacoesPedidoAdmin);
   el("recebimentoSetor")?.addEventListener("change", atualizarCongregacoesRecebimentoAdmin);
