@@ -10,7 +10,7 @@ const modelos = {
 
 const CONFIG = {
   inicioPedidos: 1, // usado apenas caso não exista campanha no banco
-  fimPedidos: 20,   // usado apenas caso não exista campanha no banco
+  fimPedidos: 31,   // usado apenas caso não exista campanha no banco
   adminPodeEditarForaPrazo: true,
   valorUnitarioCamiseta: 45,
   adminUsuario: "admin",
