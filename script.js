@@ -897,8 +897,8 @@ function renderTabelaRecebimentosAdmin() {
         <td>${moeda(r.valor)}</td>
         <td>${escapeHtml(r.observacao || "-")}</td>
         <td class="td-actions">
-          <button class="primary btn-sm" onclick="abrirModalEdicao('recebimento', ${r.id})">✏️</button>
-          <button class="danger btn-sm" onclick="deletarRecebimentoBanco(${r.id})">🗑️</button>
+          <button type="button" class="primary btn-sm" onclick="abrirModalEdicao('recebimento', '${r.id}')">✏️</button>
+          <button type="button" class="danger btn-sm" onclick="deletarRecebimentoBanco('${r.id}')">🗑️</button>
         </td>
       </tr>
     `;
@@ -926,8 +926,8 @@ function renderTabelaPedidosAdmin() {
         <td>${escapeHtml(p.tamanho || "-")}</td>
         <td>${numero(p.quantidade)}</td>
         <td class="td-actions">
-          <button class="primary btn-sm" onclick="abrirModalEdicao('pedido', ${p.id})">✏️</button>
-          <button class="danger btn-sm" onclick="deletarPedidoBanco(${p.id})">🗑️</button>
+          <button type="button" class="primary btn-sm" onclick="abrirModalEdicao('pedido', '${p.id}')">✏️</button>
+          <button type="button" class="danger btn-sm" onclick="deletarPedidoBanco('${p.id}')">🗑️</button>
         </td>
       </tr>
     `;
