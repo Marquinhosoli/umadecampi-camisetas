@@ -9,8 +9,8 @@ const modelos = {
 };
 
 const CONFIG = {
-  inicioPedidos: 1, // usado apenas caso não exista campanha no banco
-  fimPedidos: 31,   // usado apenas caso não exista campanha no banco
+  inicioPedidos: 1, 
+  fimPedidos: 20,   
   adminPodeEditarForaPrazo: true,
   valorUnitarioCamiseta: 45,
   adminUsuario: "admin",
@@ -61,7 +61,6 @@ function dataBr(valor) {
   const d = new Date(valor);
   if (Number.isNaN(d.getTime())) return String(valor);
   
-  // Adiciona o timezone local para evitar que dia 20 vire dia 19
   d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
   return d.toLocaleDateString("pt-BR");
 }
@@ -574,16 +573,12 @@ async function registrarRecebimento({ setor_id, congregacao_id, valor, observaca
   throw ultimoErro || new Error("Não foi possível registrar o recebimento.");
 }
 
-// ---------------------------------------------------------
-// NOVO: Função para Prorrogar Prazo pelo Admin
-// ---------------------------------------------------------
 async function prorrogarPrazoAdmin(diasExtras) {
   if (!campanhaAtual || campanhaAtual._fallback) {
     alert("Nenhuma campanha oficial rodando no banco de dados para prorrogar. Crie uma na tabela 'campanhas'.");
     return;
   }
   
-  // Pegamos a data atual de vencimento ou hoje (o que for maior)
   let dataBase = new Date(campanhaAtual.fim_pedidos + "T23:59:59");
   let hoje = new Date();
   
@@ -591,9 +586,8 @@ async function prorrogarPrazoAdmin(diasExtras) {
       dataBase = hoje; 
   }
   
-  // Adicionamos os dias
   dataBase.setDate(dataBase.getDate() + Number(diasExtras));
-  let novoFimStr = dataBase.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+  let novoFimStr = dataBase.toISOString().split('T')[0];
   
   try {
     await api(`campanhas?id=eq.${campanhaAtual.id}`, {
@@ -601,8 +595,8 @@ async function prorrogarPrazoAdmin(diasExtras) {
       body: { fim_pedidos: novoFimStr }
     });
     
-    await carregarCampanhaAtual(); // Recarrega os dados do banco
-    renderTela(); // Atualiza a tela
+    await carregarCampanhaAtual(); 
+    renderTela();
     alert(`Sucesso! O prazo foi prorrogado para o dia ${dataBr(novoFimStr)}.`);
   } catch (err) {
     alert("Erro ao prorrogar prazo: " + extrairMensagemErro(err));
@@ -610,36 +604,110 @@ async function prorrogarPrazoAdmin(diasExtras) {
 }
 
 // ---------------------------------------------------------
-// NOVO: Função para Exportar Excel (CSV com BOM para acentos)
+// NOVO: Função para Exportar Relatório de Fábrica (Várias Abas .xlsx)
 // ---------------------------------------------------------
 function exportarParaExcel() {
-  const linhas = montarResumoIgrejasDetalhado();
-  
-  // BOM (\uFEFF) garante que o Excel do Windows leia os acentos corretamente
-  let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-  
-  // Cabeçalhos
-  csvContent += "Setor;Congregação;Peças;Total (R$);Recebido (R$);Saldo (R$);Status\n";
+  if (typeof XLSX === "undefined") {
+    alert("A biblioteca do Excel ainda está carregando ou ocorreu um erro de internet. Aguarde alguns segundos e tente novamente.");
+    return;
+  }
 
-  // Preenche os dados
-  linhas.forEach(x => {
-    // Tratando valores monetários com vírgula para o Excel entender em português
-    let valTotal = x.total.toFixed(2).replace('.', ',');
-    let valRecebido = x.recebido.toFixed(2).replace('.', ',');
-    let valSaldo = x.saldo.toFixed(2).replace('.', ',');
-    
-    let row = `${x.setorNome};${x.congregacaoNome};${x.qtd};${valTotal};${valRecebido};${valSaldo};${x.status}`;
-    csvContent += row + "\n";
+  const wb = XLSX.utils.book_new();
+
+  // 1. PREPARAÇÃO DAS ESTRUTURAS
+  const prodGeral = [
+    { Modelo: "Masculino", PP: 0, P: 0, M: 0, G: 0, GG: 0, XG: 0, XXG: 0, TOTAL: 0 },
+    { Modelo: "Baby Look", PP: 0, P: 0, M: 0, G: 0, GG: 0, XG: 0, XXG: 0, TOTAL: 0 }
+  ];
+
+  const mascSetorMap = {};
+  const babySetorMap = {};
+  const pedDetalhados = [];
+
+  setoresOrdenados().forEach(s => {
+    const nomeSetor = `${String(s.numero || "").padStart(2, "0")} - ${s.nome}`;
+    mascSetorMap[s.id] = { Setor: nomeSetor, PP: 0, P: 0, M: 0, G: 0, GG: 0, XG: 0, XXG: 0, TOTAL: 0 };
+    babySetorMap[s.id] = { Setor: nomeSetor, PP: 0, P: 0, M: 0, G: 0, GG: 0, XG: 0, XXG: 0, TOTAL: 0 };
   });
 
-  // Download
-  var encodedUri = encodeURI(csvContent);
-  var link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
-  link.setAttribute("download", "Relatorio_UMADECAMPI.csv");
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  // 2. PROCESSAMENTO DOS PEDIDOS
+  pedidosCache.forEach(p => {
+    const setor = getSetorById(p.setor_id);
+    const nomeSetor = setor ? `${String(setor.numero || "").padStart(2, "0")} - ${setor.nome}` : "-";
+    const cong = getCongregacaoById(p.congregacao_id);
+    const nomeCong = cong ? cong.nome : "-";
+    
+    const isMasc = normalizarTexto(p.modelo) === "masculino";
+    const tam = (p.tamanho || "").toUpperCase();
+    const qtd = numero(p.quantidade);
+
+    pedDetalhados.push({
+      ID: p.id,
+      Data: formatarDataHora(dataPedido(p)),
+      Setor: nomeSetor,
+      Congregação: nomeCong,
+      Modelo: isMasc ? "Masculino" : "Baby Look Feminina",
+      Tamanho: tam,
+      Quantidade: qtd
+    });
+
+    if (!["PP", "P", "M", "G", "GG", "XG", "XXG"].includes(tam)) return;
+
+    const prodRef = isMasc ? prodGeral[0] : prodGeral[1];
+    prodRef[tam] += qtd;
+    prodRef.TOTAL += qtd;
+
+    if (p.setor_id) {
+      const setorMap = isMasc ? mascSetorMap : babySetorMap;
+      if (setorMap[p.setor_id]) {
+        setorMap[p.setor_id][tam] += qtd;
+        setorMap[p.setor_id].TOTAL += qtd;
+      }
+    }
+  });
+
+  const mascArr = Object.values(mascSetorMap).filter(s => s.TOTAL > 0);
+  const babyArr = Object.values(babySetorMap).filter(s => s.TOTAL > 0);
+
+  // 3. ABA "POR SETOR"
+  const totalPorSetor = setoresOrdenados().map(s => {
+    const nomeSetor = `${String(s.numero || "").padStart(2, "0")} - ${s.nome}`;
+    const totalMasc = mascSetorMap[s.id] ? mascSetorMap[s.id].TOTAL : 0;
+    const totalBaby = babySetorMap[s.id] ? babySetorMap[s.id].TOTAL : 0;
+    return {
+      Setor: nomeSetor,
+      "Total Peças": totalMasc + totalBaby
+    };
+  }).filter(s => s["Total Peças"] > 0);
+
+  // 4. ABA "FINANCEIRO"
+  const resumoFin = montarResumoIgrejasDetalhado().map(x => ({
+    Setor: x.setorNome,
+    Congregação: x.congregacaoNome,
+    "Total Peças": x.qtd,
+    "Valor Total (R$)": x.total,
+    "Valor Pago (R$)": x.recebido,
+    "Saldo Devedor (R$)": x.saldo,
+    "Status Pagamento": x.status
+  }));
+
+  // 5. MONTAR E SALVAR ARQUIVO EXCEL
+  const wsGeral = XLSX.utils.json_to_sheet(prodGeral);
+  const wsMasc = XLSX.utils.json_to_sheet(mascArr);
+  const wsBaby = XLSX.utils.json_to_sheet(babyArr);
+  const wsSetor = XLSX.utils.json_to_sheet(totalPorSetor);
+  const wsFin = XLSX.utils.json_to_sheet(resumoFin);
+  const wsDetalhados = XLSX.utils.json_to_sheet(pedDetalhados);
+
+  XLSX.utils.book_append_sheet(wb, wsGeral, "Produção Geral");
+  XLSX.utils.book_append_sheet(wb, wsMasc, "Masculino");
+  XLSX.utils.book_append_sheet(wb, wsBaby, "Baby Look");
+  XLSX.utils.book_append_sheet(wb, wsSetor, "Por Setor");
+  XLSX.utils.book_append_sheet(wb, wsDetalhados, "Pedidos Detalhados");
+  XLSX.utils.book_append_sheet(wb, wsFin, "Financeiro");
+
+  const hoje = new Date().toISOString().split("T")[0];
+  XLSX.writeFile(wb, `Relatorio_Fabrica_UMADECAMPI_${hoje}.xlsx`);
 }
 
 function dataPedido(item) {
@@ -887,7 +955,6 @@ function atualizarBadgeCampanha() {
       : "Campanha inativa."
   );
   
-  // Atualiza também a label do controle de prazo do Admin
   preencherTexto("msgVencimentoAtual", campanhaAtual?.fim_pedidos ? `Vencimento: ${dataBr(campanhaAtual.fim_pedidos)}` : "Sem data de vencimento");
 }
 
@@ -1127,7 +1194,6 @@ function bindEventos() {
     }
   });
   
-  // NOVO: Evento do botão de Prorrogar
   el("btnProrrogar")?.addEventListener("click", () => {
     const dias = el("diasProrrogacao")?.value;
     if (dias && dias > 0) {
@@ -1135,7 +1201,7 @@ function bindEventos() {
     }
   });
   
-  // NOVO: Evento do botão de Exportar
+  // EVENTO DE GERAR EXCEL COM ABAS
   el("btnExportarExcel")?.addEventListener("click", exportarParaExcel);
 
   el("pedidoAdminSetor")?.addEventListener("change", atualizarCongregacoesPedidoAdmin);
