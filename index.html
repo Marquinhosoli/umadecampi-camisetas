@@ -1,4 +1,3 @@
-<!-- SISTEMA UMADECAMPI COMPLETO CORRIGIDO -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -147,7 +146,7 @@ carregar();
 function render(){
 document.getElementById("pedidos").innerHTML=
 pedidos.map(p=>{
-const c=congregacoes.find(x=>x.id==p.congregacao_id);
+const c = congregacoes.find(x => String(x.id) === String(p.congregacao_id));
 return `<tr><td>${c?.nome}</td><td>${p.quantidade}</td></tr>`;
 }).join("");
 
