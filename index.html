@@ -26,6 +26,7 @@
       --yellow-text:#92400e;
       --red-soft:#fee2e2;
       --red-text:#991b1b;
+      --slate-soft:#f8fafc;
     }
 
     *{
@@ -148,10 +149,14 @@
       line-height:1.15;
     }
 
-    .login-grid,.grid-2{
+    .login-grid,.grid-2,.grid-3{
       display:grid;
       gap:22px;
       grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+
+    .grid-3{
+      grid-template-columns:repeat(3,minmax(0,1fr));
     }
 
     form{
@@ -170,13 +175,18 @@
       margin-bottom:6px;
     }
 
-    input,select,button{
+    input,select,button,textarea{
       width:100%;
       border-radius:12px;
       border:1px solid var(--border);
       padding:12px 14px;
       font-size:.98rem;
       background:#fff;
+    }
+
+    textarea{
+      resize:vertical;
+      min-height:90px;
     }
 
     button{
@@ -291,7 +301,7 @@
       color:#334155;
     }
 
-    .pill-success,.pill-warning{
+    .pill-success,.pill-warning,.pill-danger,.pill-neutral{
       display:inline-block;
       padding:6px 10px;
       border-radius:999px;
@@ -308,6 +318,16 @@
     .pill-warning{
       background:var(--yellow-soft);
       color:var(--yellow-text);
+    }
+
+    .pill-danger{
+      background:var(--red-soft);
+      color:var(--red-text);
+    }
+
+    .pill-neutral{
+      background:#e2e8f0;
+      color:#334155;
     }
 
     details{
@@ -334,14 +354,53 @@
       color:var(--muted);
     }
 
+    .muted{
+      color:var(--muted);
+    }
+
+    .mini-grid{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:12px;
+      margin-top:14px;
+    }
+
+    .mini-card{
+      background:var(--slate-soft);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:14px;
+    }
+
+    .mini-card .label{
+      color:var(--muted);
+      font-size:.88rem;
+      font-weight:700;
+      margin-bottom:8px;
+    }
+
+    .mini-card .value{
+      color:var(--primary);
+      font-size:1.2rem;
+      font-weight:800;
+    }
+
     @media (max-width:1100px){
       .stats{
         grid-template-columns:repeat(3,minmax(0,1fr));
       }
+
+      .grid-3{
+        grid-template-columns:1fr;
+      }
+
+      .mini-grid{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+      }
     }
 
     @media (max-width:780px){
-      .login-grid,.grid-2,.stats{
+      .login-grid,.grid-2,.grid-3,.stats,.mini-grid{
         grid-template-columns:1fr;
       }
 
@@ -626,6 +685,48 @@
           </div>
         </div>
 
+        <div class="card" style="margin-top:22px">
+          <details open>
+            <summary>Resumo por setor</summary>
+            <div class="table-wrap" style="margin-top:14px">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Setor</th>
+                    <th>Congregações</th>
+                    <th>Peças</th>
+                    <th>Total</th>
+                    <th>Recebido</th>
+                    <th>Saldo</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyResumoSetores"></tbody>
+              </table>
+            </div>
+          </details>
+        </div>
+
+        <div class="card" style="margin-top:22px">
+          <details open>
+            <summary>Resumo por congregação</summary>
+            <div class="table-wrap" style="margin-top:14px">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Setor</th>
+                    <th>Congregação</th>
+                    <th>Peças</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyResumoCongregacoes"></tbody>
+              </table>
+            </div>
+          </details>
+        </div>
+
         <div class="grid-2" style="margin-top:22px">
           <div class="card">
             <details>
@@ -664,6 +765,13 @@
 
         <div class="card" style="margin-top:22px">
           <details open>
+            <summary>Setores que fizeram pagamento</summary>
+            <div class="mini-grid" id="cardsSetoresPagantes"></div>
+          </details>
+        </div>
+
+        <div class="card" style="margin-top:22px">
+          <details open>
             <summary>Recebimentos lançados</summary>
             <div class="table-wrap" style="margin-top:14px">
               <table>
@@ -689,7 +797,6 @@
     const SUPABASE_ANON_KEY = "sb_publishable_b_tuFrU9PhG3VKYLupMVhg_pWPF6Spj";
     const SESSION_KEY = "umadecampi_sessao_supabase_v1";
 
-    const tamanhos = ["PP", "P", "M", "G", "GG", "XG", "XXG"];
     const modelos = {
       masculino: "Masculino",
       babylook: "Baby Look Feminina",
@@ -769,7 +876,6 @@
     function mostrar(id, exibir = true) {
       const node = el(id);
       if (!node) return;
-
       if (exibir) {
         node.classList.remove("hidden");
         node.style.display = "";
@@ -855,7 +961,6 @@
     function campanhaEstaMarcadaComoAtiva(campanha) {
       if (!campanha) return false;
       if (campanha.ativo === true || campanha.ativa === true) return true;
-
       const status = normalizarTexto(campanha.status || campanha.situacao || "");
       return ["ativa", "ativo", "aberta", "aberto", "em andamento", "andamento"].includes(status);
     }
@@ -910,7 +1015,6 @@
           if (!Array.isArray(data) || !data.length) continue;
 
           let campanha = null;
-
           if (rota.includes("limit=50")) {
             campanha = data.find((c) => campanhaEstaMarcadaComoAtiva(c)) || data[0] || null;
           } else {
@@ -921,9 +1025,7 @@
             campanhaAtual = { ...campanha, _fallback: false };
             return;
           }
-        } catch (e) {
-          console.warn("Falha ao carregar campanha:", rota, e);
-        }
+        } catch (e) {}
       }
 
       campanhaAtual = criarCampanhaFallback();
@@ -982,14 +1084,6 @@
       await carregarRecebimentos();
     }
 
-    function dataPedido(item) {
-      return item?.created_at || item?.data || null;
-    }
-
-    function dataRecebimento(item) {
-      return item?.data_pagamento || item?.data_recebimento || item?.data_registro || item?.created_at || null;
-    }
-
     function getSetorById(setorId) {
       return setores.find((s) => idComparavel(s.id) === idComparavel(setorId)) || null;
     }
@@ -1020,6 +1114,10 @@
       return recebimentosCache.filter((r) => idComparavel(r.setor_id) === idComparavel(setorId));
     }
 
+    function pedidosDaCongregacao(congregacaoId) {
+      return pedidosCache.filter((p) => idComparavel(p.congregacao_id) === idComparavel(congregacaoId));
+    }
+
     function totalPecasDoSetor(setorId) {
       return pedidosDoSetor(setorId).reduce((acc, p) => acc + numero(p.quantidade), 0);
     }
@@ -1034,10 +1132,6 @@
 
     function saldoDoSetor(setorId) {
       return totalFinanceiroDoSetor(setorId) - totalRecebidoDoSetor(setorId);
-    }
-
-    function pedidosDaCongregacao(congregacaoId) {
-      return pedidosCache.filter((p) => idComparavel(p.congregacao_id) === idComparavel(congregacaoId));
     }
 
     function congregacoesQueAindaNaoPediram() {
@@ -1086,7 +1180,6 @@
       }
 
       const setorUsuario = getSetorById(usuario.setor_id);
-
       if (!setorUsuario) {
         throw new Error("Setor do usuário não encontrado.");
       }
@@ -1210,6 +1303,21 @@
       await carregarRecebimentos();
     }
 
+    function statusFinanceiroDoSetor(setorId) {
+      const total = totalFinanceiroDoSetor(setorId);
+      const recebido = totalRecebidoDoSetor(setorId);
+
+      if (recebido <= 0) return '<span class="pill-warning">Sem pagamento</span>';
+      if (recebido >= total && total > 0) return '<span class="pill-success">Pago</span>';
+      return '<span class="pill-neutral">Parcial</span>';
+    }
+
+    function statusPedidoDaCongregacao(congregacaoId) {
+      const pecas = pedidosDaCongregacao(congregacaoId).reduce((acc, p) => acc + numero(p.quantidade), 0);
+      if (pecas > 0) return '<span class="pill-success">Com pedido</span>';
+      return '<span class="pill-warning">Sem pedido</span>';
+    }
+
     function renderTabelaPedidosSetor() {
       const corpo = el("tbodyPedidosSetor");
       if (!corpo || !sessao?.setor_id) return;
@@ -1226,7 +1334,7 @@
           const congregacao = getCongregacaoById(p.congregacao_id);
           return `
             <tr>
-              <td>${formatarDataHora(dataPedido(p))}</td>
+              <td>${formatarDataHora(p.created_at || p.data)}</td>
               <td>${escapeHtml(congregacao?.nome || "-")}</td>
               <td>${escapeHtml(modelos[p.modelo] || p.modelo || "-")}</td>
               <td>${escapeHtml(p.tamanho || "-")}</td>
@@ -1249,15 +1357,12 @@
       }
 
       corpo.innerHTML = lista
-        .map((c) => {
-          const qtd = pedidosDaCongregacao(c.id).reduce((acc, p) => acc + numero(p.quantidade), 0);
-          return `
-            <tr>
-              <td>${escapeHtml(c.nome)}</td>
-              <td>${qtd > 0 ? '<span class="pill-success">Com pedido</span>' : '<span class="pill-warning">Sem pedido</span>'}</td>
-            </tr>
-          `;
-        })
+        .map((c) => `
+          <tr>
+            <td>${escapeHtml(c.nome)}</td>
+            <td>${statusPedidoDaCongregacao(c.id)}</td>
+          </tr>
+        `)
         .join("");
     }
 
@@ -1275,14 +1380,112 @@
           const setor = getSetorById(r.setor_id);
           return `
             <tr>
-              <td>${formatarDataHora(dataRecebimento(r))}</td>
-              <td>${escapeHtml(setor?.nome || `ID ${r.setor_id || "-"}`)}</td>
+              <td>${formatarDataHora(r.data_pagamento || r.data_recebimento || r.data_registro || r.created_at)}</td>
+              <td>${escapeHtml(setor?.nome || nomeSetorPorId(r.setor_id) || `ID ${r.setor_id || "-"}`)}</td>
               <td>${moeda(r.valor)}</td>
               <td>${escapeHtml(r.observacao || "-")}</td>
             </tr>
           `;
         })
         .join("");
+    }
+
+    function renderResumoSetores() {
+      const tbody = el("tbodyResumoSetores");
+      if (!tbody) return;
+
+      if (!setores.length) {
+        tbody.innerHTML = `<tr><td colspan="7">Nenhum setor encontrado.</td></tr>`;
+        return;
+      }
+
+      const linhas = [...setores]
+        .sort((a, b) => numero(a.numero) - numero(b.numero) || String(a.nome).localeCompare(String(b.nome), "pt-BR"))
+        .map((setor) => {
+          const congs = congregacoesDoSetor(setor.id).length;
+          const pecas = totalPecasDoSetor(setor.id);
+          const total = totalFinanceiroDoSetor(setor.id);
+          const recebido = totalRecebidoDoSetor(setor.id);
+          const saldo = total - recebido;
+
+          return `
+            <tr>
+              <td>${String(setor.numero || "").padStart(2, "0")} - ${escapeHtml(setor.nome || "-")}</td>
+              <td>${congs}</td>
+              <td>${pecas}</td>
+              <td>${moeda(total)}</td>
+              <td>${moeda(recebido)}</td>
+              <td>${moeda(saldo)}</td>
+              <td>${statusFinanceiroDoSetor(setor.id)}</td>
+            </tr>
+          `;
+        });
+
+      tbody.innerHTML = linhas.join("");
+    }
+
+    function renderResumoCongregacoes() {
+      const tbody = el("tbodyResumoCongregacoes");
+      if (!tbody) return;
+
+      if (!congregacoes.length) {
+        tbody.innerHTML = `<tr><td colspan="5">Nenhuma congregação encontrada.</td></tr>`;
+        return;
+      }
+
+      const linhas = [...congregacoes]
+        .sort((a, b) =>
+          `${numeroSetorPorId(a.setor_id)} ${a.nome}`.localeCompare(
+            `${numeroSetorPorId(b.setor_id)} ${b.nome}`,
+            "pt-BR"
+          )
+        )
+        .map((c) => {
+          const pecas = pedidosDaCongregacao(c.id).reduce((acc, p) => acc + numero(p.quantidade), 0);
+          const total = pecas * CONFIG.valorUnitarioCamiseta;
+
+          return `
+            <tr>
+              <td>${String(numeroSetorPorId(c.setor_id)).padStart(2, "0")} - ${escapeHtml(nomeSetorPorId(c.setor_id))}</td>
+              <td>${escapeHtml(c.nome)}</td>
+              <td>${pecas}</td>
+              <td>${moeda(total)}</td>
+              <td>${statusPedidoDaCongregacao(c.id)}</td>
+            </tr>
+          `;
+        });
+
+      tbody.innerHTML = linhas.join("");
+    }
+
+    function renderSetoresPagantes() {
+      const box = el("cardsSetoresPagantes");
+      if (!box) return;
+
+      const pagantes = [...setores]
+        .map((setor) => {
+          const recebido = totalRecebidoDoSetor(setor.id);
+          return { setor, recebido };
+        })
+        .filter((item) => item.recebido > 0)
+        .sort((a, b) => b.recebido - a.recebido);
+
+      if (!pagantes.length) {
+        box.innerHTML = `<div class="info-box">Nenhum setor com pagamento lançado.</div>`;
+        return;
+      }
+
+      box.innerHTML = pagantes.map(({ setor, recebido }) => {
+        const total = totalFinanceiroDoSetor(setor.id);
+        const saldo = total - recebido;
+        return `
+          <div class="mini-card">
+            <div class="label">${String(setor.numero || "").padStart(2, "0")} - ${escapeHtml(setor.nome || "-")}</div>
+            <div class="value">${moeda(recebido)}</div>
+            <div class="notice" style="margin-top:8px">Total: ${moeda(total)} • Saldo: ${moeda(saldo)}</div>
+          </div>
+        `;
+      }).join("");
     }
 
     function renderFaltantesAdmin() {
@@ -1346,13 +1549,22 @@
       preencherTexto("statTopoPrazo", dentroPrazoPedidos() ? "Aberto" : "Fechado");
       preencherTexto("statTopoValor", moeda(CONFIG.valorUnitarioCamiseta));
       preencherTexto("nomeCampanhaAtual", campanhaAtual?.nome || "Campanha não definida");
-
       preencherTexto(
         "periodoCampanha",
         campanhaAtual?.inicio_pedidos && campanhaAtual?.fim_pedidos
           ? `${dataBr(campanhaAtual.inicio_pedidos)} até ${dataBr(campanhaAtual.fim_pedidos)}`
           : "Sem período definido"
       );
+    }
+
+    function nomeSetorPorId(id) {
+      const setor = getSetorById(id);
+      return setor ? setor.nome : "-";
+    }
+
+    function numeroSetorPorId(id) {
+      const setor = getSetorById(id);
+      return setor ? setor.numero : "-";
     }
 
     function renderPainelSetor() {
@@ -1438,6 +1650,9 @@
       );
 
       renderTabelaRecebimentosAdmin();
+      renderResumoSetores();
+      renderResumoCongregacoes();
+      renderSetoresPagantes();
       renderFaltantesAdmin();
       renderMapaSetoresCongregacoes();
     }
@@ -1507,8 +1722,7 @@
     }
 
     function extrairMensagemErro(e) {
-      const texto = String(e?.message || "Erro inesperado.");
-      return texto;
+      return String(e?.message || "Erro inesperado.");
     }
 
     function bindEventos() {
