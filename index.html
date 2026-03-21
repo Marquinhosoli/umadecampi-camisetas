@@ -731,12 +731,6 @@
         .toLowerCase();
     }
 
-    function isUuid(valor) {
-      return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-        String(valor || "").trim()
-      );
-    }
-
     function numero(v) {
       const n = Number(String(v ?? "").replace(",", "."));
       return Number.isFinite(n) ? n : 0;
@@ -790,31 +784,35 @@
       if (node) node.textContent = String(valor ?? "");
     }
 
+    function idComparavel(v) {
+      return String(v ?? "").trim();
+    }
+
     function preencherSelect(selectId, options, getValue, getLabel, placeholder = "Selecione") {
       const select = el(selectId);
       if (!select) return;
 
-      const valorAtual = select.value;
+      const valorAtual = idComparavel(select.value);
       select.innerHTML = `<option value="">${placeholder}</option>`;
 
       options.forEach((item) => {
         const option = document.createElement("option");
-        option.value = String(getValue(item));
+        option.value = idComparavel(getValue(item));
         option.textContent = getLabel(item);
         select.appendChild(option);
       });
 
-      if (options.length === 0) {
+      if (!options.length) {
         select.value = "";
         return;
       }
 
-      const existeValorAtual = options.some((o) => String(getValue(o)) === String(valorAtual));
+      const existeValorAtual = options.some((o) => idComparavel(getValue(o)) === valorAtual);
 
-      if (existeValorAtual) {
+      if (existeValorAtual && valorAtual !== "") {
         select.value = valorAtual;
       } else {
-        select.value = String(getValue(options[0]));
+        select.value = idComparavel(getValue(options[0]));
       }
     }
 
@@ -856,10 +854,7 @@
 
     function campanhaEstaMarcadaComoAtiva(campanha) {
       if (!campanha) return false;
-      if (campanha.ativo === true) return true;
-      if (campanha.ativa === true) return true;
-      if (numero(campanha.ativo) === 1) return true;
-      if (numero(campanha.ativa) === 1) return true;
+      if (campanha.ativo === true || campanha.ativa === true) return true;
 
       const status = normalizarTexto(campanha.status || campanha.situacao || "");
       return ["ativa", "ativo", "aberta", "aberto", "em andamento", "andamento"].includes(status);
@@ -906,8 +901,6 @@
         "campanhas?select=*&ativa=eq.true&order=id.desc&limit=1",
         "campanhas?select=*&status=eq.Ativa&order=id.desc&limit=1",
         "campanhas?select=*&status=eq.ativa&order=id.desc&limit=1",
-        "campanhas?select=*&situacao=eq.Ativa&order=id.desc&limit=1",
-        "campanhas?select=*&situacao=eq.ativa&order=id.desc&limit=1",
         "campanhas?select=*&order=id.desc&limit=50",
       ];
 
@@ -925,14 +918,11 @@
           }
 
           if (campanha) {
-            campanhaAtual = {
-              ...campanha,
-              _fallback: false,
-            };
+            campanhaAtual = { ...campanha, _fallback: false };
             return;
           }
         } catch (e) {
-          console.warn("Falha ao tentar carregar campanha:", rota, e);
+          console.warn("Falha ao carregar campanha:", rota, e);
         }
       }
 
@@ -943,120 +933,44 @@
       try {
         usuariosCache = await api("usuarios?select=*&order=nome.asc");
       } catch (e) {
-        console.warn("Falha ao carregar usuários:", e);
         usuariosCache = [];
       }
     }
 
     async function carregarSetores() {
-      const tentativas = [
-        "setores?select=*&order=numero.asc,nome.asc",
-        "setores?select=*&order=nome.asc",
-        "setores?select=*",
-      ];
-
-      for (const rota of tentativas) {
+      try {
+        setores = await api("setores?select=*&order=numero.asc");
+      } catch (e) {
         try {
-          const lista = await api(rota);
-          setores = Array.isArray(lista) ? lista : [];
-          return;
-        } catch (e) {
-          console.warn("Falha ao carregar setores:", rota, e);
+          setores = await api("setores?select=*&order=nome.asc");
+        } catch (err) {
+          setores = [];
         }
       }
-
-      setores = [];
     }
 
     async function carregarCongregacoes() {
-      const tentativas = [
-        "congregacoes?select=*&order=nome.asc",
-        "congregacoes?select=*",
-      ];
-
-      for (const rota of tentativas) {
-        try {
-          const lista = await api(rota);
-          congregacoes = Array.isArray(lista) ? lista : [];
-          return;
-        } catch (e) {
-          console.warn("Falha ao carregar congregações:", rota, e);
-        }
+      try {
+        congregacoes = await api("congregacoes?select=*&order=nome.asc");
+      } catch (e) {
+        congregacoes = [];
       }
-
-      congregacoes = [];
     }
 
     async function carregarPedidos() {
-      const camposPreferidos = [
-        "id,setor_id,congregacao_id,modelo,tamanho,quantidade,created_at,campanha_id,usuario_id,data",
-        "id,setor_id,congregacao_id,modelo,tamanho,quantidade,created_at,campanha_id,data",
-        "id,setor_id,congregacao_id,modelo,tamanho,quantidade,created_at,data",
-        "id,setor_id,congregacao_id,modelo,tamanho,quantidade,created_at",
-        "id,setor_id,congregacao_id,modelo,tamanho,quantidade,data",
-        "*",
-      ];
-
-      for (const selectBase of camposPreferidos) {
-        try {
-          if (
-            campanhaAtual?.id &&
-            !isUuid(campanhaAtual.id) &&
-            !Number.isNaN(Number(campanhaAtual.id))
-          ) {
-            try {
-              pedidosCache = await api(
-                `pedidos?select=${selectBase}&campanha_id=eq.${Number(campanhaAtual.id)}&order=id.desc`
-              );
-              return;
-            } catch (e) {
-              console.warn("Falha ao carregar pedidos por campanha:", e);
-            }
-          }
-
-          pedidosCache = await api(`pedidos?select=${selectBase}&order=id.desc`);
-          return;
-        } catch (e) {
-          console.warn("Falha ao carregar pedidos:", selectBase, e);
-        }
+      try {
+        pedidosCache = await api("pedidos?select=*&order=id.desc");
+      } catch (e) {
+        pedidosCache = [];
       }
-
-      pedidosCache = [];
     }
 
     async function carregarRecebimentos() {
-      const camposPreferidos = [
-        "id,setor_id,valor,observacao,created_at,campanha_id,data_pagamento,data_recebimento,data_registro,usuario_id",
-        "id,setor_id,valor,observacao,created_at,data_pagamento,data_recebimento,data_registro,usuario_id",
-        "id,setor_id,valor,observacao,created_at,data_pagamento,data_recebimento,data_registro",
-        "*",
-      ];
-
-      for (const selectBase of camposPreferidos) {
-        try {
-          if (
-            campanhaAtual?.id &&
-            !isUuid(campanhaAtual.id) &&
-            !Number.isNaN(Number(campanhaAtual.id))
-          ) {
-            try {
-              recebimentosCache = await api(
-                `recebimentos?select=${selectBase}&campanha_id=eq.${Number(campanhaAtual.id)}&order=id.desc`
-              );
-              return;
-            } catch (e) {
-              console.warn("Falha ao carregar recebimentos por campanha:", e);
-            }
-          }
-
-          recebimentosCache = await api(`recebimentos?select=${selectBase}&order=id.desc`);
-          return;
-        } catch (e) {
-          console.warn("Falha ao carregar recebimentos:", selectBase, e);
-        }
+      try {
+        recebimentosCache = await api("recebimentos?select=*&order=id.desc");
+      } catch (e) {
+        recebimentosCache = [];
       }
-
-      recebimentosCache = [];
     }
 
     async function recarregarTudo() {
@@ -1076,34 +990,34 @@
       return item?.data_pagamento || item?.data_recebimento || item?.data_registro || item?.created_at || null;
     }
 
+    function getSetorById(setorId) {
+      return setores.find((s) => idComparavel(s.id) === idComparavel(setorId)) || null;
+    }
+
+    function getCongregacaoById(congregacaoId) {
+      return congregacoes.find((c) => idComparavel(c.id) === idComparavel(congregacaoId)) || null;
+    }
+
     function nomeSetorPorId(id) {
-      const item = setores.find((s) => String(s.id) === String(id));
+      const item = getSetorById(id);
       return item ? item.nome : "-";
     }
 
     function numeroSetorPorId(id) {
-      const item = setores.find((s) => String(s.id) === String(id));
+      const item = getSetorById(id);
       return item ? item.numero : "-";
     }
 
-    function getSetorById(setorId) {
-      return setores.find((s) => String(s.id) === String(setorId)) || null;
-    }
-
-    function getCongregacaoById(congregacaoId) {
-      return congregacoes.find((c) => String(c.id) === String(congregacaoId)) || null;
-    }
-
     function congregacoesDoSetor(setorId) {
-      return congregacoes.filter((c) => String(c.setor_id) === String(setorId));
+      return congregacoes.filter((c) => idComparavel(c.setor_id) === idComparavel(setorId));
     }
 
     function pedidosDoSetor(setorId) {
-      return pedidosCache.filter((p) => String(p.setor_id) === String(setorId));
+      return pedidosCache.filter((p) => idComparavel(p.setor_id) === idComparavel(setorId));
     }
 
     function recebimentosDoSetor(setorId) {
-      return recebimentosCache.filter((r) => String(r.setor_id) === String(setorId));
+      return recebimentosCache.filter((r) => idComparavel(r.setor_id) === idComparavel(setorId));
     }
 
     function totalPecasDoSetor(setorId) {
@@ -1123,7 +1037,7 @@
     }
 
     function pedidosDaCongregacao(congregacaoId) {
-      return pedidosCache.filter((p) => String(p.congregacao_id) === String(congregacaoId));
+      return pedidosCache.filter((p) => idComparavel(p.congregacao_id) === idComparavel(congregacaoId));
     }
 
     function congregacoesQueAindaNaoPediram() {
@@ -1162,104 +1076,28 @@
       );
     }
 
-    function encontrarSetorNoCache(loginDigitado) {
-      const valor = normalizarTexto(loginDigitado);
-
-      return setores.find((s) => {
-        const nome = normalizarTexto(s.nome);
-        const codigo = normalizarTexto(s.codigo || "");
-        const sigla = normalizarTexto(s.sigla || "");
-        const idTexto = String(s.id || "").trim();
-
-        return (
-          valor === nome ||
-          valor === codigo ||
-          valor === sigla ||
-          String(loginDigitado || "").trim() === idTexto
-        );
-      });
-    }
-
-    async function buscarSetorDireto(loginDigitado) {
-      const bruto = String(loginDigitado || "").trim();
-      const valor = normalizarTexto(loginDigitado);
-
-      try {
-        const lista = await api("setores?select=*");
-        setores = Array.isArray(lista) ? lista : [];
-
-        return (
-          setores.find((s) => {
-            const nome = normalizarTexto(s.nome);
-            const codigo = normalizarTexto(s.codigo || "");
-            const sigla = normalizarTexto(s.sigla || "");
-            const idTexto = String(s.id || "").trim();
-
-            return (
-              valor === nome ||
-              valor === codigo ||
-              valor === sigla ||
-              bruto === idTexto
-            );
-          }) || null
-        );
-      } catch (e) {
-        console.error("Erro ao buscar setor direto:", e);
-        throw new Error("Não foi possível consultar os setores no banco.");
-      }
-    }
-
-    function setorSenhaValida(setor, senhaDigitada) {
-      const senhaBanco = String(setor?.senha || "").trim();
-      const senhaInformada = String(senhaDigitada || "").trim();
-      return senhaBanco === senhaInformada;
-    }
-
     async function fazerLoginSetor(login, senha) {
       if (!login || !senha) throw new Error("Informe login e senha.");
 
       const usuario = usuarioSetorPorLoginESenha(login, senha);
 
-      if (usuario && usuario.setor_id) {
-        const setorUsuario = getSetorById(usuario.setor_id);
-
-        if (!setorUsuario) {
-          throw new Error("Setor do usuário não encontrado.");
-        }
-
-        sessao = {
-          tipo: "setor",
-          usuario_id: usuario.id,
-          usuario_nome: usuario.nome || usuario.login || setorUsuario.nome,
-          setor_id: setorUsuario.id,
-          setor_nome: setorUsuario.nome,
-          setor_numero: setorUsuario.numero,
-          login_em: new Date().toISOString(),
-        };
-
-        salvarSessao();
-        return;
+      if (!usuario) {
+        throw new Error("Login ou senha inválidos.");
       }
 
-      let setor = encontrarSetorNoCache(login);
+      const setorUsuario = getSetorById(usuario.setor_id);
 
-      if (!setor) {
-        setor = await buscarSetorDireto(login);
-      }
-
-      if (!setor) {
-        throw new Error("Setor inválido.");
-      }
-
-      if (!setorSenhaValida(setor, senha)) {
-        throw new Error("Senha inválida.");
+      if (!setorUsuario) {
+        throw new Error("Setor do usuário não encontrado.");
       }
 
       sessao = {
         tipo: "setor",
-        setor_id: setor.id,
-        setor_nome: setor.nome,
-        setor_numero: setor.numero,
+        usuario_id: usuario.id,
+        usuario_nome: usuario.nome || usuario.login || setorUsuario.nome,
+        setor_id: setorUsuario.id,
+        setor_nome: setorUsuario.nome,
+        setor_numero: setorUsuario.numero,
         login_em: new Date().toISOString(),
       };
 
@@ -1302,28 +1140,17 @@
     }
 
     function dentroPrazoPedidos() {
-      if (sessao?.tipo === "admin") {
-        return campanhaDisponivelParaAdmin();
-      }
+      if (sessao?.tipo === "admin") return campanhaDisponivelParaAdmin();
       return campanhaDisponivelParaSetor();
     }
 
     async function salvarPedido({ setor_id, congregacao_id, modelo, tamanho, quantidade, usuario_id }) {
-      if (!campanhaExiste()) {
-        throw new Error("Nenhuma campanha encontrada.");
-      }
-
-      if (!campanhaEstaAtiva()) {
-        throw new Error("A campanha está inativa.");
-      }
-
+      if (!campanhaExiste()) throw new Error("Nenhuma campanha encontrada.");
+      if (!campanhaEstaAtiva()) throw new Error("A campanha está inativa.");
       if (!setor_id || !congregacao_id || !modelo || !tamanho || !quantidade) {
         throw new Error("Preencha todos os campos do pedido.");
       }
-
-      if (!dentroPrazoPedidos()) {
-        throw new Error("Período de pedidos encerrado.");
-      }
+      if (!dentroPrazoPedidos()) throw new Error("Período de pedidos encerrado.");
 
       const modeloNormalizado = normalizarTexto(modelo);
       const modeloCorrigido =
@@ -1333,154 +1160,54 @@
           ? "babylook"
           : modelo;
 
-      const payloadBase = {
-        setor_id: Number(setor_id),
-        congregacao_id: Number(congregacao_id),
+      const payload = {
+        setor_id: numero(setor_id) || setor_id,
+        congregacao_id: numero(congregacao_id) || congregacao_id,
         modelo: modeloCorrigido,
         tamanho,
         quantidade: numero(quantidade),
         data: new Date().toISOString(),
       };
 
-      if (usuario_id && !Number.isNaN(Number(usuario_id))) {
-        payloadBase.usuario_id = Number(usuario_id);
-      }
+      if (usuario_id) payload.usuario_id = numero(usuario_id) || usuario_id;
+      if (campanhaAtual?.id) payload.campanha_id = numero(campanhaAtual.id) || campanhaAtual.id;
 
-      if (
-        campanhaAtual?.id &&
-        !isUuid(campanhaAtual.id) &&
-        !Number.isNaN(Number(campanhaAtual.id))
-      ) {
-        payloadBase.campanha_id = Number(campanhaAtual.id);
-      }
+      await api("pedidos", {
+        method: "POST",
+        body: payload,
+      });
 
-      const variantes = [
-        ["usuario_id", "data", "campanha_id"],
-        ["data", "campanha_id"],
-        ["usuario_id", "campanha_id"],
-        ["usuario_id", "data"],
-        ["campanha_id"],
-        ["data"],
-        ["usuario_id"],
-        [],
-      ];
-
-      let ultimoErro = null;
-
-      for (const campos of variantes) {
-        const payload = {};
-        campos.forEach((campo) => {
-          if (payloadBase[campo] !== undefined) payload[campo] = payloadBase[campo];
-        });
-
-        payload.setor_id = payloadBase.setor_id;
-        payload.congregacao_id = payloadBase.congregacao_id;
-        payload.modelo = payloadBase.modelo;
-        payload.tamanho = payloadBase.tamanho;
-        payload.quantidade = payloadBase.quantidade;
-
-        try {
-          await api("pedidos", {
-            method: "POST",
-            body: payload,
-          });
-          await carregarPedidos();
-          return;
-        } catch (e) {
-          ultimoErro = e;
-        }
-      }
-
-      throw ultimoErro || new Error("Não foi possível salvar o pedido.");
+      await carregarPedidos();
     }
 
     async function registrarRecebimento({ setor_id, valor, observacao, data_pagamento, usuario_id }) {
       if (!setor_id) throw new Error("Setor não informado.");
       if (!valor) throw new Error("Informe o valor recebido.");
 
-      const base = {
-        setor_id: Number(setor_id),
+      const payload = {
+        setor_id: numero(setor_id) || setor_id,
         valor: numero(valor),
         observacao: observacao || null,
         data_pagamento: data_pagamento || new Date().toISOString().slice(0, 10),
       };
 
-      if (usuario_id && !Number.isNaN(Number(usuario_id))) {
-        base.usuario_id = Number(usuario_id);
+      if (usuario_id) payload.usuario_id = numero(usuario_id) || usuario_id;
+      if (campanhaAtual?.id) payload.campanha_id = numero(campanhaAtual.id) || campanhaAtual.id;
+
+      try {
+        await api("recebimentos", {
+          method: "POST",
+          body: payload,
+        });
+      } catch (e) {
+        delete payload.campanha_id;
+        await api("recebimentos", {
+          method: "POST",
+          body: payload,
+        });
       }
 
-      if (
-        campanhaAtual?.id &&
-        !isUuid(campanhaAtual.id) &&
-        !Number.isNaN(Number(campanhaAtual.id))
-      ) {
-        base.campanha_id = Number(campanhaAtual.id);
-      }
-
-      const tentativas = [
-        { ...base },
-        (() => {
-          const p = { ...base };
-          delete p.campanha_id;
-          return p;
-        })(),
-        (() => {
-          const p = { ...base };
-          delete p.usuario_id;
-          return p;
-        })(),
-        (() => {
-          const p = { ...base };
-          delete p.data_pagamento;
-          p.data_recebimento = new Date().toISOString().slice(0, 10);
-          return p;
-        })(),
-        (() => {
-          const p = { ...base };
-          delete p.usuario_id;
-          delete p.campanha_id;
-          return p;
-        })(),
-        (() => {
-          const p = { ...base };
-          delete p.usuario_id;
-          delete p.data_pagamento;
-          p.data_recebimento = new Date().toISOString().slice(0, 10);
-          return p;
-        })(),
-        (() => {
-          const p = { ...base };
-          delete p.campanha_id;
-          delete p.data_pagamento;
-          p.data_recebimento = new Date().toISOString().slice(0, 10);
-          return p;
-        })(),
-        (() => {
-          const p = { ...base };
-          delete p.usuario_id;
-          delete p.campanha_id;
-          delete p.data_pagamento;
-          p.data_recebimento = new Date().toISOString().slice(0, 10);
-          return p;
-        })(),
-      ];
-
-      let ultimoErro = null;
-
-      for (const payload of tentativas) {
-        try {
-          await api("recebimentos", {
-            method: "POST",
-            body: payload,
-          });
-          await carregarRecebimentos();
-          return;
-        } catch (e) {
-          ultimoErro = e;
-        }
-      }
-
-      throw ultimoErro || new Error("Não foi possível registrar o recebimento.");
+      await carregarRecebimentos();
     }
 
     function renderTabelaPedidosSetor() {
@@ -1549,7 +1276,7 @@
           return `
             <tr>
               <td>${formatarDataHora(dataRecebimento(r))}</td>
-              <td>${escapeHtml(setor?.nome || "-")}</td>
+              <td>${escapeHtml(setor?.nome || `ID ${r.setor_id || "-"}`)}</td>
               <td>${moeda(r.valor)}</td>
               <td>${escapeHtml(r.observacao || "-")}</td>
             </tr>
@@ -1699,7 +1426,7 @@
 
       const setorEscolhido = el("pedidoAdminSetor")?.value || "";
       const congregacoesFiltradas = congregacoes
-        .filter((c) => !setorEscolhido || String(c.setor_id) === String(setorEscolhido))
+        .filter((c) => idComparavel(c.setor_id) === idComparavel(setorEscolhido))
         .sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"));
 
       preencherSelect(
@@ -1707,7 +1434,7 @@
         congregacoesFiltradas,
         (c) => c.id,
         (c) => c.nome,
-        "Selecione a congregação"
+        congregacoesFiltradas.length ? "Selecione a congregação" : "Nenhuma congregação encontrada"
       );
 
       renderTabelaRecebimentosAdmin();
@@ -1733,13 +1460,8 @@
       const mensagemPrazoPedidos = el("mensagemPrazoPedidos");
       const statusAdminCampanha = el("statusAdminCampanha");
 
-      if (badgeCampanhaStatus) {
-        badgeCampanhaStatus.textContent = `Campanha: ${statCampanha || "-"}`;
-      }
-
-      if (badgeCampanhaPrazo) {
-        badgeCampanhaPrazo.textContent = `Prazo: ${statPrazo || "-"}`;
-      }
+      if (badgeCampanhaStatus) badgeCampanhaStatus.textContent = `Campanha: ${statCampanha || "-"}`;
+      if (badgeCampanhaPrazo) badgeCampanhaPrazo.textContent = `Prazo: ${statPrazo || "-"}`;
 
       const campanhaAtiva = statCampanha.toLowerCase() === "ativa";
       const prazoAberto = statPrazo.toLowerCase() === "aberto";
@@ -1778,64 +1500,38 @@
 
       renderResumoPublico();
 
-      if (sessao?.tipo === "setor") {
-        renderPainelSetor();
-      }
-
-      if (sessao?.tipo === "admin") {
-        renderPainelAdmin();
-      }
+      if (sessao?.tipo === "setor") renderPainelSetor();
+      if (sessao?.tipo === "admin") renderPainelAdmin();
 
       atualizarBadgesVisuais();
     }
 
     function extrairMensagemErro(e) {
       const texto = String(e?.message || "Erro inesperado.");
-
-      if (texto.includes("PGRST204") && texto.includes("campanha_id")) {
-        return "A tabela recebimentos não possui a coluna campanha_id.";
-      }
-
-      if (texto.includes("22P02")) {
-        return "Um campo numérico está recebendo valor inválido no banco.";
-      }
-
-      if (texto.includes("duplicate key")) {
-        return "Já existe um registro igual salvo no sistema.";
-      }
-
-      if (texto.includes("JWT")) {
-        return "Falha de acesso ao banco. Verifique permissões do Supabase.";
-      }
-
       return texto;
     }
 
     function bindEventos() {
       el("formLoginSetor")?.addEventListener("submit", async (e) => {
         e.preventDefault();
-
         try {
           await recarregarTudo();
           await fazerLoginSetor(el("loginSetor")?.value, el("senhaSetor")?.value);
           renderTela();
           alert("Login setor funcionando.");
         } catch (err) {
-          console.error("Erro login setor:", err);
           alert(extrairMensagemErro(err));
         }
       });
 
       el("formLoginAdmin")?.addEventListener("submit", async (e) => {
         e.preventDefault();
-
         try {
           await recarregarTudo();
           fazerLoginAdmin(el("loginAdmin")?.value, el("senhaAdmin")?.value);
           renderTela();
           alert("Login admin funcionando.");
         } catch (err) {
-          console.error("Erro login admin:", err);
           alert(extrairMensagemErro(err));
         }
       });
@@ -1845,7 +1541,6 @@
 
       el("formPedidoSetor")?.addEventListener("submit", async (e) => {
         e.preventDefault();
-
         try {
           await salvarPedido({
             setor_id: sessao?.setor_id,
@@ -1855,20 +1550,17 @@
             quantidade: el("pedidoQuantidade")?.value,
             usuario_id: sessao?.usuario_id,
           });
-
-          if (el("pedidoQuantidade")) el("pedidoQuantidade").value = 1;
+          el("pedidoQuantidade").value = 1;
           await recarregarTudo();
           renderTela();
           alert("Pedido salvo com sucesso.");
         } catch (err) {
-          console.error(err);
           alert(extrairMensagemErro(err));
         }
       });
 
       el("formPedidoAdmin")?.addEventListener("submit", async (e) => {
         e.preventDefault();
-
         try {
           await salvarPedido({
             setor_id: el("pedidoAdminSetor")?.value,
@@ -1878,37 +1570,22 @@
             quantidade: el("pedidoAdminQuantidade")?.value,
             usuario_id: sessao?.usuario_id,
           });
-
-          if (el("pedidoAdminQuantidade")) el("pedidoAdminQuantidade").value = 1;
+          el("pedidoAdminQuantidade").value = 1;
           await recarregarTudo();
           renderTela();
           alert("Pedido do admin salvo com sucesso.");
         } catch (err) {
-          console.error(err);
           alert(extrairMensagemErro(err));
         }
       });
 
       el("pedidoAdminSetor")?.addEventListener("change", () => {
-        if (sessao?.tipo === "admin") {
-          const setorEscolhido = el("pedidoAdminSetor")?.value || "";
-          const congregacoesFiltradas = congregacoes
-            .filter((c) => !setorEscolhido || String(c.setor_id) === String(setorEscolhido))
-            .sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"));
-
-          preencherSelect(
-            "pedidoAdminCongregacao",
-            congregacoesFiltradas,
-            (c) => c.id,
-            (c) => c.nome,
-            "Selecione a congregação"
-          );
-        }
+        renderPainelAdmin();
+        atualizarBadgesVisuais();
       });
 
       el("formRecebimentoAdmin")?.addEventListener("submit", async (e) => {
         e.preventDefault();
-
         try {
           await registrarRecebimento({
             setor_id: el("recebimentoSetor")?.value,
@@ -1917,14 +1594,12 @@
             data_pagamento: new Date().toISOString().slice(0, 10),
             usuario_id: sessao?.usuario_id,
           });
-
-          if (el("recebimentoValor")) el("recebimentoValor").value = "";
-          if (el("recebimentoObs")) el("recebimentoObs").value = "";
+          el("recebimentoValor").value = "";
+          el("recebimentoObs").value = "";
           await recarregarTudo();
           renderTela();
           alert("Recebimento salvo com sucesso.");
         } catch (err) {
-          console.error(err);
           alert(extrairMensagemErro(err));
         }
       });
@@ -1932,12 +1607,9 @@
 
     function validarSessaoAtual() {
       if (!sessao) return;
-
       if (sessao.tipo === "setor") {
-        const existe = setores.some((s) => String(s.id) === String(sessao.setor_id));
-        if (!existe && setores.length > 0) {
-          limparSessao();
-        }
+        const existe = setores.some((s) => idComparavel(s.id) === idComparavel(sessao.setor_id));
+        if (!existe && setores.length > 0) limparSessao();
       }
     }
 
