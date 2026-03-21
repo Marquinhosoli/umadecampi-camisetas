@@ -750,12 +750,13 @@ async function registrarRecebimento({ setor_id, valor, observacao, data_pagament
   if (!setor_id) throw new Error("Setor não informado.");
   if (!valor) throw new Error("Informe o valor recebido.");
 
-  const base = {
-    setor_id: Number(setor_id),
-    valor: numero(valor),
-    observacao: observacao || null,
-    data_pagamento: data_pagamento || new Date().toISOString().slice(0, 10),
-  };
+const payload = {
+  setor_id: setor_id,
+  congregacao_id: el("recebimentoCongregacao")?.value,
+  valor: numero(valor),
+  observacao: observacao || null,
+  data_pagamento: data_pagamento || new Date().toISOString().slice(0, 10),
+};
 
   if (usuario_id && !Number.isNaN(Number(usuario_id))) {
     base.usuario_id = Number(usuario_id);
@@ -1253,6 +1254,40 @@ function validarSessaoAtual() {
 /* =========================
    INICIALIZAÇÃO
 ========================= */
+function montarResumoIgrejas() {
+  return congregacoes.map((c) => {
+    const pedidos = pedidosDaCongregacao(c.id);
+    const recebimentos = recebimentosCache.filter(r => String(r.congregacao_id) === String(c.id));
+
+    const qtd = pedidos.reduce((acc, p) => acc + numero(p.quantidade), 0);
+    const total = qtd * CONFIG.valorUnitarioCamiseta;
+    const recebido = recebimentos.reduce((acc, r) => acc + numero(r.valor), 0);
+
+    let status = "nao_pediu";
+
+    if (qtd > 0 && recebido <= 0) status = "pendente";
+    else if (qtd > 0 && recebido > 0 && recebido < total) status = "parcial";
+    else if (qtd > 0 && recebido >= total) status = "quitado";
+
+    return { qtd, total, recebido, status };
+  });
+}
+
+function renderResumoIgrejas() {
+  const resumo = montarResumoIgrejas();
+
+  const pediram = resumo.filter(r => r.qtd > 0).length;
+  const naoPediram = resumo.filter(r => r.qtd === 0).length;
+  const quites = resumo.filter(r => r.status === "quitado").length;
+  const parcial = resumo.filter(r => r.status === "parcial").length;
+  const pendentes = resumo.filter(r => r.status === "pendente").length;
+
+  el("igPediram").textContent = pediram;
+  el("igNaoPediram").textContent = naoPediram;
+  el("igQuites").textContent = quites;
+  el("igParcial").textContent = parcial;
+  el("igPendentes").textContent = pendentes;
+}
 
 async function iniciarSistema() {
   bindEventos();
