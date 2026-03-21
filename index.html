@@ -602,6 +602,36 @@
           <div class="panel-header">
             <div class="panel-info">
               <h2>Painel Administrativo</h2>
+              <div class="card" style="margin-top:22px">
+  <h3 class="section-title">Resumo das Igrejas</h3>
+
+  <div class="mini-grid">
+    <div class="mini-card">
+      <div class="label">Pediram</div>
+      <div class="value" id="igPediram">0</div>
+    </div>
+
+    <div class="mini-card">
+      <div class="label">Não pediram</div>
+      <div class="value" id="igNaoPediram">0</div>
+    </div>
+
+    <div class="mini-card">
+      <div class="label">Quites</div>
+      <div class="value" id="igQuites">0</div>
+    </div>
+
+    <div class="mini-card">
+      <div class="label">Parcial</div>
+      <div class="value" id="igParcial">0</div>
+    </div>
+
+    <div class="mini-card">
+      <div class="label">Pendentes</div>
+      <div class="value" id="igPendentes">0</div>
+    </div>
+  </div>
+</div>
               <p>Controle geral do sistema</p>
             </div>
 
@@ -673,14 +703,14 @@
             <h3 class="section-title">Lançar recebimento</h3>
             <form id="formRecebimentoAdmin">
               <div class="field">
-                <label for="recebimentoSetor">Setor</label>
-                <select id="recebimentoSetor"></select>
-              </div>
+              <label for="recebimentoSetor">Setor</label>
+<select id="recebimentoSetor"></select>
 
-              <div class="field">
-                <label for="recebimentoValor">Valor recebido</label>
-                <input id="recebimentoValor" type="number" min="0" step="0.01" />
-              </div>
+<label for="recebimentoCongregacao">Congregação</label>
+<select id="recebimentoCongregacao"></select>
+
+<label for="recebimentoValor">Valor recebido</label>
+<input id="recebimentoValor" type="number" min="0" step="0.01" />
 
               <div class="field">
                 <label for="recebimentoObs">Observação</label>
