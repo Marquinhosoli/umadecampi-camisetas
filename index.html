@@ -152,7 +152,7 @@ return `<tr><td>${c?.nome}</td><td>${p.quantidade}</td></tr>`;
 
 document.getElementById("recebimentos").innerHTML=
 recebimentos.map(r=>{
-const c=congregacoes.find(x=>x.id==r.congregacao_id);
+const c = congregacoes.find(x => String(x.id) === String(r.congregacao_id));
 return `<tr><td>${c?.nome}</td><td>${r.valor}</td></tr>`;
 }).join("");
 
