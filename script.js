@@ -2,7 +2,7 @@ const SUPABASE_URL = "https://dqwlhouwoxbwxkcaytja.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_b_tuFrU9PhG3VKYLupMVhg_pWPF6Spj";
 const SESSION_KEY = "umadecampi_sessao_supabase_v1";
 
-const tamanhos = ["PP", "P", "M", "G", "GG", "XG", "XXG"];
+const tamanhos = ["PP","P","M","G","GG","XG","XXG"];
 const modelos = {
   masculino: "Masculino",
   babylook: "Baby Look Feminina",
@@ -14,7 +14,7 @@ const CONFIG = {
   adminPodeEditarForaPrazo: true,
   valorUnitarioCamiseta: 45,
   adminUsuario: "admin",
-  adminSenha: "123456",
+  adminSenha: "umadecampi2026", // <-- Corrigido para bater com o README
 };
 
 let sessao = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
@@ -42,12 +42,6 @@ function normalizarTexto(txt) {
     .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .toLowerCase();
-}
-
-function isUuid(valor) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    String(valor || "").trim()
-  );
 }
 
 function numero(v) {
@@ -88,14 +82,7 @@ function escapeHtml(texto) {
 function mostrar(id, exibir = true) {
   const node = el(id);
   if (!node) return;
-
-  if (exibir) {
-    node.classList.remove("hidden");
-    node.style.display = "";
-  } else {
-    node.classList.add("hidden");
-    node.style.display = "none";
-  }
+  node.classList.toggle("hidden", !exibir);
 }
 
 function preencherTexto(id, valor) {
@@ -103,11 +90,11 @@ function preencherTexto(id, valor) {
   if (node) node.textContent = String(valor ?? "");
 }
 
-function preencherSelect(selectId, options, getValue, getLabel, placeholder = "Selecione") {
+function preencherSelect(selectId, options, getValue, getLabel, placeholder = "Selecione", manterAtual = true) {
   const select = el(selectId);
   if (!select) return;
 
-  const valorAtual = select.value;
+  const valorAtual = String(select.value || "");
   select.innerHTML = `<option value="">${placeholder}</option>`;
 
   options.forEach((item) => {
@@ -117,8 +104,17 @@ function preencherSelect(selectId, options, getValue, getLabel, placeholder = "S
     select.appendChild(option);
   });
 
-  if (options.some((o) => String(getValue(o)) === String(valorAtual))) {
+  if (!options.length) {
+    select.value = "";
+    return;
+  }
+
+  const existeAtual = options.some((o) => String(getValue(o)) === valorAtual);
+
+  if (manterAtual && valorAtual && existeAtual) {
     select.value = valorAtual;
+  } else {
+    select.value = String(getValue(options[0]));
   }
 }
 
@@ -143,10 +139,6 @@ async function api(path, options = {}) {
   return text ? JSON.parse(text) : [];
 }
 
-/* =========================
-   CAMPANHA
-========================= */
-
 function criarCampanhaFallback() {
   const hoje = new Date();
   const ano = hoje.getFullYear();
@@ -164,14 +156,9 @@ function criarCampanhaFallback() {
 
 function campanhaEstaMarcadaComoAtiva(campanha) {
   if (!campanha) return false;
-
-  if (campanha.ativo === true) return true;
-  if (campanha.ativa === true) return true;
-  if (numero(campanha.ativo) === 1) return true;
-  if (numero(campanha.ativa) === 1) return true;
-
+  if (campanha.ativo === true || campanha.ativa === true) return true;
   const status = normalizarTexto(campanha.status || campanha.situacao || "");
-  return ["ativa", "ativo", "aberta", "aberto", "em andamento", "andamento"].includes(status);
+  return ["ativa","ativo","aberta","aberto","em andamento","andamento"].includes(status);
 }
 
 function campanhaTemPeriodoValido(campanha) {
@@ -183,7 +170,6 @@ function campanhaTemPeriodoValido(campanha) {
   const fim = new Date(`${campanha.fim_pedidos}T23:59:59`);
 
   if (Number.isNaN(inicio.getTime()) || Number.isNaN(fim.getTime())) return true;
-
   return agora >= inicio && agora <= fim;
 }
 
@@ -198,17 +184,14 @@ function campanhaEstaAtiva() {
 }
 
 function campanhaDisponivelParaSetor() {
-  if (!campanhaEstaAtiva()) return false;
-  return campanhaTemPeriodoValido(campanhaAtual);
+  return campanhaEstaAtiva() && campanhaTemPeriodoValido(campanhaAtual);
 }
 
 function campanhaDisponivelParaAdmin() {
   if (!campanhaAtual) return false;
   if (campanhaAtual._fallback) return true;
-
   if (!campanhaEstaAtiva()) return false;
   if (CONFIG.adminPodeEditarForaPrazo) return true;
-
   return campanhaTemPeriodoValido(campanhaAtual);
 }
 
@@ -218,8 +201,6 @@ async function carregarCampanhaAtual() {
     "campanhas?select=*&ativa=eq.true&order=id.desc&limit=1",
     "campanhas?select=*&status=eq.Ativa&order=id.desc&limit=1",
     "campanhas?select=*&status=eq.ativa&order=id.desc&limit=1",
-    "campanhas?select=*&situacao=eq.Ativa&order=id.desc&limit=1",
-    "campanhas?select=*&situacao=eq.ativa&order=id.desc&limit=1",
     "campanhas?select=*&order=id.desc&limit=50",
   ];
 
@@ -229,151 +210,72 @@ async function carregarCampanhaAtual() {
       if (!Array.isArray(data) || !data.length) continue;
 
       let campanha = null;
-
       if (rota.includes("limit=50")) {
-        campanha =
-          data.find((c) => campanhaEstaMarcadaComoAtiva(c)) ||
-          data[0] ||
-          null;
+        campanha = data.find((c) => campanhaEstaMarcadaComoAtiva(c)) || data[0] || null;
       } else {
         campanha = data[0] || null;
       }
 
       if (campanha) {
-        campanhaAtual = {
-          ...campanha,
-          _fallback: false,
-        };
+        campanhaAtual = { ...campanha, _fallback: false };
         return;
       }
-    } catch (e) {
-      console.warn("Falha ao tentar carregar campanha:", rota, e);
-    }
+    } catch (e) {}
   }
 
   campanhaAtual = criarCampanhaFallback();
 }
 
-/* =========================
-   CARREGAMENTO
-========================= */
-
 async function carregarUsuarios() {
   try {
     usuariosCache = await api("usuarios?select=*&order=nome.asc");
   } catch (e) {
-    console.warn("Falha ao carregar usuários:", e);
     usuariosCache = [];
   }
 }
 
 async function carregarSetores() {
-  const tentativas = [
-    "setores?select=*&order=numero.asc.nullslast,nome.asc",
-    "setores?select=*&order=nome.asc",
-    "setores?select=*",
-  ];
-
-  for (const rota of tentativas) {
+  try {
+    setores = await api("setores?select=*&order=numero.asc.nullslast,nome.asc");
+  } catch (e) {
     try {
-      setores = await api(rota);
-      return;
-    } catch (e) {
-      console.warn("Falha ao carregar setores:", rota, e);
+      setores = await api("setores?select=*&order=nome.asc");
+    } catch (err) {
+      setores = [];
     }
   }
-
-  setores = [];
 }
 
 async function carregarCongregacoes() {
-  const tentativas = [
-    "congregacoes?select=*&order=nome.asc",
-    "congregacoes?select=*",
-  ];
-
-  for (const rota of tentativas) {
-    try {
-      congregacoes = await api(rota);
-      return;
-    } catch (e) {
-      console.warn("Falha ao carregar congregações:", rota, e);
-    }
+  try {
+    congregacoes = await api("congregacoes?select=*&order=nome.asc");
+  } catch (e) {
+    congregacoes = [];
   }
-
-  congregacoes = [];
 }
 
 async function carregarPedidos() {
-  const camposPreferidos = [
-    "id,setor_id,congregacao_id,modelo,tamanho,quantidade,created_at,campanha_id,usuario_id,data",
-    "id,setor_id,congregacao_id,modelo,tamanho,quantidade,created_at,campanha_id,data",
-    "id,setor_id,congregacao_id,modelo,tamanho,quantidade,created_at,data",
-    "id,setor_id,congregacao_id,modelo,tamanho,quantidade,created_at",
-    "id,setor_id,congregacao_id,modelo,tamanho,quantidade,data",
-    "*",
-  ];
-
-  for (const selectBase of camposPreferidos) {
+  try {
+    pedidosCache = await api("pedidos?select=*&order=data.desc.nullslast,created_at.desc.nullslast,id.desc");
+  } catch (e) {
     try {
-      if (
-        campanhaAtual?.id &&
-        !isUuid(campanhaAtual.id) &&
-        !Number.isNaN(Number(campanhaAtual.id))
-      ) {
-        try {
-          pedidosCache = await api(
-            `pedidos?select=${selectBase}&campanha_id=eq.${Number(campanhaAtual.id)}&order=id.desc`
-          );
-          return;
-        } catch (e) {
-          console.warn("Falha ao carregar pedidos por campanha:", e);
-        }
-      }
-
-      pedidosCache = await api(`pedidos?select=${selectBase}&order=id.desc`);
-      return;
-    } catch (e) {
-      console.warn("Falha ao carregar pedidos:", selectBase, e);
+      pedidosCache = await api("pedidos?select=*&order=id.desc");
+    } catch (err) {
+      pedidosCache = [];
     }
   }
-
-  pedidosCache = [];
 }
 
 async function carregarRecebimentos() {
-  const camposPreferidos = [
-    "id,setor_id,valor,observacao,created_at,campanha_id,data_pagamento,data_recebimento,data_registro,usuario_id",
-    "id,setor_id,valor,observacao,created_at,data_pagamento,data_recebimento,data_registro,usuario_id",
-    "id,setor_id,valor,observacao,created_at,data_pagamento,data_recebimento,data_registro",
-    "*",
-  ];
-
-  for (const selectBase of camposPreferidos) {
+  try {
+    recebimentosCache = await api("recebimentos?select=*&order=data_recebimento.desc.nullslast,id.desc");
+  } catch (e) {
     try {
-      if (
-        campanhaAtual?.id &&
-        !isUuid(campanhaAtual.id) &&
-        !Number.isNaN(Number(campanhaAtual.id))
-      ) {
-        try {
-          recebimentosCache = await api(
-            `recebimentos?select=${selectBase}&campanha_id=eq.${Number(campanhaAtual.id)}&order=id.desc`
-          );
-          return;
-        } catch (e) {
-          console.warn("Falha ao carregar recebimentos por campanha:", e);
-        }
-      }
-
-      recebimentosCache = await api(`recebimentos?select=${selectBase}&order=id.desc`);
-      return;
-    } catch (e) {
-      console.warn("Falha ao carregar recebimentos:", selectBase, e);
+      recebimentosCache = await api("recebimentos?select=*&order=id.desc");
+    } catch (err) {
+      recebimentosCache = [];
     }
   }
-
-  recebimentosCache = [];
 }
 
 async function recarregarTudo() {
@@ -385,39 +287,22 @@ async function recarregarTudo() {
   await carregarRecebimentos();
 }
 
-/* =========================
-   HELPERS
-========================= */
-
-function dataPedido(item) {
-  return item?.created_at || item?.data || null;
-}
-
-function dataRecebimento(item) {
-  return item?.data_pagamento || item?.data_recebimento || item?.data_registro || item?.created_at || null;
-}
-
-function nomeCongregacaoPorId(id) {
-  const item = congregacoes.find((c) => String(c.id) === String(id));
-  return item ? item.nome : "-";
-}
-
-function nomeSetorPorId(id) {
-  const item = setores.find((s) => String(s.id) === String(id));
-  return item ? item.nome : "-";
-}
-
-function numeroSetorPorId(id) {
-  const item = setores.find((s) => String(s.id) === String(id));
-  return item ? item.numero : "-";
-}
-
 function getSetorById(setorId) {
   return setores.find((s) => String(s.id) === String(setorId)) || null;
 }
 
 function getCongregacaoById(congregacaoId) {
   return congregacoes.find((c) => String(c.id) === String(congregacaoId)) || null;
+}
+
+function nomeSetorPorId(id) {
+  const setor = getSetorById(id);
+  return setor ? setor.nome : "-";
+}
+
+function numeroSetorPorId(id) {
+  const setor = getSetorById(id);
+  return setor ? setor.numero : "-";
 }
 
 function congregacoesDoSetor(setorId) {
@@ -430,6 +315,14 @@ function pedidosDoSetor(setorId) {
 
 function recebimentosDoSetor(setorId) {
   return recebimentosCache.filter((r) => String(r.setor_id) === String(setorId));
+}
+
+function pedidosDaCongregacao(congregacaoId) {
+  return pedidosCache.filter((p) => String(p.congregacao_id) === String(congregacaoId));
+}
+
+function recebimentosDaCongregacao(congregacaoId) {
+  return recebimentosCache.filter((r) => String(r.congregacao_id) === String(congregacaoId));
 }
 
 function totalPecasDoSetor(setorId) {
@@ -446,10 +339,6 @@ function totalRecebidoDoSetor(setorId) {
 
 function saldoDoSetor(setorId) {
   return totalFinanceiroDoSetor(setorId) - totalRecebidoDoSetor(setorId);
-}
-
-function pedidosDaCongregacao(congregacaoId) {
-  return pedidosCache.filter((p) => String(p.congregacao_id) === String(congregacaoId));
 }
 
 function congregacoesQueAindaNaoPediram() {
@@ -488,10 +377,6 @@ function usuarioAdminPorLoginESenha(login, senha) {
   );
 }
 
-/* =========================
-   LOGIN
-========================= */
-
 function encontrarSetorNoCache(loginDigitado) {
   const valor = normalizarTexto(loginDigitado);
 
@@ -507,42 +392,7 @@ function encontrarSetorNoCache(loginDigitado) {
       valor === sigla ||
       String(loginDigitado || "").trim() === idTexto
     );
-  });
-}
-
-async function buscarSetorDireto(loginDigitado) {
-  const bruto = String(loginDigitado || "").trim();
-  const valor = normalizarTexto(loginDigitado);
-
-  try {
-    const lista = await api("setores?select=*");
-    setores = Array.isArray(lista) ? lista : [];
-
-    return (
-      setores.find((s) => {
-        const nome = normalizarTexto(s.nome);
-        const codigo = normalizarTexto(s.codigo || "");
-        const sigla = normalizarTexto(s.sigla || "");
-        const idTexto = String(s.id || "").trim();
-
-        return (
-          valor === nome ||
-          valor === codigo ||
-          valor === sigla ||
-          bruto === idTexto
-        );
-      }) || null
-    );
-  } catch (e) {
-    console.error("Erro ao buscar setor direto:", e);
-    throw new Error("Não foi possível consultar os setores no banco.");
-  }
-}
-
-function setorSenhaValida(setor, senhaDigitada) {
-  const senhaBanco = String(setor?.senha || "").trim();
-  const senhaInformada = String(senhaDigitada || "").trim();
-  return senhaBanco === senhaInformada;
+  }) || null;
 }
 
 async function fazerLoginSetor(login, senha) {
@@ -571,17 +421,10 @@ async function fazerLoginSetor(login, senha) {
     return;
   }
 
-  let setor = encontrarSetorNoCache(login);
+  const setor = encontrarSetorNoCache(login);
+  if (!setor) throw new Error("Setor inválido.");
 
-  if (!setor) {
-    setor = await buscarSetorDireto(login);
-  }
-
-  if (!setor) {
-    throw new Error("Setor inválido.");
-  }
-
-  if (!setorSenhaValida(setor, senha)) {
+  if (String(setor?.senha || "").trim() !== String(senha || "").trim()) {
     throw new Error("Senha inválida.");
   }
 
@@ -631,38 +474,18 @@ function logout() {
   renderTela();
 }
 
-/* =========================
-   REGRAS
-========================= */
-
 function dentroPrazoPedidos() {
-  if (sessao?.tipo === "admin") {
-    return campanhaDisponivelParaAdmin();
-  }
-
+  if (sessao?.tipo === "admin") return campanhaDisponivelParaAdmin();
   return campanhaDisponivelParaSetor();
 }
 
-/* =========================
-   PEDIDOS
-========================= */
-
 async function salvarPedido({ setor_id, congregacao_id, modelo, tamanho, quantidade, usuario_id }) {
-  if (!campanhaExiste()) {
-    throw new Error("Nenhuma campanha encontrada.");
-  }
-
-  if (!campanhaEstaAtiva()) {
-    throw new Error("A campanha está inativa.");
-  }
-
+  if (!campanhaExiste()) throw new Error("Nenhuma campanha encontrada.");
+  if (!campanhaEstaAtiva()) throw new Error("A campanha está inativa.");
   if (!setor_id || !congregacao_id || !modelo || !tamanho || !quantidade) {
     throw new Error("Preencha todos os campos do pedido.");
   }
-
-  if (!dentroPrazoPedidos()) {
-    throw new Error("Período de pedidos encerrado.");
-  }
+  if (!dentroPrazoPedidos()) throw new Error("Período de pedidos encerrado.");
 
   const modeloNormalizado = normalizarTexto(modelo);
   const modeloCorrigido =
@@ -672,57 +495,30 @@ async function salvarPedido({ setor_id, congregacao_id, modelo, tamanho, quantid
       ? "babylook"
       : modelo;
 
-  const payloadBase = {
-    setor_id: Number(setor_id),
-    congregacao_id: Number(congregacao_id),
+  const payload = {
+    setor_id: String(setor_id),
+    congregacao_id: String(congregacao_id),
     modelo: modeloCorrigido,
-    tamanho,
+    tamanho: String(tamanho),
     quantidade: numero(quantidade),
     data: new Date().toISOString(),
   };
 
-  if (usuario_id && !Number.isNaN(Number(usuario_id))) {
-    payloadBase.usuario_id = Number(usuario_id);
-  }
+  if (usuario_id) payload.usuario_id = String(usuario_id);
+  if (campanhaAtual?.id != null) payload.campanha_id = String(campanhaAtual.id);
 
-  if (
-    campanhaAtual?.id &&
-    !isUuid(campanhaAtual.id) &&
-    !Number.isNaN(Number(campanhaAtual.id))
-  ) {
-    payloadBase.campanha_id = Number(campanhaAtual.id);
-  }
-
-  const variantes = [
-    ["usuario_id", "data", "campanha_id"],
-    ["data", "campanha_id"],
-    ["usuario_id", "campanha_id"],
-    ["usuario_id", "data"],
-    ["campanha_id"],
-    ["data"],
-    ["usuario_id"],
-    [],
+  const tentativas = [
+    { ...payload },
+    (() => { const p = { ...payload }; delete p.campanha_id; return p; })(),
+    (() => { const p = { ...payload }; delete p.usuario_id; return p; })(),
+    (() => { const p = { ...payload }; delete p.campanha_id; delete p.usuario_id; return p; })(),
   ];
 
   let ultimoErro = null;
 
-  for (const campos of variantes) {
-    const payload = {};
-    campos.forEach((campo) => {
-      if (payloadBase[campo] !== undefined) payload[campo] = payloadBase[campo];
-    });
-
-    payload.setor_id = payloadBase.setor_id;
-    payload.congregacao_id = payloadBase.congregacao_id;
-    payload.modelo = payloadBase.modelo;
-    payload.tamanho = payloadBase.tamanho;
-    payload.quantidade = payloadBase.quantidade;
-
+  for (const tentativa of tentativas) {
     try {
-      await api("pedidos", {
-        method: "POST",
-        body: payload,
-      });
+      await api("pedidos", { method: "POST", body: tentativa });
       await carregarPedidos();
       return;
     } catch (e) {
@@ -733,67 +529,34 @@ async function salvarPedido({ setor_id, congregacao_id, modelo, tamanho, quantid
   throw ultimoErro || new Error("Não foi possível salvar o pedido.");
 }
 
-async function excluirPedido(pedidoId) {
-  await api(`pedidos?id=eq.${pedidoId}`, {
-    method: "DELETE",
-    prefer: "return=minimal",
-  });
-
-  await carregarPedidos();
-}
-
-/* =========================
-   RECEBIMENTOS
-========================= */
-
-async function registrarRecebimento({ setor_id, valor, observacao, data_pagamento, usuario_id }) {
+async function registrarRecebimento({ setor_id, congregacao_id, valor, observacao, usuario_id }) {
   if (!setor_id) throw new Error("Setor não informado.");
+  if (!congregacao_id) throw new Error("Selecione a congregação.");
   if (!valor) throw new Error("Informe o valor recebido.");
 
-  const congregacao_id = el("recebimentoCongregacao")?.value;
-
-  if (!congregacao_id) {
-    throw new Error("Selecione a congregação.");
-  }
-
   const payload = {
-    setor_id: setor_id,
-    congregacao_id: congregacao_id,
+    setor_id: String(setor_id),
+    congregacao_id: String(congregacao_id),
     valor: numero(valor),
-    observacao: observacao || null
+    observacao: observacao || null,
+    data_recebimento: new Date().toISOString().slice(0, 10),
   };
 
-  if (usuario_id) payload.usuario_id = usuario_id;
-  if (campanhaAtual?.id) payload.campanha_id = campanhaAtual.id;
+  if (usuario_id) payload.usuario_id = String(usuario_id);
+  if (campanhaAtual?.id != null) payload.campanha_id = String(campanhaAtual.id);
 
   const tentativas = [
     { ...payload },
-    (() => {
-      const p = { ...payload };
-      delete p.campanha_id;
-      return p;
-    })(),
-    (() => {
-      const p = { ...payload };
-      delete p.usuario_id;
-      return p;
-    })(),
-    (() => {
-      const p = { ...payload };
-      delete p.campanha_id;
-      delete p.usuario_id;
-      return p;
-    })(),
+    (() => { const p = { ...payload }; delete p.campanha_id; return p; })(),
+    (() => { const p = { ...payload }; delete p.usuario_id; return p; })(),
+    (() => { const p = { ...payload }; delete p.campanha_id; delete p.usuario_id; return p; })(),
   ];
 
   let ultimoErro = null;
 
   for (const tentativa of tentativas) {
     try {
-      await api("recebimentos", {
-        method: "POST",
-        body: tentativa,
-      });
+      await api("recebimentos", { method: "POST", body: tentativa });
       await carregarRecebimentos();
       return;
     } catch (e) {
@@ -803,25 +566,64 @@ async function registrarRecebimento({ setor_id, valor, observacao, data_pagament
 
   throw ultimoErro || new Error("Não foi possível registrar o recebimento.");
 }
-/* =========================
-   RENDER
-========================= */
 
-function renderResumoPublico() {
-  preencherTexto("statSetores", setores.length);
-  preencherTexto("statIgrejas", congregacoes.length);
-  preencherTexto("statPedidos", pedidosCache.length);
-  preencherTexto("statTopoCampanha", campanhaEstaAtiva() ? "Ativa" : "Inativa");
-  preencherTexto("statTopoPrazo", dentroPrazoPedidos() ? "Aberto" : "Fechado");
-  preencherTexto("statTopoValor", moeda(CONFIG.valorUnitarioCamiseta));
-  preencherTexto("nomeCampanhaAtual", campanhaAtual?.nome || "Campanha não definida");
+function dataPedido(item) {
+  return item?.created_at || item?.data || null;
+}
 
-  preencherTexto(
-    "periodoCampanha",
-    campanhaAtual?.inicio_pedidos && campanhaAtual?.fim_pedidos
-      ? `${dataBr(campanhaAtual.inicio_pedidos)} até ${dataBr(campanhaAtual.fim_pedidos)}`
-      : "Sem período definido"
-  );
+function dataRecebimento(item) {
+  return item?.data_recebimento || item?.created_at || null;
+}
+
+function montarResumoIgrejasDetalhado() {
+  return congregacoes.map((c) => {
+    const setor = getSetorById(c.setor_id);
+    const pedidos = pedidosDaCongregacao(c.id);
+    const recebimentos = recebimentosDaCongregacao(c.id);
+
+    const qtd = pedidos.reduce((acc, p) => acc + numero(p.quantidade), 0);
+    const total = qtd * CONFIG.valorUnitarioCamiseta;
+    const recebido = recebimentos.reduce((acc, r) => acc + numero(r.valor), 0);
+    const saldo = Math.max(total - recebido, 0);
+
+    let status = "Não pediu";
+    let statusClass = "pill-info";
+
+    if (qtd > 0 && recebido <= 0) {
+      status = "Pediu e não pagou";
+      statusClass = "pill-warning";
+    } else if (qtd > 0 && recebido > 0 && recebido < total) {
+      status = "Pagamento parcial";
+      statusClass = "pill-info";
+    } else if (qtd > 0 && recebido >= total) {
+      status = "Quitado";
+      statusClass = "pill-success";
+    }
+
+    return {
+      setorId: c.setor_id,
+      setorNome: `${String(setor?.numero || "").padStart(2, "0")} - ${setor?.nome || "-"}`,
+      congregacaoId: c.id,
+      congregacaoNome: c.nome || "-",
+      qtd,
+      total,
+      recebido,
+      saldo,
+      status,
+      statusClass,
+    };
+  });
+}
+
+function renderResumoIgrejas() {
+  const resumo = montarResumoIgrejasDetalhado();
+
+  preencherTexto("igPediram", resumo.filter(r => r.qtd > 0).length);
+  preencherTexto("igNaoPediram", resumo.filter(r => r.qtd === 0).length);
+  preencherTexto("igQuites", resumo.filter(r => r.qtd > 0 && r.recebido >= r.total).length);
+  preencherTexto("igParcial", resumo.filter(r => r.qtd > 0 && r.recebido > 0 && r.recebido < r.total).length);
+  preencherTexto("igPendentes", resumo.filter(r => r.qtd > 0 && r.recebido <= 0).length);
+  preencherTexto("igComRecebimento", resumo.filter(r => r.recebido > 0).length);
 }
 
 function renderTabelaPedidosSetor() {
@@ -835,20 +637,18 @@ function renderTabelaPedidosSetor() {
     return;
   }
 
-  corpo.innerHTML = lista
-    .map((p) => {
-      const congregacao = getCongregacaoById(p.congregacao_id);
-      return `
-        <tr>
-          <td>${formatarDataHora(dataPedido(p))}</td>
-          <td>${escapeHtml(congregacao?.nome || "-")}</td>
-          <td>${escapeHtml(modelos[p.modelo] || p.modelo || "-")}</td>
-          <td>${escapeHtml(p.tamanho || "-")}</td>
-          <td>${numero(p.quantidade)}</td>
-        </tr>
-      `;
-    })
-    .join("");
+  corpo.innerHTML = lista.map((p) => {
+    const congregacao = getCongregacaoById(p.congregacao_id);
+    return `
+      <tr>
+        <td>${formatarDataHora(dataPedido(p))}</td>
+        <td>${escapeHtml(congregacao?.nome || "-")}</td>
+        <td>${escapeHtml(modelos[p.modelo] || p.modelo || "-")}</td>
+        <td>${escapeHtml(p.tamanho || "-")}</td>
+        <td>${numero(p.quantidade)}</td>
+      </tr>
+    `;
+  }).join("");
 }
 
 function renderTabelaCongregacoesSetor() {
@@ -862,17 +662,15 @@ function renderTabelaCongregacoesSetor() {
     return;
   }
 
-  corpo.innerHTML = lista
-    .map((c) => {
-      const qtd = pedidosDaCongregacao(c.id).reduce((acc, p) => acc + numero(p.quantidade), 0);
-      return `
-        <tr>
-          <td>${escapeHtml(c.nome)}</td>
-          <td>${qtd > 0 ? '<span class="pill-success">Com pedido</span>' : '<span class="pill-warning">Sem pedido</span>'}</td>
-        </tr>
-      `;
-    })
-    .join("");
+  corpo.innerHTML = lista.map((c) => {
+    const qtd = pedidosDaCongregacao(c.id).reduce((acc, p) => acc + numero(p.quantidade), 0);
+    return `
+      <tr>
+        <td>${escapeHtml(c.nome)}</td>
+        <td>${qtd > 0 ? '<span class="pill pill-success">Com pedido</span>' : '<span class="pill pill-warning">Sem pedido</span>'}</td>
+      </tr>
+    `;
+  }).join("");
 }
 
 function renderTabelaRecebimentosAdmin() {
@@ -880,23 +678,23 @@ function renderTabelaRecebimentosAdmin() {
   if (!corpo) return;
 
   if (!recebimentosCache.length) {
-    corpo.innerHTML = `<tr><td colspan="4">Nenhum recebimento encontrado.</td></tr>`;
+    corpo.innerHTML = `<tr><td colspan="5">Nenhum recebimento encontrado.</td></tr>`;
     return;
   }
 
-  corpo.innerHTML = recebimentosCache
-    .map((r) => {
-      const setor = getSetorById(r.setor_id);
-      return `
-        <tr>
-          <td>${formatarDataHora(dataRecebimento(r))}</td>
-          <td>${escapeHtml(setor?.nome || "-")}</td>
-          <td>${moeda(r.valor)}</td>
-          <td>${escapeHtml(r.observacao || "-")}</td>
-        </tr>
-      `;
-    })
-    .join("");
+  corpo.innerHTML = recebimentosCache.map((r) => {
+    const setor = getSetorById(r.setor_id);
+    const congregacao = getCongregacaoById(r.congregacao_id);
+    return `
+      <tr>
+        <td>${formatarDataHora(dataRecebimento(r))}</td>
+        <td>${escapeHtml(setor?.nome || "-")}</td>
+        <td>${escapeHtml(congregacao?.nome || "-")}</td>
+        <td>${moeda(r.valor)}</td>
+        <td>${escapeHtml(r.observacao || "-")}</td>
+      </tr>
+    `;
+  }).join("");
 }
 
 function renderFaltantesAdmin() {
@@ -926,30 +724,134 @@ function renderFaltantesAdmin() {
     .join("");
 }
 
-function renderMapaSetoresCongregacoes() {
-  const tbody = el("tbodyMapaSetoresCongregacoes");
+function renderVisualizacaoRapida() {
+  const tbody = el("tbodyVisualizacaoAdmin");
   if (!tbody) return;
 
-  if (!congregacoes.length) {
-    tbody.innerHTML = `<tr><td colspan="2">Nenhuma congregação cadastrada.</td></tr>`;
+  let linhas = montarResumoIgrejasDetalhado();
+  const tipo = el("tipoVisualizacaoAdmin")?.value || "pediram";
+  const filtroSetor = el("filtroSetorVisualizacao")?.value || "";
+  const busca = normalizarTexto(el("buscaVisualizacao")?.value || "");
+
+  if (tipo === "pediram") {
+    linhas = linhas.filter(x => x.qtd > 0);
+  } else if (tipo === "pagaram") {
+    linhas = linhas.filter(x => x.recebido > 0);
+  } else if (tipo === "pendentes") {
+    linhas = linhas.filter(x => x.qtd > 0 && x.saldo > 0);
+  } else if (tipo === "semPedido") {
+    linhas = linhas.filter(x => x.qtd === 0);
+  }
+
+  if (filtroSetor) {
+    linhas = linhas.filter(x => String(x.setorId) === String(filtroSetor));
+  }
+
+  if (busca) {
+    linhas = linhas.filter(x =>
+      normalizarTexto(x.setorNome).includes(busca) ||
+      normalizarTexto(x.congregacaoNome).includes(busca)
+    );
+  }
+
+  if (!linhas.length) {
+    tbody.innerHTML = `<tr><td colspan="7">Nenhum resultado encontrado.</td></tr>`;
     return;
   }
 
-  const lista = [...congregacoes].sort((a, b) =>
-    `${numeroSetorPorId(a.setor_id)} ${a.nome}`.localeCompare(
-      `${numeroSetorPorId(b.setor_id)} ${b.nome}`,
-      "pt-BR"
-    )
-  );
-
-  tbody.innerHTML = lista
-    .map((c) => `
+  tbody.innerHTML = linhas
+    .sort((a, b) => `${a.setorNome} ${a.congregacaoNome}`.localeCompare(`${b.setorNome} ${b.congregacaoNome}`, "pt-BR"))
+    .map((x) => `
       <tr>
-        <td>${String(numeroSetorPorId(c.setor_id)).padStart(2, "0")} - ${escapeHtml(nomeSetorPorId(c.setor_id))}</td>
-        <td>${escapeHtml(c.nome)}</td>
+        <td>${escapeHtml(x.setorNome)}</td>
+        <td>${escapeHtml(x.congregacaoNome)}</td>
+        <td>${x.qtd}</td>
+        <td>${moeda(x.total)}</td>
+        <td>${moeda(x.recebido)}</td>
+        <td>${moeda(x.saldo)}</td>
+        <td><span class="pill ${x.statusClass}">${escapeHtml(x.status)}</span></td>
       </tr>
     `)
     .join("");
+}
+
+function renderResumoPublico() {
+  preencherTexto("statSetores", setores.length);
+  preencherTexto("statIgrejas", congregacoes.length);
+  preencherTexto("statPedidos", pedidosCache.length);
+  preencherTexto("statTopoCampanha", campanhaEstaAtiva() ? "Ativa" : "Inativa");
+  preencherTexto("statTopoPrazo", dentroPrazoPedidos() ? "Aberto" : "Fechado");
+  preencherTexto("statTopoValor", moeda(CONFIG.valorUnitarioCamiseta));
+  preencherTexto("nomeCampanhaAtual", campanhaAtual?.nome || "Campanha não definida");
+  preencherTexto(
+    "periodoCampanha",
+    campanhaAtual?.inicio_pedidos && campanhaAtual?.fim_pedidos
+      ? `${dataBr(campanhaAtual.inicio_pedidos)} até ${dataBr(campanhaAtual.fim_pedidos)}`
+      : "Sem período definido"
+  );
+}
+
+function atualizarBadgeCampanha() {
+  const statusCampanha = campanhaEstaAtiva() ? "Campanha: Ativa" : "Campanha: Inativa";
+  const statusPrazo = dentroPrazoPedidos() ? "Prazo: Aberto" : "Prazo: Fechado";
+
+  preencherTexto("badgeCampanhaStatus", statusCampanha);
+  preencherTexto("badgeCampanhaPrazo", statusPrazo);
+  preencherTexto(
+    "statusAdminCampanha",
+    campanhaEstaAtiva()
+      ? (dentroPrazoPedidos() ? "Campanha ativa • Prazo aberto" : "Campanha ativa • Prazo fechado")
+      : "Campanha inativa"
+  );
+  preencherTexto(
+    "mensagemPrazoPedidos",
+    campanhaEstaAtiva()
+      ? (dentroPrazoPedidos() ? "Pedidos liberados." : "Período de pedidos encerrado.")
+      : "Campanha inativa."
+  );
+}
+
+function popularTamanhos() {
+  preencherSelect("pedidoTamanho", tamanhos, (x) => x, (x) => x, "Selecione");
+  preencherSelect("pedidoAdminTamanho", tamanhos, (x) => x, (x) => x, "Selecione");
+}
+
+function setoresOrdenados() {
+  return [...setores].sort(
+    (a, b) => numero(a.numero) - numero(b.numero) || String(a.nome).localeCompare(String(b.nome), "pt-BR")
+  );
+}
+
+function atualizarCongregacoesPedidoAdmin() {
+  const setorId = el("pedidoAdminSetor")?.value || "";
+  const lista = congregacoes
+    .filter((c) => String(c.setor_id) === String(setorId))
+    .sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"));
+
+  preencherSelect(
+    "pedidoAdminCongregacao",
+    lista,
+    (c) => c.id,
+    (c) => c.nome,
+    lista.length ? "Selecione a congregação" : "Nenhuma congregação encontrada",
+    false
+  );
+}
+
+function atualizarCongregacoesRecebimentoAdmin() {
+  const setorId = el("recebimentoSetor")?.value || "";
+  const lista = congregacoes
+    .filter((c) => String(c.setor_id) === String(setorId))
+    .sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"));
+
+  preencherSelect(
+    "recebimentoCongregacao",
+    lista,
+    (c) => c.id,
+    (c) => c.nome,
+    lista.length ? "Selecione a congregação" : "Nenhuma congregação encontrada",
+    false
+  );
 }
 
 function renderPainelSetor() {
@@ -970,24 +872,17 @@ function renderPainelSetor() {
   preencherTexto("statSetorSaldo", moeda(saldoDoSetor(setorId)));
   preencherTexto("statValorUnitarioSetor", moeda(CONFIG.valorUnitarioCamiseta));
   preencherTexto(
-    "mensagemPrazoPedidos",
-    campanhaEstaAtiva()
-      ? dentroPrazoPedidos()
-        ? "Pedidos liberados."
-        : "Período de pedidos encerrado."
-      : "Campanha inativa."
-  );
-  preencherTexto(
     "infoSetorDetalhes",
     `Setor: ${setor?.nome || sessao?.setor_nome || "-"} • Congregações: ${congregacoesSetor.length} • Pedidos: ${pedidosSetor.length} • Recebimentos: ${recebimentosSetor.length}`
   );
 
   preencherSelect(
     "pedidoCongregacao",
-    congregacoesSetor,
+    congregacoesSetor.sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR")),
     (c) => c.id,
     (c) => c.nome,
-    "Selecione a congregação"
+    "Selecione a congregação",
+    false
   );
 
   renderTabelaPedidosSetor();
@@ -1009,13 +904,11 @@ function renderPainelAdmin() {
     `Campanha: ${campanhaAtual?.nome || "Não definida"} • Status: ${campanhaEstaAtiva() ? "Ativa" : "Inativa"} • Setores: ${setores.length} • Congregações: ${congregacoes.length} • Pedidos: ${pedidosCache.length} • Recebido: ${moeda(totalRecebido)}`
   );
 
-  const setoresOrdenados = [...setores].sort(
-    (a, b) => numero(a.numero) - numero(b.numero) || String(a.nome).localeCompare(String(b.nome), "pt-BR")
-  );
+  const listaSetores = setoresOrdenados();
 
   preencherSelect(
     "pedidoAdminSetor",
-    setoresOrdenados,
+    listaSetores,
     (s) => s.id,
     (s) => `${String(s.numero || "").padStart(2, "0")} - ${s.nome}`,
     "Selecione o setor"
@@ -1023,28 +916,26 @@ function renderPainelAdmin() {
 
   preencherSelect(
     "recebimentoSetor",
-    setoresOrdenados,
+    listaSetores,
     (s) => s.id,
     (s) => `${String(s.numero || "").padStart(2, "0")} - ${s.nome}`,
     "Selecione o setor"
   );
 
-  const setorEscolhido = el("pedidoAdminSetor")?.value || "";
-  const congregacoesFiltradas = congregacoes
-    .filter((c) => !setorEscolhido || String(c.setor_id) === String(setorEscolhido))
-    .sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"));
-
   preencherSelect(
-    "pedidoAdminCongregacao",
-    congregacoesFiltradas,
-    (c) => c.id,
-    (c) => c.nome,
-    "Selecione a congregação"
+    "filtroSetorVisualizacao",
+    listaSetores,
+    (s) => s.id,
+    (s) => `${String(s.numero || "").padStart(2, "0")} - ${s.nome}`,
+    "Todos os setores"
   );
 
+  atualizarCongregacoesPedidoAdmin();
+  atualizarCongregacoesRecebimentoAdmin();
+  renderResumoIgrejas();
   renderTabelaRecebimentosAdmin();
   renderFaltantesAdmin();
-  renderMapaSetoresCongregacoes();
+  renderVisualizacaoRapida();
 }
 
 function renderTela() {
@@ -1053,73 +944,44 @@ function renderTela() {
   mostrar("painelAdmin", sessao?.tipo === "admin");
 
   renderResumoPublico();
+  atualizarBadgeCampanha();
 
-  if (!sessao) return;
-
-  if (sessao.tipo === "setor") {
-    renderPainelSetor();
-  }
-
-  if (sessao.tipo === "admin") {
-    renderPainelAdmin();
-  }
+  if (sessao?.tipo === "setor") renderPainelSetor();
+  if (sessao?.tipo === "admin") renderPainelAdmin();
 }
-
-/* =========================
-   MENSAGENS DE ERRO
-========================= */
 
 function extrairMensagemErro(e) {
   const texto = String(e?.message || "Erro inesperado.");
 
-  if (texto.includes("PGRST204") && texto.includes("campanha_id")) {
-    return "A tabela recebimentos não possui a coluna campanha_id.";
-  }
-
-  if (texto.includes("22P02")) {
-    return "Um campo numérico está recebendo valor inválido no banco.";
-  }
-
-  if (texto.includes("duplicate key")) {
-    return "Já existe um registro igual salvo no sistema.";
-  }
-
-  if (texto.includes("JWT")) {
-    return "Falha de acesso ao banco. Verifique permissões do Supabase.";
-  }
-
+  if (texto.includes("PGRST204") && texto.includes("campanha_id")) return "A tabela não possui a coluna campanha_id.";
+  if (texto.includes("PGRST204") && texto.includes("usuario_id")) return "A tabela não possui a coluna usuario_id.";
+  if (texto.includes("PGRST204") && texto.includes("data_recebimento")) return "A tabela não possui a coluna data_recebimento.";
+  if (texto.includes("PGRST204") && texto.includes("congregacao_id")) return "A tabela não possui a coluna congregacao_id.";
+  if (texto.includes("22P02")) return "Há um campo com tipo diferente no banco. Verifique IDs ou valores numéricos.";
   return texto;
 }
-
-/* =========================
-   EVENTOS
-========================= */
 
 function bindEventos() {
   el("formLoginSetor")?.addEventListener("submit", async (e) => {
     e.preventDefault();
-
     try {
       await recarregarTudo();
       await fazerLoginSetor(el("loginSetor")?.value, el("senhaSetor")?.value);
       renderTela();
-      alert("Login setor funcionando.");
+      alert("Login efetuado com sucesso.");
     } catch (err) {
-      console.error("Erro login setor:", err);
       alert(extrairMensagemErro(err));
     }
   });
 
   el("formLoginAdmin")?.addEventListener("submit", async (e) => {
     e.preventDefault();
-
     try {
       await recarregarTudo();
       fazerLoginAdmin(el("loginAdmin")?.value, el("senhaAdmin")?.value);
       renderTela();
-      alert("Login admin funcionando.");
+      alert("Administrador logado com sucesso.");
     } catch (err) {
-      console.error("Erro login admin:", err);
       alert(extrairMensagemErro(err));
     }
   });
@@ -1129,7 +991,6 @@ function bindEventos() {
 
   el("formPedidoSetor")?.addEventListener("submit", async (e) => {
     e.preventDefault();
-
     try {
       await salvarPedido({
         setor_id: sessao?.setor_id,
@@ -1139,20 +1000,17 @@ function bindEventos() {
         quantidade: el("pedidoQuantidade")?.value,
         usuario_id: sessao?.usuario_id,
       });
-
-      if (el("pedidoQuantidade")) el("pedidoQuantidade").value = 1;
+      el("pedidoQuantidade").value = 1;
       await recarregarTudo();
       renderTela();
       alert("Pedido salvo com sucesso.");
     } catch (err) {
-      console.error(err);
       alert(extrairMensagemErro(err));
     }
   });
 
   el("formPedidoAdmin")?.addEventListener("submit", async (e) => {
     e.preventDefault();
-
     try {
       await salvarPedido({
         setor_id: el("pedidoAdminSetor")?.value,
@@ -1162,103 +1020,54 @@ function bindEventos() {
         quantidade: el("pedidoAdminQuantidade")?.value,
         usuario_id: sessao?.usuario_id,
       });
-
-      if (el("pedidoAdminQuantidade")) el("pedidoAdminQuantidade").value = 1;
+      el("pedidoAdminQuantidade").value = 1;
       await recarregarTudo();
       renderTela();
       alert("Pedido do admin salvo com sucesso.");
     } catch (err) {
-      console.error(err);
       alert(extrairMensagemErro(err));
-    }
-  });
-
-  el("pedidoAdminSetor")?.addEventListener("change", () => {
-    if (sessao?.tipo === "admin") {
-      renderPainelAdmin();
     }
   });
 
   el("formRecebimentoAdmin")?.addEventListener("submit", async (e) => {
     e.preventDefault();
-
     try {
       await registrarRecebimento({
         setor_id: el("recebimentoSetor")?.value,
+        congregacao_id: el("recebimentoCongregacao")?.value,
         valor: el("recebimentoValor")?.value,
         observacao: el("recebimentoObs")?.value,
-        data_pagamento: new Date().toISOString().slice(0, 10),
         usuario_id: sessao?.usuario_id,
       });
-
-      if (el("recebimentoValor")) el("recebimentoValor").value = "";
-      if (el("recebimentoObs")) el("recebimentoObs").value = "";
+      el("recebimentoValor").value = "";
+      el("recebimentoObs").value = "";
       await recarregarTudo();
       renderTela();
       alert("Recebimento salvo com sucesso.");
     } catch (err) {
-      console.error(err);
       alert(extrairMensagemErro(err));
     }
   });
-}
 
-/* =========================
-   SESSÃO
-========================= */
+  el("pedidoAdminSetor")?.addEventListener("change", atualizarCongregacoesPedidoAdmin);
+  el("recebimentoSetor")?.addEventListener("change", atualizarCongregacoesRecebimentoAdmin);
+  el("tipoVisualizacaoAdmin")?.addEventListener("change", renderVisualizacaoRapida);
+  el("filtroSetorVisualizacao")?.addEventListener("change", renderVisualizacaoRapida);
+  el("buscaVisualizacao")?.addEventListener("input", renderVisualizacaoRapida);
+}
 
 function validarSessaoAtual() {
   if (!sessao) return;
 
   if (sessao.tipo === "setor") {
     const existe = setores.some((s) => String(s.id) === String(sessao.setor_id));
-    if (!existe && setores.length > 0) {
-      limparSessao();
-    }
+    if (!existe && setores.length > 0) limparSessao();
   }
 }
 
-/* =========================
-   INICIALIZAÇÃO
-========================= */
-function montarResumoIgrejas() {
-  return congregacoes.map((c) => {
-    const pedidos = pedidosDaCongregacao(c.id);
-    const recebimentos = recebimentosCache.filter(r => String(r.congregacao_id) === String(c.id));
-
-    const qtd = pedidos.reduce((acc, p) => acc + numero(p.quantidade), 0);
-    const total = qtd * CONFIG.valorUnitarioCamiseta;
-    const recebido = recebimentos.reduce((acc, r) => acc + numero(r.valor), 0);
-
-    let status = "nao_pediu";
-
-    if (qtd > 0 && recebido <= 0) status = "pendente";
-    else if (qtd > 0 && recebido > 0 && recebido < total) status = "parcial";
-    else if (qtd > 0 && recebido >= total) status = "quitado";
-
-    return { qtd, total, recebido, status };
-  });
-}
-
-function renderResumoIgrejas() {
-  const resumo = montarResumoIgrejas();
-
-  const pediram = resumo.filter(r => r.qtd > 0).length;
-  const naoPediram = resumo.filter(r => r.qtd === 0).length;
-  const quites = resumo.filter(r => r.status === "quitado").length;
-  const parcial = resumo.filter(r => r.status === "parcial").length;
-  const pendentes = resumo.filter(r => r.status === "pendente").length;
-
-  el("igPediram").textContent = pediram;
-  el("igNaoPediram").textContent = naoPediram;
-  el("igQuites").textContent = quites;
-  el("igParcial").textContent = parcial;
-  el("igPendentes").textContent = pendentes;
-}
-
 async function iniciarSistema() {
+  popularTamanhos();
   bindEventos();
-
   campanhaAtual = criarCampanhaFallback();
   renderTela();
 
@@ -1266,8 +1075,6 @@ async function iniciarSistema() {
     await recarregarTudo();
     validarSessaoAtual();
     renderTela();
-    console.log("UMADECAMPI carregado com sucesso");
-    console.log("Se aparecer mensagem, existe script antigo ainda rodando.");
   } catch (e) {
     console.error("Erro ao iniciar sistema:", e);
     renderTela();
