@@ -750,81 +750,49 @@ async function registrarRecebimento({ setor_id, valor, observacao, data_pagament
   if (!setor_id) throw new Error("Setor não informado.");
   if (!valor) throw new Error("Informe o valor recebido.");
 
-const payload = {
-  setor_id: setor_id,
-  congregacao_id: el("recebimentoCongregacao")?.value,
-  valor: numero(valor),
-  observacao: observacao || null,
-  data_pagamento: data_pagamento || new Date().toISOString().slice(0, 10),
-};
+  const congregacao_id = el("recebimentoCongregacao")?.value;
 
-  if (usuario_id && !Number.isNaN(Number(usuario_id))) {
-    base.usuario_id = Number(usuario_id);
+  if (!congregacao_id) {
+    throw new Error("Selecione a congregação.");
   }
 
-  if (
-    campanhaAtual?.id &&
-    !isUuid(campanhaAtual.id) &&
-    !Number.isNaN(Number(campanhaAtual.id))
-  ) {
-    base.campanha_id = Number(campanhaAtual.id);
-  }
+  const payload = {
+    setor_id: setor_id,
+    congregacao_id: congregacao_id,
+    valor: numero(valor),
+    observacao: observacao || null
+  };
+
+  if (usuario_id) payload.usuario_id = usuario_id;
+  if (campanhaAtual?.id) payload.campanha_id = campanhaAtual.id;
 
   const tentativas = [
-    { ...base },
+    { ...payload },
     (() => {
-      const p = { ...base };
+      const p = { ...payload };
       delete p.campanha_id;
       return p;
     })(),
     (() => {
-      const p = { ...base };
+      const p = { ...payload };
       delete p.usuario_id;
       return p;
     })(),
     (() => {
-      const p = { ...base };
-      delete p.data_pagamento;
-      p.data_recebimento = new Date().toISOString().slice(0, 10);
-      return p;
-    })(),
-    (() => {
-      const p = { ...base };
-      delete p.usuario_id;
+      const p = { ...payload };
       delete p.campanha_id;
-      return p;
-    })(),
-    (() => {
-      const p = { ...base };
       delete p.usuario_id;
-      delete p.data_pagamento;
-      p.data_recebimento = new Date().toISOString().slice(0, 10);
-      return p;
-    })(),
-    (() => {
-      const p = { ...base };
-      delete p.campanha_id;
-      delete p.data_pagamento;
-      p.data_recebimento = new Date().toISOString().slice(0, 10);
-      return p;
-    })(),
-    (() => {
-      const p = { ...base };
-      delete p.usuario_id;
-      delete p.campanha_id;
-      delete p.data_pagamento;
-      p.data_recebimento = new Date().toISOString().slice(0, 10);
       return p;
     })(),
   ];
 
   let ultimoErro = null;
 
-  for (const payload of tentativas) {
+  for (const tentativa of tentativas) {
     try {
       await api("recebimentos", {
         method: "POST",
-        body: payload,
+        body: tentativa,
       });
       await carregarRecebimentos();
       return;
@@ -835,7 +803,6 @@ const payload = {
 
   throw ultimoErro || new Error("Não foi possível registrar o recebimento.");
 }
-
 /* =========================
    RENDER
 ========================= */
