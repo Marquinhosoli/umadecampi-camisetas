@@ -1,181 +1,1676 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<title>UMADECAMPI</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistema Oficial - Pedidos UMADECAMPI</title>
+  <style>
+    :root{
+      --bg:#eef2f7;
+      --card:#ffffff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --line:#dbe3ee;
+      --primary:#0b1633;
+      --primary-2:#14244d;
+      --blue:#1d4ed8;
+      --soft:#f8fafc;
+      --danger:#b91c1c;
+      --warning-bg:#fff7ed;
+      --warning-border:#fdba74;
+      --warning-text:#9a3412;
+      --success-bg:#ecfdf5;
+      --success-border:#86efac;
+      --success-text:#166534;
+      --info-bg:#eff6ff;
+      --info-border:#bfdbfe;
+      --info-text:#1d4ed8;
+      --radius:22px;
+      --shadow:0 8px 24px rgba(15,23,42,.06);
+    }
 
-<style>
-body{font-family:Arial;background:#f4f7fb;margin:0;padding:20px}
-.card{background:#fff;padding:20px;border-radius:12px;margin-bottom:20px}
-h2{margin-bottom:10px}
-select,input{width:100%;padding:10px;margin-bottom:10px}
-button{padding:10px;background:#16a34a;color:#fff;border:none;border-radius:8px}
-table{width:100%;border-collapse:collapse;margin-top:10px}
-th,td{padding:10px;border-bottom:1px solid #ddd;text-align:left}
-</style>
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Arial,Helvetica,sans-serif;
+      background:linear-gradient(180deg,#f8fafc 0%,#eef2f7 100%);
+      color:var(--text);
+    }
+    .container{
+      max-width:1280px;
+      margin:0 auto;
+      padding:14px;
+    }
+    .hidden{display:none !important}
+    h1,h2,h3,h4,p{margin-top:0}
+    h1{font-size:15px;color:var(--blue);margin-bottom:10px}
+    h2{font-size:34px;margin-bottom:14px;font-weight:800}
+    h3{font-size:20px;margin-bottom:10px}
+    h4{font-size:17px;margin-bottom:10px}
+    p{color:var(--muted);line-height:1.4}
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      padding:22px;
+      margin-bottom:18px;
+      box-shadow:var(--shadow);
+    }
+    .hero-card{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:20px;
+    }
+    .hero-info{flex:1}
+    .hero-actions{min-width:280px}
+    .stats{
+      display:grid;
+      grid-template-columns:repeat(6,1fr);
+      gap:16px;
+      margin-bottom:18px;
+    }
+    .stats .card{
+      min-width:110px;
+      text-align:center;
+      margin-bottom:0;
+      padding:18px 14px;
+    }
+    .stat{
+      display:block;
+      font-size:26px;
+      font-weight:800;
+      color:var(--primary);
+      margin-bottom:6px;
+    }
+    label{
+      display:block;
+      margin:14px 0 8px;
+      font-weight:700;
+      color:var(--text);
+    }
+    input,select,button,textarea{font:inherit}
+    input,select,textarea{
+      width:100%;
+      min-height:54px;
+      padding:14px 16px;
+      border:1px solid #cfd8e3;
+      border-radius:16px;
+      background:#fff;
+      color:var(--text);
+      outline:none;
+      transition:border-color .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+    input:focus,select:focus,textarea:focus{
+      border-color:#94a3b8;
+      box-shadow:0 0 0 3px rgba(148,163,184,.18);
+    }
+    button{
+      min-height:54px;
+      padding:14px 18px;
+      border:none;
+      border-radius:16px;
+      cursor:pointer;
+      font-weight:700;
+      transition:transform .15s ease, background .2s ease, opacity .2s ease;
+    }
+    button:hover:not(:disabled){transform:translateY(-1px)}
+    button:disabled{opacity:.6;cursor:not-allowed;transform:none}
+    .primary{width:100%;background:var(--primary);color:#fff}
+    .primary:hover:not(:disabled){background:var(--primary-2)}
+    .secondary{
+      background:#fff;
+      color:var(--text);
+      border:1px solid #cfd8e3;
+    }
+    .secondary:hover:not(:disabled){background:#f8fafc}
+    .danger{background:var(--danger);color:#fff}
+    .success{background:#16a34a;color:#fff}
+    .success:hover:not(:disabled){background:#15803d}
+    .muted{color:var(--muted)}
+    .grid-2{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:18px;
+    }
+    .grid-3{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:14px;
+    }
+    .summary-stat{
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:16px;
+      text-align:center;
+      min-height:104px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
+    .summary-stat span{
+      display:block;
+      font-size:24px;
+      font-weight:800;
+      color:var(--primary);
+    }
+    .summary-stat small{
+      display:block;
+      margin-top:6px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.35;
+    }
+    .table-wrap{
+      overflow-x:auto;
+      border:1px solid var(--line);
+      border-radius:18px;
+      background:#fff;
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      min-width:860px;
+      background:#fff;
+    }
+    th,td{
+      padding:14px 12px;
+      border-bottom:1px solid var(--line);
+      text-align:left;
+      vertical-align:middle;
+    }
+    th{
+      background:#f8fafc;
+      font-size:14px;
+      font-weight:700;
+      color:var(--text);
+    }
+    tbody tr:hover{background:#f8fafc}
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      border-radius:999px;
+      padding:8px 12px;
+      font-size:13px;
+      font-weight:700;
+      white-space:nowrap;
+    }
+    .pill-success{
+      background:var(--success-bg);
+      border:1px solid var(--success-border);
+      color:var(--success-text);
+    }
+    .pill-warning{
+      background:var(--warning-bg);
+      border:1px solid var(--warning-border);
+      color:var(--warning-text);
+    }
+    .pill-info{
+      background:var(--info-bg);
+      border:1px solid var(--info-border);
+      color:var(--info-text);
+    }
+    .info-box{
+      background:var(--soft);
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:16px;
+    }
+    .top-actions{
+      display:flex;
+      gap:12px;
+      justify-content:space-between;
+      align-items:flex-start;
+      flex-wrap:wrap;
+    }
+    .campaign-badges{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:10px;
+    }
+    .toolbar{
+      display:grid;
+      grid-template-columns:1.1fr 1fr 1fr;
+      gap:14px;
+      margin-bottom:14px;
+    }
+    details{
+      border:1px solid var(--line);
+      border-radius:18px;
+      background:#fff;
+      padding:14px;
+    }
+    details summary{
+      cursor:pointer;
+      font-weight:800;
+      list-style:none;
+    }
+    details summary::-webkit-details-marker{display:none}
+    .notice{
+      margin-top:12px;
+      color:var(--muted);
+      font-size:14px;
+    }
+
+    @media (max-width:1100px){
+      .stats{grid-template-columns:repeat(3,1fr)}
+      .toolbar,.grid-2,.grid-3{grid-template-columns:1fr}
+    }
+    @media (max-width:780px){
+      .hero-card{flex-direction:column;align-items:stretch}
+      .hero-actions{min-width:100%}
+      .stats{grid-template-columns:1fr}
+      h2{font-size:28px}
+      .card{padding:18px}
+    }
+  </style>
 </head>
-
 <body>
+  <div class="container">
+    <div class="card hero-card">
+      <div class="hero-info">
+        <h1>SISTEMA OFICIAL</h1>
+        <h2>Pedidos UMADECAMPI</h2>
+        <p>Controle por setor, congregação e financeiro</p>
+      </div>
 
-<div class="card">
-<h2>Lançar Pedido</h2>
+      <div class="hero-actions">
+        <h4 id="nomeCampanhaAtual">Campanha atual</h4>
+        <p id="periodoCampanha">Carregando período...</p>
+        <div class="campaign-badges">
+          <span class="pill pill-info" id="badgeCampanhaStatus">Campanha</span>
+          <span class="pill pill-info" id="badgeCampanhaPrazo">Prazo</span>
+        </div>
+      </div>
+    </div>
 
-<select id="setorPedido"></select>
-<select id="congregacaoPedido"></select>
+    <div class="stats">
+      <div class="card"><span class="stat" id="statSetores">0</span><p>Setores</p></div>
+      <div class="card"><span class="stat" id="statIgrejas">0</span><p>Igrejas</p></div>
+      <div class="card"><span class="stat" id="statPedidos">0</span><p>Pedidos</p></div>
+      <div class="card"><span class="stat" id="statTopoCampanha">-</span><p>Campanha</p></div>
+      <div class="card"><span class="stat" id="statTopoPrazo">-</span><p>Prazo</p></div>
+      <div class="card"><span class="stat" id="statTopoValor">R$ 45,00</span><p>Valor</p></div>
+    </div>
 
-<select id="modelo">
-<option>Masculino</option>
-<option>Baby Look Feminina</option>
-</select>
+    <section id="telaLogin" class="card">
+      <div class="grid-2">
+        <div class="card" style="margin-bottom:0">
+          <h3>Login do Setor</h3>
+          <form id="formLoginSetor">
+            <label for="loginSetor">Login</label>
+            <input id="loginSetor" type="text" placeholder="Ex.: setor05 ou nome do setor" />
 
-<select id="tamanho">
-<option>P</option><option>M</option><option>G</option>
-</select>
+            <label for="senhaSetor">Senha</label>
+            <input id="senhaSetor" type="password" placeholder="Digite a senha" />
 
-<input id="quantidade" type="number" value="1">
-<button onclick="salvarPedido()">Salvar Pedido</button>
-</div>
+            <button class="primary" type="submit">Entrar como setor</button>
+            <div class="notice">Pode usar usuário da tabela <strong>usuarios</strong> ou login direto do setor, conforme seu banco.</div>
+          </form>
+        </div>
 
-<div class="card">
-<h2>Lançar Recebimento</h2>
+        <div class="card" style="margin-bottom:0">
+          <h3>Login Administrativo</h3>
+          <form id="formLoginAdmin">
+            <label for="loginAdmin">Usuário</label>
+            <input id="loginAdmin" type="text" placeholder="admin" />
 
-<select id="setorReceb"></select>
-<select id="congregacaoReceb"></select>
+            <label for="senhaAdmin">Senha</label>
+            <input id="senhaAdmin" type="password" placeholder="Digite a senha" />
 
-<input id="valor" type="number" placeholder="Valor">
-<button onclick="salvarReceb()">Salvar Recebimento</button>
-</div>
+            <button class="primary" type="submit">Entrar como administrador</button>
+          </form>
+        </div>
+      </div>
+    </section>
 
-<div class="card">
-<h2>Resumo Igrejas</h2>
+    <section id="painelSetor" class="hidden">
+      <div class="card">
+        <div class="top-actions">
+          <div>
+            <h3 id="tituloPainelSetor">Painel do Setor</h3>
+            <p>Lançamento e acompanhamento dos pedidos do setor</p>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <span class="pill pill-info" id="mensagemPrazoPedidos">Verificando...</span>
+            <button id="btnLogoutSetor" type="button" class="danger">Sair</button>
+          </div>
+        </div>
 
-<p>Pediram: <span id="pediram">0</span></p>
-<p>Não pediram: <span id="nao">0</span></p>
-<p>Quites: <span id="quitado">0</span></p>
-<p>Parcial: <span id="parcial">0</span></p>
-<p>Pendentes: <span id="pendente">0</span></p>
-</div>
+        <div class="stats">
+          <div class="card"><span class="stat" id="statSetorCongregacoes">0</span><p>Congregações</p></div>
+          <div class="card"><span class="stat" id="statSetorPecas">0</span><p>Peças</p></div>
+          <div class="card"><span class="stat" id="statSetorTotal">R$ 0,00</span><p>Total</p></div>
+          <div class="card"><span class="stat" id="statSetorRecebido">R$ 0,00</span><p>Recebido</p></div>
+          <div class="card"><span class="stat" id="statSetorSaldo">R$ 0,00</span><p>Saldo</p></div>
+          <div class="card"><span class="stat" id="statValorUnitarioSetor">R$ 45,00</span><p>Valor Unitário</p></div>
+        </div>
 
-<div class="card">
-<h2>Pedidos</h2>
-<table>
-<thead><tr><th>Congregação</th><th>Qtd</th></tr></thead>
-<tbody id="pedidos"></tbody>
-</table>
-</div>
+        <div class="info-box" id="infoSetorDetalhes">Nenhum dado carregado.</div>
+      </div>
 
-<div class="card">
-<h2>Recebimentos</h2>
-<table>
-<thead><tr><th>Congregação</th><th>Valor</th></tr></thead>
-<tbody id="recebimentos"></tbody>
-</table>
-</div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Lançar pedido</h3>
+          <form id="formPedidoSetor">
+            <label for="pedidoCongregacao">Congregação</label>
+            <select id="pedidoCongregacao"></select>
 
-<script>
-const URL = "https://dqwlhouwoxbwxkcaytja.supabase.co/rest/v1/";
-const KEY = "sb_publishable_b_tuFrU9PhG3VKYLupMVhg_pWPF6Spj";
+            <label for="pedidoModelo">Modelo</label>
+            <select id="pedidoModelo">
+              <option value="Masculino">Masculino</option>
+              <option value="Baby Look Feminina">Baby Look Feminina</option>
+            </select>
 
-async function api(tabela, method="GET", body=null){
-const res = await fetch(URL+tabela,{
-method,
-headers:{
-apikey:KEY,
-Authorization:"Bearer "+KEY,
-"Content-Type":"application/json"
-},
-body:body?JSON.stringify(body):null
-});
-return await res.json();
-}
+            <label for="pedidoTamanho">Tamanho</label>
+            <select id="pedidoTamanho"></select>
 
-let setores=[],congregacoes=[],pedidos=[],recebimentos=[];
+            <label for="pedidoQuantidade">Quantidade</label>
+            <input id="pedidoQuantidade" type="number" min="1" value="1" />
 
-async function carregar(){
-setores = await api("setores");
-congregacoes = await api("congregacoes");
-pedidos = await api("pedidos");
-recebimentos = await api("recebimentos");
+            <button class="success" type="submit">Salvar pedido</button>
+          </form>
+        </div>
 
-popular();
-render();
-}
+        <div class="card">
+          <details open>
+            <summary>Congregações do setor</summary>
+            <div class="table-wrap" style="margin-top:14px">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Congregação</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyCongregacoesSetor"></tbody>
+              </table>
+            </div>
+          </details>
+        </div>
+      </div>
 
-function popular(){
-const s1=document.getElementById("setorPedido");
-const s2=document.getElementById("setorReceb");
+      <div class="card">
+        <details open>
+          <summary>Pedidos lançados</summary>
+          <div class="table-wrap" style="margin-top:14px">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Congregação</th>
+                  <th>Modelo</th>
+                  <th>Tamanho</th>
+                  <th>Quantidade</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyPedidosSetor"></tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+    </section>
 
-s1.innerHTML=s2.innerHTML=setores.map(s=>`<option value="${s.id}">${s.nome}</option>`).join("");
+    <section id="painelAdmin" class="hidden">
+      <div class="card">
+        <div class="top-actions">
+          <div>
+            <h3>Painel Administrativo</h3>
+            <p>Controle geral do sistema</p>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <span class="pill pill-info" id="statusAdminCampanha">Verificando...</span>
+            <button id="btnLogoutAdmin" type="button" class="danger">Sair</button>
+          </div>
+        </div>
 
-atualizarCongregacoes();
-}
+        <div class="stats">
+          <div class="card"><span class="stat" id="statAdminPecas">0</span><p>Peças</p></div>
+          <div class="card"><span class="stat" id="statAdminTotal">R$ 0,00</span><p>Total Geral</p></div>
+          <div class="card"><span class="stat" id="statAdminRecebido">R$ 0,00</span><p>Recebido</p></div>
+          <div class="card"><span class="stat" id="statAdminSetores">0</span><p>Setores</p></div>
+          <div class="card"><span class="stat" id="statAdminIgrejas">0</span><p>Igrejas</p></div>
+          <div class="card"><span class="stat" id="statAdminPedidos">0</span><p>Pedidos</p></div>
+        </div>
 
-function atualizarCongregacoes(){
-const setor=document.getElementById("setorPedido").value;
+        <div class="info-box" id="infoAdminDetalhes">Sistema pronto.</div>
+      </div>
 
-const lista=congregacoes.filter(c=>c.setor_id==setor);
+      <div class="card">
+        <h3>Resumo das igrejas</h3>
+        <div class="grid-3">
+          <div class="summary-stat"><span id="igPediram">0</span><small>Igrejas que pediram</small></div>
+          <div class="summary-stat"><span id="igNaoPediram">0</span><small>Igrejas que não pediram</small></div>
+          <div class="summary-stat"><span id="igQuites">0</span><small>Igrejas quites</small></div>
+          <div class="summary-stat"><span id="igParcial">0</span><small>Pagamento parcial</small></div>
+          <div class="summary-stat"><span id="igPendentes">0</span><small>Pendentes</small></div>
+          <div class="summary-stat"><span id="igComRecebimento">0</span><small>Igrejas com recebimento</small></div>
+        </div>
+      </div>
 
-document.getElementById("congregacaoPedido").innerHTML=
-lista.map(c=>`<option value="${c.id}">${c.nome}</option>`).join("");
+      <div class="grid-2">
+        <div class="card">
+          <h3>Lançar pedido pelo admin</h3>
+          <form id="formPedidoAdmin">
+            <label for="pedidoAdminSetor">Setor</label>
+            <select id="pedidoAdminSetor"></select>
 
-document.getElementById("congregacaoReceb").innerHTML=
-lista.map(c=>`<option value="${c.id}">${c.nome}</option>`).join("");
-}
+            <label for="pedidoAdminCongregacao">Congregação</label>
+            <select id="pedidoAdminCongregacao"></select>
 
-document.getElementById("setorPedido").onchange=atualizarCongregacoes;
+            <label for="pedidoAdminModelo">Modelo</label>
+            <select id="pedidoAdminModelo">
+              <option value="Masculino">Masculino</option>
+              <option value="Baby Look Feminina">Baby Look Feminina</option>
+            </select>
 
-async function salvarPedido(){
-await api("pedidos","POST",{
-setor_id:document.getElementById("setorPedido").value,
-congregacao_id:document.getElementById("congregacaoPedido").value,
-quantidade:document.getElementById("quantidade").value
-});
-carregar();
-}
+            <label for="pedidoAdminTamanho">Tamanho</label>
+            <select id="pedidoAdminTamanho"></select>
 
-async function salvarReceb(){
-await api("recebimentos","POST",{
-setor_id:document.getElementById("setorReceb").value,
-congregacao_id:document.getElementById("congregacaoReceb").value,
-valor:document.getElementById("valor").value
-});
-carregar();
-}
+            <label for="pedidoAdminQuantidade">Quantidade</label>
+            <input id="pedidoAdminQuantidade" type="number" min="1" value="1" />
 
-function render(){
-document.getElementById("pedidos").innerHTML=
-pedidos.map(p=>{
-const c = congregacoes.find(x => String(x.id) === String(p.congregacao_id));
-return `<tr><td>${c?.nome}</td><td>${p.quantidade}</td></tr>`;
-}).join("");
+            <button class="success" type="submit">Salvar pedido</button>
+          </form>
+        </div>
 
-document.getElementById("recebimentos").innerHTML=
-recebimentos.map(r=>{
-const c = congregacoes.find(x => String(x.id) === String(r.congregacao_id));
-return `<tr><td>${c?.nome}</td><td>${r.valor}</td></tr>`;
-}).join("");
+        <div class="card">
+          <h3>Lançar recebimento</h3>
+          <form id="formRecebimentoAdmin">
+            <label for="recebimentoSetor">Setor</label>
+            <select id="recebimentoSetor"></select>
 
-const resumo=congregacoes.map(c=>{
-const p=pedidos.filter(x=>x.congregacao_id==c.id);
-const r=recebimentos.filter(x=>x.congregacao_id==c.id);
+            <label for="recebimentoCongregacao">Congregação</label>
+            <select id="recebimentoCongregacao"></select>
 
-const qtd=p.reduce((a,b)=>a+Number(b.quantidade),0);
-const total=qtd*45;
-const recebido=r.reduce((a,b)=>a+Number(b.valor),0);
+            <label for="recebimentoValor">Valor recebido</label>
+            <input id="recebimentoValor" type="number" min="0" step="0.01" />
 
-return{qtd,total,recebido};
-});
+            <label for="recebimentoObs">Observação</label>
+            <input id="recebimentoObs" type="text" placeholder="Ex.: pagamento parcial" />
 
-document.getElementById("pediram").innerText=resumo.filter(x=>x.qtd>0).length;
-document.getElementById("nao").innerText=resumo.filter(x=>x.qtd==0).length;
-document.getElementById("quitado").innerText=resumo.filter(x=>x.recebido>=x.total && x.total>0).length;
-document.getElementById("parcial").innerText=resumo.filter(x=>x.recebido>0 && x.recebido<x.total).length;
-document.getElementById("pendente").innerText=resumo.filter(x=>x.qtd>0 && x.recebido==0).length;
-}
+            <button class="success" type="submit">Salvar recebimento</button>
+          </form>
+        </div>
+      </div>
 
-carregar();
-</script>
+      <div class="card">
+        <h3>Visualização rápida</h3>
 
+        <div class="toolbar">
+          <div>
+            <label for="tipoVisualizacaoAdmin">Mostrar</label>
+            <select id="tipoVisualizacaoAdmin">
+              <option value="pediram">Igrejas que pediram</option>
+              <option value="pagaram">Igrejas que pagaram</option>
+              <option value="pendentes">Igrejas pendentes</option>
+              <option value="semPedido">Igrejas sem pedido</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="filtroSetorVisualizacao">Filtrar setor</label>
+            <select id="filtroSetorVisualizacao"></select>
+          </div>
+
+          <div>
+            <label for="buscaVisualizacao">Buscar nome</label>
+            <input id="buscaVisualizacao" type="text" placeholder="Digite setor ou congregação" />
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Setor</th>
+                <th>Congregação</th>
+                <th>Pedido</th>
+                <th>Total</th>
+                <th>Recebido</th>
+                <th>Saldo</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyVisualizacaoAdmin"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <details open>
+            <summary>Recebimentos lançados</summary>
+            <div class="table-wrap" style="margin-top:14px">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Setor</th>
+                    <th>Congregação</th>
+                    <th>Valor</th>
+                    <th>Observação</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyRecebimentosAdmin"></tbody>
+              </table>
+            </div>
+          </details>
+        </div>
+
+        <div class="card">
+          <details open>
+            <summary>Congregações sem pedido</summary>
+            <div class="table-wrap" style="margin-top:14px">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Setor</th>
+                    <th>Congregação</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyFaltantesAdmin"></tbody>
+              </table>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://dqwlhouwoxbwxkcaytja.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_b_tuFrU9PhG3VKYLupMVhg_pWPF6Spj";
+    const SESSION_KEY = "umadecampi_sessao_supabase_v1";
+
+    const tamanhos = ["PP","P","M","G","GG","XG","XXG"];
+    const modelos = {
+      masculino: "Masculino",
+      babylook: "Baby Look Feminina",
+    };
+
+    const CONFIG = {
+      inicioPedidos: 1,
+      fimPedidos: 20,
+      adminPodeEditarForaPrazo: true,
+      valorUnitarioCamiseta: 45,
+      adminUsuario: "admin",
+      adminSenha: "123456",
+    };
+
+    let sessao = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
+    let campanhaAtual = null;
+    let setores = [];
+    let congregacoes = [];
+    let pedidosCache = [];
+    let recebimentosCache = [];
+    let usuariosCache = [];
+
+    const el = (id) => document.getElementById(id);
+
+    function salvarSessao() {
+      localStorage.setItem(SESSION_KEY, JSON.stringify(sessao));
+    }
+
+    function limparSessao() {
+      sessao = null;
+      localStorage.removeItem(SESSION_KEY);
+    }
+
+    function normalizarTexto(txt) {
+      return String(txt || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim()
+        .toLowerCase();
+    }
+
+    function numero(v) {
+      const n = Number(String(v ?? "").replace(",", "."));
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    function moeda(v) {
+      return Number(v || 0).toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+      });
+    }
+
+    function dataBr(valor) {
+      if (!valor) return "-";
+      const d = new Date(valor);
+      if (Number.isNaN(d.getTime())) return String(valor);
+      return d.toLocaleDateString("pt-BR");
+    }
+
+    function formatarDataHora(valor) {
+      if (!valor) return "-";
+      const d = new Date(valor);
+      if (Number.isNaN(d.getTime())) return String(valor);
+      return d.toLocaleString("pt-BR");
+    }
+
+    function escapeHtml(texto) {
+      return String(texto ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function mostrar(id, exibir = true) {
+      const node = el(id);
+      if (!node) return;
+      node.classList.toggle("hidden", !exibir);
+    }
+
+    function preencherTexto(id, valor) {
+      const node = el(id);
+      if (node) node.textContent = String(valor ?? "");
+    }
+
+    function preencherSelect(selectId, options, getValue, getLabel, placeholder = "Selecione", manterAtual = true) {
+      const select = el(selectId);
+      if (!select) return;
+
+      const valorAtual = String(select.value || "");
+      select.innerHTML = `<option value="">${placeholder}</option>`;
+
+      options.forEach((item) => {
+        const option = document.createElement("option");
+        option.value = String(getValue(item));
+        option.textContent = getLabel(item);
+        select.appendChild(option);
+      });
+
+      if (!options.length) {
+        select.value = "";
+        return;
+      }
+
+      const existeAtual = options.some((o) => String(getValue(o)) === valorAtual);
+
+      if (manterAtual && valorAtual && existeAtual) {
+        select.value = valorAtual;
+      } else {
+        select.value = String(getValue(options[0]));
+      }
+    }
+
+    async function api(path, options = {}) {
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+        method: options.method || "GET",
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json",
+          Prefer: options.prefer || "return=representation",
+        },
+        body: options.body ? JSON.stringify(options.body) : undefined,
+      });
+
+      const text = await response.text();
+
+      if (!response.ok) {
+        throw new Error(text || "Erro na comunicação com o Supabase.");
+      }
+
+      return text ? JSON.parse(text) : [];
+    }
+
+    function criarCampanhaFallback() {
+      const hoje = new Date();
+      const ano = hoje.getFullYear();
+      const mes = String(hoje.getMonth() + 1).padStart(2, "0");
+
+      return {
+        id: null,
+        nome: "Campanha provisória",
+        inicio_pedidos: `${ano}-${mes}-${String(CONFIG.inicioPedidos).padStart(2, "0")}`,
+        fim_pedidos: `${ano}-${mes}-${String(CONFIG.fimPedidos).padStart(2, "0")}`,
+        ativo: true,
+        _fallback: true,
+      };
+    }
+
+    function campanhaEstaMarcadaComoAtiva(campanha) {
+      if (!campanha) return false;
+      if (campanha.ativo === true || campanha.ativa === true) return true;
+      const status = normalizarTexto(campanha.status || campanha.situacao || "");
+      return ["ativa","ativo","aberta","aberto","em andamento","andamento"].includes(status);
+    }
+
+    function campanhaTemPeriodoValido(campanha) {
+      if (!campanha) return false;
+      if (!campanha.inicio_pedidos || !campanha.fim_pedidos) return true;
+
+      const agora = new Date();
+      const inicio = new Date(`${campanha.inicio_pedidos}T00:00:00`);
+      const fim = new Date(`${campanha.fim_pedidos}T23:59:59`);
+
+      if (Number.isNaN(inicio.getTime()) || Number.isNaN(fim.getTime())) return true;
+      return agora >= inicio && agora <= fim;
+    }
+
+    function campanhaExiste() {
+      return !!campanhaAtual;
+    }
+
+    function campanhaEstaAtiva() {
+      if (!campanhaAtual) return false;
+      if (campanhaAtual._fallback) return true;
+      return campanhaEstaMarcadaComoAtiva(campanhaAtual);
+    }
+
+    function campanhaDisponivelParaSetor() {
+      return campanhaEstaAtiva() && campanhaTemPeriodoValido(campanhaAtual);
+    }
+
+    function campanhaDisponivelParaAdmin() {
+      if (!campanhaAtual) return false;
+      if (campanhaAtual._fallback) return true;
+      if (!campanhaEstaAtiva()) return false;
+      if (CONFIG.adminPodeEditarForaPrazo) return true;
+      return campanhaTemPeriodoValido(campanhaAtual);
+    }
+
+    async function carregarCampanhaAtual() {
+      const tentativas = [
+        "campanhas?select=*&ativo=eq.true&order=id.desc&limit=1",
+        "campanhas?select=*&ativa=eq.true&order=id.desc&limit=1",
+        "campanhas?select=*&status=eq.Ativa&order=id.desc&limit=1",
+        "campanhas?select=*&status=eq.ativa&order=id.desc&limit=1",
+        "campanhas?select=*&order=id.desc&limit=50",
+      ];
+
+      for (const rota of tentativas) {
+        try {
+          const data = await api(rota);
+          if (!Array.isArray(data) || !data.length) continue;
+
+          let campanha = null;
+          if (rota.includes("limit=50")) {
+            campanha = data.find((c) => campanhaEstaMarcadaComoAtiva(c)) || data[0] || null;
+          } else {
+            campanha = data[0] || null;
+          }
+
+          if (campanha) {
+            campanhaAtual = { ...campanha, _fallback: false };
+            return;
+          }
+        } catch (e) {}
+      }
+
+      campanhaAtual = criarCampanhaFallback();
+    }
+
+    async function carregarUsuarios() {
+      try {
+        usuariosCache = await api("usuarios?select=*&order=nome.asc");
+      } catch (e) {
+        usuariosCache = [];
+      }
+    }
+
+    async function carregarSetores() {
+      try {
+        setores = await api("setores?select=*&order=numero.asc.nullslast,nome.asc");
+      } catch (e) {
+        try {
+          setores = await api("setores?select=*&order=nome.asc");
+        } catch (err) {
+          setores = [];
+        }
+      }
+    }
+
+    async function carregarCongregacoes() {
+      try {
+        congregacoes = await api("congregacoes?select=*&order=nome.asc");
+      } catch (e) {
+        congregacoes = [];
+      }
+    }
+
+    async function carregarPedidos() {
+      try {
+        pedidosCache = await api("pedidos?select=*&order=id.desc");
+      } catch (e) {
+        pedidosCache = [];
+      }
+    }
+
+    async function carregarRecebimentos() {
+      try {
+        recebimentosCache = await api("recebimentos?select=*&order=id.desc");
+      } catch (e) {
+        recebimentosCache = [];
+      }
+    }
+
+    async function recarregarTudo() {
+      await carregarCampanhaAtual();
+      await carregarUsuarios();
+      await carregarSetores();
+      await carregarCongregacoes();
+      await carregarPedidos();
+      await carregarRecebimentos();
+    }
+
+    function getSetorById(setorId) {
+      return setores.find((s) => String(s.id) === String(setorId)) || null;
+    }
+
+    function getCongregacaoById(congregacaoId) {
+      return congregacoes.find((c) => String(c.id) === String(congregacaoId)) || null;
+    }
+
+    function nomeSetorPorId(id) {
+      const setor = getSetorById(id);
+      return setor ? setor.nome : "-";
+    }
+
+    function numeroSetorPorId(id) {
+      const setor = getSetorById(id);
+      return setor ? setor.numero : "-";
+    }
+
+    function congregacoesDoSetor(setorId) {
+      return congregacoes.filter((c) => String(c.setor_id) === String(setorId));
+    }
+
+    function pedidosDoSetor(setorId) {
+      return pedidosCache.filter((p) => String(p.setor_id) === String(setorId));
+    }
+
+    function recebimentosDoSetor(setorId) {
+      return recebimentosCache.filter((r) => String(r.setor_id) === String(setorId));
+    }
+
+    function pedidosDaCongregacao(congregacaoId) {
+      return pedidosCache.filter((p) => String(p.congregacao_id) === String(congregacaoId));
+    }
+
+    function recebimentosDaCongregacao(congregacaoId) {
+      return recebimentosCache.filter((r) => String(r.congregacao_id) === String(congregacaoId));
+    }
+
+    function totalPecasDoSetor(setorId) {
+      return pedidosDoSetor(setorId).reduce((acc, p) => acc + numero(p.quantidade), 0);
+    }
+
+    function totalFinanceiroDoSetor(setorId) {
+      return totalPecasDoSetor(setorId) * CONFIG.valorUnitarioCamiseta;
+    }
+
+    function totalRecebidoDoSetor(setorId) {
+      return recebimentosDoSetor(setorId).reduce((acc, r) => acc + numero(r.valor), 0);
+    }
+
+    function saldoDoSetor(setorId) {
+      return totalFinanceiroDoSetor(setorId) - totalRecebidoDoSetor(setorId);
+    }
+
+    function congregacoesQueAindaNaoPediram() {
+      return congregacoes.filter((c) => pedidosDaCongregacao(c.id).length === 0);
+    }
+
+    function usuarioSetorPorLoginESenha(login, senha) {
+      const loginN = normalizarTexto(login);
+      const senhaN = String(senha || "").trim();
+
+      return (
+        usuariosCache.find((u) => {
+          const tipo = normalizarTexto(u.tipo || "");
+          return (
+            ["setor", "usuario", "usuário"].includes(tipo) &&
+            normalizarTexto(u.login || "") === loginN &&
+            String(u.senha || "").trim() === senhaN
+          );
+        }) || null
+      );
+    }
+
+    function usuarioAdminPorLoginESenha(login, senha) {
+      const loginN = normalizarTexto(login);
+      const senhaN = String(senha || "").trim();
+
+      return (
+        usuariosCache.find((u) => {
+          const tipo = normalizarTexto(u.tipo || "");
+          return (
+            tipo === "admin" &&
+            normalizarTexto(u.login || "") === loginN &&
+            String(u.senha || "").trim() === senhaN
+          );
+        }) || null
+      );
+    }
+
+    function encontrarSetorNoCache(loginDigitado) {
+      const valor = normalizarTexto(loginDigitado);
+
+      return setores.find((s) => {
+        const nome = normalizarTexto(s.nome);
+        const codigo = normalizarTexto(s.codigo || "");
+        const sigla = normalizarTexto(s.sigla || "");
+        const idTexto = String(s.id || "").trim();
+
+        return (
+          valor === nome ||
+          valor === codigo ||
+          valor === sigla ||
+          String(loginDigitado || "").trim() === idTexto
+        );
+      }) || null;
+    }
+
+    async function fazerLoginSetor(login, senha) {
+      if (!login || !senha) throw new Error("Informe login e senha.");
+
+      const usuario = usuarioSetorPorLoginESenha(login, senha);
+
+      if (usuario && usuario.setor_id) {
+        const setorUsuario = getSetorById(usuario.setor_id);
+
+        if (!setorUsuario) {
+          throw new Error("Setor do usuário não encontrado.");
+        }
+
+        sessao = {
+          tipo: "setor",
+          usuario_id: usuario.id,
+          usuario_nome: usuario.nome || usuario.login || setorUsuario.nome,
+          setor_id: setorUsuario.id,
+          setor_nome: setorUsuario.nome,
+          setor_numero: setorUsuario.numero,
+          login_em: new Date().toISOString(),
+        };
+
+        salvarSessao();
+        return;
+      }
+
+      const setor = encontrarSetorNoCache(login);
+      if (!setor) throw new Error("Setor inválido.");
+
+      if (String(setor?.senha || "").trim() !== String(senha || "").trim()) {
+        throw new Error("Senha inválida.");
+      }
+
+      sessao = {
+        tipo: "setor",
+        setor_id: setor.id,
+        setor_nome: setor.nome,
+        setor_numero: setor.numero,
+        login_em: new Date().toISOString(),
+      };
+
+      salvarSessao();
+    }
+
+    function fazerLoginAdmin(usuario, senha) {
+      const adminBanco = usuarioAdminPorLoginESenha(usuario, senha);
+
+      if (adminBanco) {
+        sessao = {
+          tipo: "admin",
+          usuario_id: adminBanco.id,
+          nome: adminBanco.nome || "Administrador",
+          login_em: new Date().toISOString(),
+        };
+        salvarSessao();
+        return;
+      }
+
+      if (
+        String(usuario || "").trim() === CONFIG.adminUsuario &&
+        String(senha || "").trim() === CONFIG.adminSenha
+      ) {
+        sessao = {
+          tipo: "admin",
+          nome: "Administrador",
+          login_em: new Date().toISOString(),
+        };
+        salvarSessao();
+        return;
+      }
+
+      throw new Error("Usuário ou senha inválidos.");
+    }
+
+    function logout() {
+      limparSessao();
+      renderTela();
+    }
+
+    function dentroPrazoPedidos() {
+      if (sessao?.tipo === "admin") return campanhaDisponivelParaAdmin();
+      return campanhaDisponivelParaSetor();
+    }
+
+    async function salvarPedido({ setor_id, congregacao_id, modelo, tamanho, quantidade, usuario_id }) {
+      if (!campanhaExiste()) throw new Error("Nenhuma campanha encontrada.");
+      if (!campanhaEstaAtiva()) throw new Error("A campanha está inativa.");
+      if (!setor_id || !congregacao_id || !modelo || !tamanho || !quantidade) {
+        throw new Error("Preencha todos os campos do pedido.");
+      }
+      if (!dentroPrazoPedidos()) throw new Error("Período de pedidos encerrado.");
+
+      const modeloNormalizado = normalizarTexto(modelo);
+      const modeloCorrigido =
+        modeloNormalizado === "masculino"
+          ? "masculino"
+          : modeloNormalizado.includes("baby")
+          ? "babylook"
+          : modelo;
+
+      const payload = {
+        setor_id: String(setor_id),
+        congregacao_id: String(congregacao_id),
+        modelo: modeloCorrigido,
+        tamanho: String(tamanho),
+        quantidade: numero(quantidade),
+        data: new Date().toISOString(),
+      };
+
+      if (usuario_id) payload.usuario_id = usuario_id;
+      if (campanhaAtual?.id != null) payload.campanha_id = campanhaAtual.id;
+
+      const tentativas = [
+        { ...payload },
+        (() => { const p = { ...payload }; delete p.campanha_id; return p; })(),
+        (() => { const p = { ...payload }; delete p.usuario_id; return p; })(),
+        (() => { const p = { ...payload }; delete p.campanha_id; delete p.usuario_id; return p; })(),
+      ];
+
+      let ultimoErro = null;
+
+      for (const tentativa of tentativas) {
+        try {
+          await api("pedidos", { method: "POST", body: tentativa });
+          await carregarPedidos();
+          return;
+        } catch (e) {
+          ultimoErro = e;
+        }
+      }
+
+      throw ultimoErro || new Error("Não foi possível salvar o pedido.");
+    }
+
+    async function registrarRecebimento({ setor_id, congregacao_id, valor, observacao, usuario_id }) {
+      if (!setor_id) throw new Error("Setor não informado.");
+      if (!congregacao_id) throw new Error("Selecione a congregação.");
+      if (!valor) throw new Error("Informe o valor recebido.");
+
+      const payload = {
+        setor_id: String(setor_id),
+        congregacao_id: String(congregacao_id),
+        valor: numero(valor),
+        observacao: observacao || null,
+      };
+
+      if (usuario_id) payload.usuario_id = usuario_id;
+      if (campanhaAtual?.id != null) payload.campanha_id = campanhaAtual.id;
+
+      const tentativas = [
+        { ...payload },
+        (() => { const p = { ...payload }; delete p.campanha_id; return p; })(),
+        (() => { const p = { ...payload }; delete p.usuario_id; return p; })(),
+        (() => { const p = { ...payload }; delete p.campanha_id; delete p.usuario_id; return p; })(),
+      ];
+
+      let ultimoErro = null;
+
+      for (const tentativa of tentativas) {
+        try {
+          await api("recebimentos", { method: "POST", body: tentativa });
+          await carregarRecebimentos();
+          return;
+        } catch (e) {
+          ultimoErro = e;
+        }
+      }
+
+      throw ultimoErro || new Error("Não foi possível registrar o recebimento.");
+    }
+
+    function dataPedido(item) {
+      return item?.created_at || item?.data || null;
+    }
+
+    function dataRecebimento(item) {
+      return item?.data_pagamento || item?.data_recebimento || item?.data_registro || item?.created_at || null;
+    }
+
+    function montarResumoIgrejasDetalhado() {
+      return congregacoes.map((c) => {
+        const setor = getSetorById(c.setor_id);
+        const pedidos = pedidosDaCongregacao(c.id);
+        const recebimentos = recebimentosDaCongregacao(c.id);
+
+        const qtd = pedidos.reduce((acc, p) => acc + numero(p.quantidade), 0);
+        const total = qtd * CONFIG.valorUnitarioCamiseta;
+        const recebido = recebimentos.reduce((acc, r) => acc + numero(r.valor), 0);
+        const saldo = Math.max(total - recebido, 0);
+
+        let status = "Não pediu";
+        let statusClass = "pill-info";
+
+        if (qtd > 0 && recebido <= 0) {
+          status = "Pediu e não pagou";
+          statusClass = "pill-warning";
+        } else if (qtd > 0 && recebido > 0 && recebido < total) {
+          status = "Pagamento parcial";
+          statusClass = "pill-info";
+        } else if (qtd > 0 && recebido >= total) {
+          status = "Quitado";
+          statusClass = "pill-success";
+        }
+
+        return {
+          setorId: c.setor_id,
+          setorNome: `${String(setor?.numero || "").padStart(2, "0")} - ${setor?.nome || "-"}`,
+          congregacaoId: c.id,
+          congregacaoNome: c.nome || "-",
+          qtd,
+          total,
+          recebido,
+          saldo,
+          status,
+          statusClass,
+        };
+      });
+    }
+
+    function renderResumoIgrejas() {
+      const resumo = montarResumoIgrejasDetalhado();
+
+      preencherTexto("igPediram", resumo.filter(r => r.qtd > 0).length);
+      preencherTexto("igNaoPediram", resumo.filter(r => r.qtd === 0).length);
+      preencherTexto("igQuites", resumo.filter(r => r.qtd > 0 && r.recebido >= r.total).length);
+      preencherTexto("igParcial", resumo.filter(r => r.qtd > 0 && r.recebido > 0 && r.recebido < r.total).length);
+      preencherTexto("igPendentes", resumo.filter(r => r.qtd > 0 && r.recebido <= 0).length);
+      preencherTexto("igComRecebimento", resumo.filter(r => r.recebido > 0).length);
+    }
+
+    function renderTabelaPedidosSetor() {
+      const corpo = el("tbodyPedidosSetor");
+      if (!corpo || !sessao?.setor_id) return;
+
+      const lista = pedidosDoSetor(sessao.setor_id);
+
+      if (!lista.length) {
+        corpo.innerHTML = `<tr><td colspan="5">Nenhum pedido lançado.</td></tr>`;
+        return;
+      }
+
+      corpo.innerHTML = lista.map((p) => {
+        const congregacao = getCongregacaoById(p.congregacao_id);
+        return `
+          <tr>
+            <td>${formatarDataHora(dataPedido(p))}</td>
+            <td>${escapeHtml(congregacao?.nome || p.congregacao_nome || "-")}</td>
+            <td>${escapeHtml(modelos[p.modelo] || p.modelo || "-")}</td>
+            <td>${escapeHtml(p.tamanho || "-")}</td>
+            <td>${numero(p.quantidade)}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function renderTabelaCongregacoesSetor() {
+      const corpo = el("tbodyCongregacoesSetor");
+      if (!corpo || !sessao?.setor_id) return;
+
+      const lista = congregacoesDoSetor(sessao.setor_id);
+
+      if (!lista.length) {
+        corpo.innerHTML = `<tr><td colspan="2">Nenhuma congregação cadastrada.</td></tr>`;
+        return;
+      }
+
+      corpo.innerHTML = lista.map((c) => {
+        const qtd = pedidosDaCongregacao(c.id).reduce((acc, p) => acc + numero(p.quantidade), 0);
+        return `
+          <tr>
+            <td>${escapeHtml(c.nome)}</td>
+            <td>${qtd > 0 ? '<span class="pill pill-success">Com pedido</span>' : '<span class="pill pill-warning">Sem pedido</span>'}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function renderTabelaRecebimentosAdmin() {
+      const corpo = el("tbodyRecebimentosAdmin");
+      if (!corpo) return;
+
+      if (!recebimentosCache.length) {
+        corpo.innerHTML = `<tr><td colspan="5">Nenhum recebimento encontrado.</td></tr>`;
+        return;
+      }
+
+      corpo.innerHTML = recebimentosCache.map((r) => {
+        const setor = getSetorById(r.setor_id);
+        const congregacao = getCongregacaoById(r.congregacao_id);
+        return `
+          <tr>
+            <td>${formatarDataHora(dataRecebimento(r))}</td>
+            <td>${escapeHtml(setor?.nome || "-")}</td>
+            <td>${escapeHtml(congregacao?.nome || "-")}</td>
+            <td>${moeda(r.valor)}</td>
+            <td>${escapeHtml(r.observacao || "-")}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function renderFaltantesAdmin() {
+      const tbody = el("tbodyFaltantesAdmin");
+      if (!tbody) return;
+
+      const faltantes = congregacoesQueAindaNaoPediram();
+
+      if (!faltantes.length) {
+        tbody.innerHTML = `<tr><td colspan="2">Todas as congregações já fizeram pedido.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = faltantes
+        .sort((a, b) =>
+          `${numeroSetorPorId(a.setor_id)} ${a.nome}`.localeCompare(
+            `${numeroSetorPorId(b.setor_id)} ${b.nome}`,
+            "pt-BR"
+          )
+        )
+        .map((c) => `
+          <tr>
+            <td>${String(numeroSetorPorId(c.setor_id)).padStart(2, "0")} - ${escapeHtml(nomeSetorPorId(c.setor_id))}</td>
+            <td>${escapeHtml(c.nome)}</td>
+          </tr>
+        `)
+        .join("");
+    }
+
+    function renderVisualizacaoRapida() {
+      const tbody = el("tbodyVisualizacaoAdmin");
+      if (!tbody) return;
+
+      let linhas = montarResumoIgrejasDetalhado();
+      const tipo = el("tipoVisualizacaoAdmin")?.value || "pediram";
+      const filtroSetor = el("filtroSetorVisualizacao")?.value || "";
+      const busca = normalizarTexto(el("buscaVisualizacao")?.value || "");
+
+      if (tipo === "pediram") {
+        linhas = linhas.filter(x => x.qtd > 0);
+      } else if (tipo === "pagaram") {
+        linhas = linhas.filter(x => x.recebido > 0);
+      } else if (tipo === "pendentes") {
+        linhas = linhas.filter(x => x.qtd > 0 && x.saldo > 0);
+      } else if (tipo === "semPedido") {
+        linhas = linhas.filter(x => x.qtd === 0);
+      }
+
+      if (filtroSetor) {
+        linhas = linhas.filter(x => String(x.setorId) === String(filtroSetor));
+      }
+
+      if (busca) {
+        linhas = linhas.filter(x =>
+          normalizarTexto(x.setorNome).includes(busca) ||
+          normalizarTexto(x.congregacaoNome).includes(busca)
+        );
+      }
+
+      if (!linhas.length) {
+        tbody.innerHTML = `<tr><td colspan="7">Nenhum resultado encontrado.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = linhas
+        .sort((a, b) => `${a.setorNome} ${a.congregacaoNome}`.localeCompare(`${b.setorNome} ${b.congregacaoNome}`, "pt-BR"))
+        .map((x) => `
+          <tr>
+            <td>${escapeHtml(x.setorNome)}</td>
+            <td>${escapeHtml(x.congregacaoNome)}</td>
+            <td>${x.qtd}</td>
+            <td>${moeda(x.total)}</td>
+            <td>${moeda(x.recebido)}</td>
+            <td>${moeda(x.saldo)}</td>
+            <td><span class="pill ${x.statusClass}">${escapeHtml(x.status)}</span></td>
+          </tr>
+        `)
+        .join("");
+    }
+
+    function renderResumoPublico() {
+      preencherTexto("statSetores", setores.length);
+      preencherTexto("statIgrejas", congregacoes.length);
+      preencherTexto("statPedidos", pedidosCache.length);
+      preencherTexto("statTopoCampanha", campanhaEstaAtiva() ? "Ativa" : "Inativa");
+      preencherTexto("statTopoPrazo", dentroPrazoPedidos() ? "Aberto" : "Fechado");
+      preencherTexto("statTopoValor", moeda(CONFIG.valorUnitarioCamiseta));
+      preencherTexto("nomeCampanhaAtual", campanhaAtual?.nome || "Campanha não definida");
+      preencherTexto(
+        "periodoCampanha",
+        campanhaAtual?.inicio_pedidos && campanhaAtual?.fim_pedidos
+          ? `${dataBr(campanhaAtual.inicio_pedidos)} até ${dataBr(campanhaAtual.fim_pedidos)}`
+          : "Sem período definido"
+      );
+    }
+
+    function atualizarBadgeCampanha() {
+      const statusCampanha = campanhaEstaAtiva() ? "Campanha: Ativa" : "Campanha: Inativa";
+      const statusPrazo = dentroPrazoPedidos() ? "Prazo: Aberto" : "Prazo: Fechado";
+
+      preencherTexto("badgeCampanhaStatus", statusCampanha);
+      preencherTexto("badgeCampanhaPrazo", statusPrazo);
+      preencherTexto(
+        "statusAdminCampanha",
+        campanhaEstaAtiva()
+          ? (dentroPrazoPedidos() ? "Campanha ativa • Prazo aberto" : "Campanha ativa • Prazo fechado")
+          : "Campanha inativa"
+      );
+      preencherTexto(
+        "mensagemPrazoPedidos",
+        campanhaEstaAtiva()
+          ? (dentroPrazoPedidos() ? "Pedidos liberados." : "Período de pedidos encerrado.")
+          : "Campanha inativa."
+      );
+    }
+
+    function popularTamanhos() {
+      preencherSelect("pedidoTamanho", tamanhos, (x) => x, (x) => x, "Selecione");
+      preencherSelect("pedidoAdminTamanho", tamanhos, (x) => x, (x) => x, "Selecione");
+    }
+
+    function setoresOrdenados() {
+      return [...setores].sort(
+        (a, b) => numero(a.numero) - numero(b.numero) || String(a.nome).localeCompare(String(b.nome), "pt-BR")
+      );
+    }
+
+    function atualizarCongregacoesPedidoAdmin() {
+      const setorId = el("pedidoAdminSetor")?.value || "";
+      const lista = congregacoes
+        .filter((c) => String(c.setor_id) === String(setorId))
+        .sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"));
+
+      preencherSelect(
+        "pedidoAdminCongregacao",
+        lista,
+        (c) => c.id,
+        (c) => c.nome,
+        lista.length ? "Selecione a congregação" : "Nenhuma congregação encontrada",
+        false
+      );
+    }
+
+    function atualizarCongregacoesRecebimentoAdmin() {
+      const setorId = el("recebimentoSetor")?.value || "";
+      const lista = congregacoes
+        .filter((c) => String(c.setor_id) === String(setorId))
+        .sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"));
+
+      preencherSelect(
+        "recebimentoCongregacao",
+        lista,
+        (c) => c.id,
+        (c) => c.nome,
+        lista.length ? "Selecione a congregação" : "Nenhuma congregação encontrada",
+        false
+      );
+    }
+
+    function renderPainelSetor() {
+      const setorId = sessao.setor_id;
+      const setor = getSetorById(setorId);
+      const congregacoesSetor = congregacoesDoSetor(setorId);
+      const pedidosSetor = pedidosDoSetor(setorId);
+      const recebimentosSetor = recebimentosDoSetor(setorId);
+
+      preencherTexto(
+        "tituloPainelSetor",
+        `Setor ${String(setor?.numero || sessao?.setor_numero || "").padStart(2, "0")} - ${setor?.nome || sessao?.setor_nome || "Setor"}`
+      );
+      preencherTexto("statSetorCongregacoes", congregacoesSetor.length);
+      preencherTexto("statSetorPecas", totalPecasDoSetor(setorId));
+      preencherTexto("statSetorTotal", moeda(totalFinanceiroDoSetor(setorId)));
+      preencherTexto("statSetorRecebido", moeda(totalRecebidoDoSetor(setorId)));
+      preencherTexto("statSetorSaldo", moeda(saldoDoSetor(setorId)));
+      preencherTexto("statValorUnitarioSetor", moeda(CONFIG.valorUnitarioCamiseta));
+      preencherTexto(
+        "infoSetorDetalhes",
+        `Setor: ${setor?.nome || sessao?.setor_nome || "-"} • Congregações: ${congregacoesSetor.length} • Pedidos: ${pedidosSetor.length} • Recebimentos: ${recebimentosSetor.length}`
+      );
+
+      preencherSelect(
+        "pedidoCongregacao",
+        congregacoesSetor.sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR")),
+        (c) => c.id,
+        (c) => c.nome,
+        "Selecione a congregação",
+        false
+      );
+
+      renderTabelaPedidosSetor();
+      renderTabelaCongregacoesSetor();
+    }
+
+    function renderPainelAdmin() {
+      const totalPecas = pedidosCache.reduce((acc, p) => acc + numero(p.quantidade), 0);
+      const totalRecebido = recebimentosCache.reduce((acc, r) => acc + numero(r.valor), 0);
+
+      preencherTexto("statAdminSetores", setores.length);
+      preencherTexto("statAdminIgrejas", congregacoes.length);
+      preencherTexto("statAdminPedidos", pedidosCache.length);
+      preencherTexto("statAdminPecas", totalPecas);
+      preencherTexto("statAdminTotal", moeda(totalPecas * CONFIG.valorUnitarioCamiseta));
+      preencherTexto("statAdminRecebido", moeda(totalRecebido));
+      preencherTexto(
+        "infoAdminDetalhes",
+        `Campanha: ${campanhaAtual?.nome || "Não definida"} • Status: ${campanhaEstaAtiva() ? "Ativa" : "Inativa"} • Setores: ${setores.length} • Congregações: ${congregacoes.length} • Pedidos: ${pedidosCache.length} • Recebido: ${moeda(totalRecebido)}`
+      );
+
+      const listaSetores = setoresOrdenados();
+
+      preencherSelect(
+        "pedidoAdminSetor",
+        listaSetores,
+        (s) => s.id,
+        (s) => `${String(s.numero || "").padStart(2, "0")} - ${s.nome}`,
+        "Selecione o setor"
+      );
+
+      preencherSelect(
+        "recebimentoSetor",
+        listaSetores,
+        (s) => s.id,
+        (s) => `${String(s.numero || "").padStart(2, "0")} - ${s.nome}`,
+        "Selecione o setor"
+      );
+
+      preencherSelect(
+        "filtroSetorVisualizacao",
+        listaSetores,
+        (s) => s.id,
+        (s) => `${String(s.numero || "").padStart(2, "0")} - ${s.nome}`,
+        "Todos os setores"
+      );
+
+      atualizarCongregacoesPedidoAdmin();
+      atualizarCongregacoesRecebimentoAdmin();
+      renderResumoIgrejas();
+      renderTabelaRecebimentosAdmin();
+      renderFaltantesAdmin();
+      renderVisualizacaoRapida();
+    }
+
+    function renderTela() {
+      mostrar("telaLogin", !sessao);
+      mostrar("painelSetor", sessao?.tipo === "setor");
+      mostrar("painelAdmin", sessao?.tipo === "admin");
+
+      renderResumoPublico();
+      atualizarBadgeCampanha();
+
+      if (sessao?.tipo === "setor") renderPainelSetor();
+      if (sessao?.tipo === "admin") renderPainelAdmin();
+    }
+
+    function extrairMensagemErro(e) {
+      const texto = String(e?.message || "Erro inesperado.");
+
+      if (texto.includes("PGRST204") && texto.includes("campanha_id")) {
+        return "A tabela não possui a coluna campanha_id.";
+      }
+      if (texto.includes("PGRST204") && texto.includes("usuario_id")) {
+        return "A tabela não possui a coluna usuario_id.";
+      }
+      if (texto.includes("PGRST204") && texto.includes("data_pagamento")) {
+        return "A tabela não possui a coluna data_pagamento.";
+      }
+      if (texto.includes("22P02")) {
+        return "Há um campo com tipo diferente no banco. Verifique IDs ou valores numéricos.";
+      }
+      return texto;
+    }
+
+    function bindEventos() {
+      el("formLoginSetor")?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        try {
+          await recarregarTudo();
+          await fazerLoginSetor(el("loginSetor")?.value, el("senhaSetor")?.value);
+          renderTela();
+          alert("Login setor funcionando.");
+        } catch (err) {
+          alert(extrairMensagemErro(err));
+        }
+      });
+
+      el("formLoginAdmin")?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        try {
+          await recarregarTudo();
+          fazerLoginAdmin(el("loginAdmin")?.value, el("senhaAdmin")?.value);
+          renderTela();
+          alert("Login admin funcionando.");
+        } catch (err) {
+          alert(extrairMensagemErro(err));
+        }
+      });
+
+      el("btnLogoutSetor")?.addEventListener("click", logout);
+      el("btnLogoutAdmin")?.addEventListener("click", logout);
+
+      el("formPedidoSetor")?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        try {
+          await salvarPedido({
+            setor_id: sessao?.setor_id,
+            congregacao_id: el("pedidoCongregacao")?.value,
+            modelo: el("pedidoModelo")?.value,
+            tamanho: el("pedidoTamanho")?.value,
+            quantidade: el("pedidoQuantidade")?.value,
+            usuario_id: sessao?.usuario_id,
+          });
+          el("pedidoQuantidade").value = 1;
+          await recarregarTudo();
+          renderTela();
+          alert("Pedido salvo com sucesso.");
+        } catch (err) {
+          alert(extrairMensagemErro(err));
+        }
+      });
+
+      el("formPedidoAdmin")?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        try {
+          await salvarPedido({
+            setor_id: el("pedidoAdminSetor")?.value,
+            congregacao_id: el("pedidoAdminCongregacao")?.value,
+            modelo: el("pedidoAdminModelo")?.value,
+            tamanho: el("pedidoAdminTamanho")?.value,
+            quantidade: el("pedidoAdminQuantidade")?.value,
+            usuario_id: sessao?.usuario_id,
+          });
+          el("pedidoAdminQuantidade").value = 1;
+          await recarregarTudo();
+          renderTela();
+          alert("Pedido do admin salvo com sucesso.");
+        } catch (err) {
+          alert(extrairMensagemErro(err));
+        }
+      });
+
+      el("formRecebimentoAdmin")?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        try {
+          await registrarRecebimento({
+            setor_id: el("recebimentoSetor")?.value,
+            congregacao_id: el("recebimentoCongregacao")?.value,
+            valor: el("recebimentoValor")?.value,
+            observacao: el("recebimentoObs")?.value,
+            usuario_id: sessao?.usuario_id,
+          });
+          el("recebimentoValor").value = "";
+          el("recebimentoObs").value = "";
+          await recarregarTudo();
+          renderTela();
+          alert("Recebimento salvo com sucesso.");
+        } catch (err) {
+          alert(extrairMensagemErro(err));
+        }
+      });
+
+      el("pedidoAdminSetor")?.addEventListener("change", () => {
+        atualizarCongregacoesPedidoAdmin();
+      });
+
+      el("recebimentoSetor")?.addEventListener("change", () => {
+        atualizarCongregacoesRecebimentoAdmin();
+      });
+
+      el("tipoVisualizacaoAdmin")?.addEventListener("change", renderVisualizacaoRapida);
+      el("filtroSetorVisualizacao")?.addEventListener("change", renderVisualizacaoRapida);
+      el("buscaVisualizacao")?.addEventListener("input", renderVisualizacaoRapida);
+    }
+
+    function validarSessaoAtual() {
+      if (!sessao) return;
+
+      if (sessao.tipo === "setor") {
+        const existe = setores.some((s) => String(s.id) === String(sessao.setor_id));
+        if (!existe && setores.length > 0) {
+          limparSessao();
+        }
+      }
+    }
+
+    async function iniciarSistema() {
+      popularTamanhos();
+      bindEventos();
+      campanhaAtual = criarCampanhaFallback();
+      renderTela();
+
+      try {
+        await recarregarTudo();
+        validarSessaoAtual();
+        renderTela();
+      } catch (e) {
+        console.error("Erro ao iniciar sistema:", e);
+        renderTela();
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", iniciarSistema);
+  </script>
 </body>
 </html>
