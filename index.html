@@ -183,7 +183,6 @@
             <span id="msgVencimentoAtual" class="pill pill-warning" style="margin-left: auto;">Vencimento atual: Carregando...</span>
           </div>
         </div>
-
       </div>
 
       <div class="card">
@@ -294,7 +293,29 @@
 
       <div class="grid-2">
         <div class="card">
-          <details open>
+          <details>
+            <summary>Todos os Pedidos (Gerenciar)</summary>
+            <div class="table-wrap" style="margin-top:14px">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Setor</th>
+                    <th>Congregação</th>
+                    <th>Modelo</th>
+                    <th>Tam</th>
+                    <th>Qtd</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyGerenciarPedidosAdmin"></tbody>
+              </table>
+            </div>
+          </details>
+        </div>
+
+        <div class="card">
+          <details>
             <summary>Recebimentos lançados</summary>
             <div class="table-wrap" style="margin-top:14px">
               <table>
@@ -305,26 +326,10 @@
                     <th>Congregação</th>
                     <th>Valor</th>
                     <th>Observação</th>
+                    <th>Ações</th>
                   </tr>
                 </thead>
                 <tbody id="tbodyRecebimentosAdmin"></tbody>
-              </table>
-            </div>
-          </details>
-        </div>
-
-        <div class="card">
-          <details open>
-            <summary>Congregações sem pedido</summary>
-            <div class="table-wrap" style="margin-top:14px">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Setor</th>
-                    <th>Congregação</th>
-                  </tr>
-                </thead>
-                <tbody id="tbodyFaltantesAdmin"></tbody>
               </table>
             </div>
           </details>
@@ -333,8 +338,38 @@
     </section>
   </div>
 
-<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-  
+  <div id="modalEdit" class="modal hidden">
+    <div class="modal-content">
+      <h3 id="modalEditTitle" style="margin-top: 0; border-bottom: 1px solid var(--line); padding-bottom: 10px;">Editar</h3>
+      <form id="formEdit">
+         <input type="hidden" id="editId" />
+         <input type="hidden" id="editType" />
+         
+         <div id="fieldsPedido" class="hidden">
+            <label>Quantidade</label>
+            <input type="number" id="editQtd" min="1" />
+            
+            <label>Tamanho</label>
+            <select id="editTamanho"></select>
+         </div>
+         
+         <div id="fieldsRecebimento" class="hidden">
+            <label>Valor (R$)</label>
+            <input type="number" step="0.01" id="editValor" />
+            
+            <label>Observação</label>
+            <input type="text" id="editObs" />
+         </div>
+         
+         <div style="display:flex; gap: 10px; margin-top: 20px;">
+           <button type="button" class="danger" style="margin-top: 0;" onclick="fecharModal()">Cancelar</button>
+           <button type="submit" class="success" style="margin-top: 0;">Salvar Alterações</button>
+         </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
