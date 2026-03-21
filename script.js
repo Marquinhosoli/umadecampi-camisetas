@@ -14,7 +14,7 @@ const CONFIG = {
   adminPodeEditarForaPrazo: true,
   valorUnitarioCamiseta: 45,
   adminUsuario: "admin",
-  adminSenha: "umadecampi2026", // <-- Corrigido para bater com o README
+  adminSenha: "umadecampi2026",
 };
 
 let sessao = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
@@ -66,8 +66,12 @@ function dataBr(valor) {
 function formatarDataHora(valor) {
   if (!valor) return "-";
   const d = new Date(valor);
-  if (Number.isNaN(d.getTime())) return String(valor);
-  return d.toLocaleString("pt-BR");
+  if (Number.isNaN(d.getTime())) return String(valor); 
+  
+  return d.toLocaleString("pt-BR", {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+  });
 }
 
 function escapeHtml(texto) {
@@ -572,7 +576,8 @@ function dataPedido(item) {
 }
 
 function dataRecebimento(item) {
-  return item?.data_recebimento || item?.created_at || null;
+  // Extração segura da Data do banco de dados (Cobre vários nomes de colunas possíveis)
+  return item?.data_recebimento || item?.data_pagamento || item?.created_at || item?.data || "-";
 }
 
 function montarResumoIgrejasDetalhado() {
@@ -586,18 +591,20 @@ function montarResumoIgrejasDetalhado() {
     const recebido = recebimentos.reduce((acc, r) => acc + numero(r.valor), 0);
     const saldo = Math.max(total - recebido, 0);
 
-    let status = "Não pediu";
+    let status = "Sem Pedido";
     let statusClass = "pill-info";
 
-    if (qtd > 0 && recebido <= 0) {
-      status = "Pediu e não pagou";
-      statusClass = "pill-warning";
-    } else if (qtd > 0 && recebido > 0 && recebido < total) {
-      status = "Pagamento parcial";
-      statusClass = "pill-info";
-    } else if (qtd > 0 && recebido >= total) {
-      status = "Quitado";
-      statusClass = "pill-success";
+    if (qtd > 0) {
+      if (recebido <= 0) {
+        status = "Pendente";
+        statusClass = "pill-danger"; // Vermelho para inadimplência total
+      } else if (recebido > 0 && recebido < (total - 0.05)) { // Margem de erro de 5 centavos
+        status = "Parcial";
+        statusClass = "pill-warning"; // Amarelo
+      } else {
+        status = "Quitado";
+        statusClass = "pill-success"; // Verde
+      }
     }
 
     return {
