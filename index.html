@@ -118,16 +118,9 @@
     button:disabled{opacity:.6;cursor:not-allowed;transform:none}
     .primary{width:100%;background:var(--primary);color:#fff}
     .primary:hover:not(:disabled){background:var(--primary-2)}
-    .secondary{
-      background:#fff;
-      color:var(--text);
-      border:1px solid #cfd8e3;
-    }
-    .secondary:hover:not(:disabled){background:#f8fafc}
     .danger{background:var(--danger);color:#fff}
     .success{background:#16a34a;color:#fff}
     .success:hover:not(:disabled){background:#15803d}
-    .muted{color:var(--muted)}
     .grid-2{
       display:grid;
       grid-template-columns:1fr 1fr;
@@ -839,17 +832,25 @@
 
     async function carregarPedidos() {
       try {
-        pedidosCache = await api("pedidos?select=*&order=id.desc");
+        pedidosCache = await api("pedidos?select=*&order=data.desc.nullslast,created_at.desc.nullslast,id.desc");
       } catch (e) {
-        pedidosCache = [];
+        try {
+          pedidosCache = await api("pedidos?select=*&order=id.desc");
+        } catch (err) {
+          pedidosCache = [];
+        }
       }
     }
 
     async function carregarRecebimentos() {
       try {
-        recebimentosCache = await api("recebimentos?select=*&order=id.desc");
+        recebimentosCache = await api("recebimentos?select=*&order=data_recebimento.desc.nullslast,id.desc");
       } catch (e) {
-        recebimentosCache = [];
+        try {
+          recebimentosCache = await api("recebimentos?select=*&order=id.desc");
+        } catch (err) {
+          recebimentosCache = [];
+        }
       }
     }
 
@@ -1079,8 +1080,8 @@
         data: new Date().toISOString(),
       };
 
-      if (usuario_id) payload.usuario_id = usuario_id;
-      if (campanhaAtual?.id != null) payload.campanha_id = campanhaAtual.id;
+      if (usuario_id) payload.usuario_id = String(usuario_id);
+      if (campanhaAtual?.id != null) payload.campanha_id = String(campanhaAtual.id);
 
       const tentativas = [
         { ...payload },
@@ -1114,10 +1115,11 @@
         congregacao_id: String(congregacao_id),
         valor: numero(valor),
         observacao: observacao || null,
+        data_recebimento: new Date().toISOString().slice(0, 10),
       };
 
-      if (usuario_id) payload.usuario_id = usuario_id;
-      if (campanhaAtual?.id != null) payload.campanha_id = campanhaAtual.id;
+      if (usuario_id) payload.usuario_id = String(usuario_id);
+      if (campanhaAtual?.id != null) payload.campanha_id = String(campanhaAtual.id);
 
       const tentativas = [
         { ...payload },
@@ -1146,7 +1148,7 @@
     }
 
     function dataRecebimento(item) {
-      return item?.data_pagamento || item?.data_recebimento || item?.data_registro || item?.created_at || null;
+      return item?.data_recebimento || item?.created_at || null;
     }
 
     function montarResumoIgrejasDetalhado() {
@@ -1216,7 +1218,7 @@
         return `
           <tr>
             <td>${formatarDataHora(dataPedido(p))}</td>
-            <td>${escapeHtml(congregacao?.nome || p.congregacao_nome || "-")}</td>
+            <td>${escapeHtml(congregacao?.nome || "-")}</td>
             <td>${escapeHtml(modelos[p.modelo] || p.modelo || "-")}</td>
             <td>${escapeHtml(p.tamanho || "-")}</td>
             <td>${numero(p.quantidade)}</td>
@@ -1527,18 +1529,11 @@
     function extrairMensagemErro(e) {
       const texto = String(e?.message || "Erro inesperado.");
 
-      if (texto.includes("PGRST204") && texto.includes("campanha_id")) {
-        return "A tabela não possui a coluna campanha_id.";
-      }
-      if (texto.includes("PGRST204") && texto.includes("usuario_id")) {
-        return "A tabela não possui a coluna usuario_id.";
-      }
-      if (texto.includes("PGRST204") && texto.includes("data_pagamento")) {
-        return "A tabela não possui a coluna data_pagamento.";
-      }
-      if (texto.includes("22P02")) {
-        return "Há um campo com tipo diferente no banco. Verifique IDs ou valores numéricos.";
-      }
+      if (texto.includes("PGRST204") && texto.includes("campanha_id")) return "A tabela não possui a coluna campanha_id.";
+      if (texto.includes("PGRST204") && texto.includes("usuario_id")) return "A tabela não possui a coluna usuario_id.";
+      if (texto.includes("PGRST204") && texto.includes("data_recebimento")) return "A tabela não possui a coluna data_recebimento.";
+      if (texto.includes("PGRST204") && texto.includes("congregacao_id")) return "A tabela não possui a coluna congregacao_id.";
+      if (texto.includes("22P02")) return "Há um campo com tipo diferente no banco. Verifique IDs ou valores numéricos.";
       return texto;
     }
 
@@ -1630,14 +1625,8 @@
         }
       });
 
-      el("pedidoAdminSetor")?.addEventListener("change", () => {
-        atualizarCongregacoesPedidoAdmin();
-      });
-
-      el("recebimentoSetor")?.addEventListener("change", () => {
-        atualizarCongregacoesRecebimentoAdmin();
-      });
-
+      el("pedidoAdminSetor")?.addEventListener("change", atualizarCongregacoesPedidoAdmin);
+      el("recebimentoSetor")?.addEventListener("change", atualizarCongregacoesRecebimentoAdmin);
       el("tipoVisualizacaoAdmin")?.addEventListener("change", renderVisualizacaoRapida);
       el("filtroSetorVisualizacao")?.addEventListener("change", renderVisualizacaoRapida);
       el("buscaVisualizacao")?.addEventListener("input", renderVisualizacaoRapida);
@@ -1648,9 +1637,7 @@
 
       if (sessao.tipo === "setor") {
         const existe = setores.some((s) => String(s.id) === String(sessao.setor_id));
-        if (!existe && setores.length > 0) {
-          limparSessao();
-        }
+        if (!existe && setores.length > 0) limparSessao();
       }
     }
 
