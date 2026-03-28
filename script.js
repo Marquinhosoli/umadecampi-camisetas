@@ -856,7 +856,11 @@ function renderTabelaPedidosSetor() {
   const corpo = el("tbodyPedidosSetor");
   if (!corpo || !sessao?.setor_id) return;
   const lista = pedidosDoSetor(sessao.setor_id);
-  if (!lista.length) { corpo.innerHTML = `<tr><td colspan="5">Nenhum pedido lançado.</td></tr>`; return; }
+  
+  if (!lista.length) { 
+    corpo.innerHTML = `<tr><td colspan="6">Nenhum pedido lançado.</td></tr>`; 
+    return; 
+  }
 
   corpo.innerHTML = lista.map((p) => {
     const congregacao = getCongregacaoById(p.congregacao_id);
@@ -866,10 +870,12 @@ function renderTabelaPedidosSetor() {
         <td>${escapeHtml(modelos[p.modelo] || p.modelo || "-")}</td>
         <td>${escapeHtml(p.tamanho || "-")}</td>
         <td>${numero(p.quantidade)}</td>
+        <td class="td-actions">
+          <button type="button" class="danger btn-sm" onclick="deletarPedidoBanco('${p.id}')">🗑️</button>
+        </td>
       </tr>`;
   }).join("");
 }
-
 function renderTabelaCongregacoesSetor() {
   const corpo = el("tbodyCongregacoesSetor");
   if (!corpo || !sessao?.setor_id) return;
