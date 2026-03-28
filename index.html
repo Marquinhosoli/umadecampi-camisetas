@@ -3,9 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sistema Oficial - UMADECAMPI</title>
+ <title>Sistema Oficial - Pedidos UMADECAMPI</title>
+  
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0f172a" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  
   <link rel="stylesheet" href="styles.css" />
-  <style>.hidden { display: none !important; }</style>
 </head>
 <body>
   <div class="container">
@@ -15,9 +21,14 @@
         <h2>Pedidos UMADECAMPI</h2>
         <p>Controle por setor, congregação e financeiro</p>
       </div>
+
       <div class="hero-actions">
-        <span class="pill pill-info">CAMPANHA ATIVA</span>
-        <span class="pill pill-info">PRAZO ABERTO</span>
+        <h4 id="nomeCampanhaAtual">Campanha atual</h4>
+        <p id="periodoCampanha">Carregando período...</p>
+        <div class="campaign-badges">
+          <span class="pill pill-info" id="badgeCampanhaStatus">Campanha</span>
+          <span class="pill pill-info" id="badgeCampanhaPrazo">Prazo</span>
+        </div>
       </div>
     </div>
 
@@ -25,27 +36,165 @@
       <div class="card"><span class="stat" id="statSetores">0</span><p>Setores</p></div>
       <div class="card"><span class="stat" id="statIgrejas">0</span><p>Igrejas</p></div>
       <div class="card"><span class="stat" id="statPedidos">0</span><p>Pedidos</p></div>
-      <div class="card"><span class="stat" id="statAdminPecas">0</span><p>Peças Totais</p></div>
-      <div class="card"><span class="stat" id="statAdminTotal">R$ 0,00</span><p>Total Geral</p></div>
+      <div class="card"><span class="stat" id="statTopoCampanha">-</span><p>Campanha</p></div>
+      <div class="card"><span class="stat" id="statTopoPrazo">-</span><p>Prazo</p></div>
+      <div class="card"><span class="stat" id="statTopoValor">R$ 45,00</span><p>Valor</p></div>
     </div>
+
+    <section id="telaLogin" class="card">
+      <div class="grid-2">
+        <div class="card" style="margin-bottom:0">
+          <h3>Login do Setor</h3>
+          <form id="formLoginSetor">
+            <label for="loginSetor">Login</label>
+            <input id="loginSetor" type="text" placeholder="Ex.: setor05 ou nome do setor" required />
+
+            <label for="senhaSetor">Senha</label>
+            <input id="senhaSetor" type="password" placeholder="Digite a senha" required />
+
+            <button class="primary" type="submit">Entrar como setor</button>
+            <div class="notice">Pode usar usuário da tabela <strong>usuarios</strong> ou login direto do setor, conforme seu banco.</div>
+          </form>
+        </div>
+
+        <div class="card" style="margin-bottom:0">
+          <h3>Login Administrativo</h3>
+          <form id="formLoginAdmin">
+            <label for="loginAdmin">Usuário</label>
+            <input id="loginAdmin" type="text" placeholder="admin" required />
+
+            <label for="senhaAdmin">Senha</label>
+            <input id="senhaAdmin" type="password" placeholder="Digite a senha" required />
+
+            <button class="primary" type="submit">Entrar como administrador</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section id="painelSetor" class="hidden">
+      <div class="card">
+        <div class="top-actions">
+          <div>
+            <h3 id="tituloPainelSetor">Painel do Setor</h3>
+            <p>Lançamento e acompanhamento dos pedidos do setor</p>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <span class="pill pill-info" id="mensagemPrazoPedidos">Verificando...</span>
+            <button id="btnLogoutSetor" type="button" class="danger">Sair</button>
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="card"><span class="stat" id="statSetorCongregacoes">0</span><p>Congregações</p></div>
+          <div class="card"><span class="stat" id="statSetorPecas">0</span><p>Peças</p></div>
+          <div class="card"><span class="stat" id="statSetorTotal">R$ 0,00</span><p>Total</p></div>
+          <div class="card"><span class="stat" id="statSetorRecebido">R$ 0,00</span><p>Recebido</p></div>
+          <div class="card"><span class="stat" id="statSetorSaldo">R$ 0,00</span><p>Saldo</p></div>
+          <div class="card"><span class="stat" id="statValorUnitarioSetor">R$ 45,00</span><p>Valor Unitário</p></div>
+        </div>
+
+        <div class="info-box" id="infoSetorDetalhes">Nenhum dado carregado.</div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>Lançar pedido</h3>
+          <form id="formPedidoSetor">
+            <label for="pedidoCongregacao">Congregação</label>
+            <select id="pedidoCongregacao" required></select>
+
+            <label for="pedidoModelo">Modelo</label>
+            <select id="pedidoModelo" required>
+              <option value="Masculino">Masculino</option>
+              <option value="Baby Look Feminina">Baby Look Feminina</option>
+              <option value="Infantil">Infantil</option>
+            </select>
+
+            <label for="pedidoTamanho">Tamanho</label>
+            <select id="pedidoTamanho" required></select>
+
+            <label for="pedidoQuantidade">Quantidade</label>
+            <input id="pedidoQuantidade" type="number" min="1" value="1" required />
+
+            <button class="success" type="submit">Salvar pedido</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <details open>
+            <summary>Congregações do setor</summary>
+            <div class="table-wrap" style="margin-top:14px">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Congregação</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyCongregacoesSetor"></tbody>
+              </table>
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <div class="card">
+        <details open>
+          <summary>Pedidos lançados</summary>
+          <div class="table-wrap" style="margin-top:14px">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Congregação</th>
+                  <th>Modelo</th>
+                  <th>Tamanho</th>
+                  <th>Quantidade</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyPedidosSetor"></tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+    </section>
 
     <section id="painelAdmin" class="hidden">
       <div class="card">
-        <h3>Lançar Pedido</h3>
-        <form id="formPedidoAdmin">
-          <label>Setor</label><select id="pedidoAdminSetor" required></select>
-          <label>Modelo</label>
-          <select id="pedidoAdminModelo" required>
-            <option value="Masculino">Masculino</option>
-            <option value="Baby Look Feminina">Baby Look Feminina</option>
-            <option value="Infantil">Infantil</option>
-          </select>
-          <label>Tamanho</label><select id="pedidoAdminTamanho" required></select>
-          <button class="success" type="submit">Salvar Pedido</button>
-        </form>
+        <div class="top-actions">
+          <div>
+            <h3>Painel Administrativo</h3>
+            <p>Controle geral do sistema</p>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <span class="pill pill-info" id="statusAdminCampanha">Verificando...</span>
+            <button id="btnLogoutAdmin" type="button" class="danger">Sair</button>
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="card"><span class="stat" id="statAdminPecas">0</span><p>Peças</p></div>
+          <div class="card"><span class="stat" id="statAdminTotal">R$ 0,00</span><p>Total Geral</p></div>
+          <div class="card"><span class="stat" id="statAdminRecebido">R$ 0,00</span><p>Recebido</p></div>
+          <div class="card"><span class="stat" id="statAdminSetores">0</span><p>Setores</p></div>
+          <div class="card"><span class="stat" id="statAdminIgrejas">0</span><p>Igrejas</p></div>
+          <div class="card"><span class="stat" id="statAdminPedidos">0</span><p>Pedidos</p></div>
+        </div>
+        
+        <div class="info-box" style="margin-bottom: 24px;">
+          <h4 style="margin-bottom: 10px; color: var(--brand);">Controle de Prazo da Campanha</h4>
+          <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+            <label style="margin: 0;">Adicionar mais dias:</label>
+            <input type="number" id="diasProrrogacao" min="1" max="30" value="5" style="width: 100px; min-height: 40px; padding: 8px;" />
+            <button id="btnProrrogar" type="button" class="primary" style="margin: 0; min-height: 40px; width: auto; padding: 8px 16px;">Prorrogar Prazo</button>
+            <span id="msgVencimentoAtual" class="pill pill-warning" style="margin-left: auto;">Vencimento atual: Carregando...</span>
+          </div>
+        </div>
       </div>
-    </section>
-  </div>
-  <script src="script.js"></script>
-</body>
-</html>
+
+      <div class="card">
+        <h3>Resumo das igrejas</h3>
+        <div class="grid-3">
+          <div class="summary-stat"><span id="igPediram">0</span><small>Igrejas que pediram</small></div>
+          <div class="summary-stat"><span id
