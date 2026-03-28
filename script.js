@@ -2,7 +2,7 @@ const SUPABASE_URL = "https://dqwlhouwoxbwxkcaytja.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_b_tuFrU9PhG3VKYLupMVhg_pWPF6Spj";
 const SESSION_KEY = "umadecampi_sessao_supabase_v1";
 
-// Grades atualizadas conforme a imagem da campanha
+// Grades atualizadas conforme a imagem 2026/27
 const GRADES = {
   "Masculino": ["PP", "P", "M", "G", "GG", "XG", "G1", "G2", "G3", "G4"],
   "Baby Look Feminina": ["PP", "P", "M", "G", "GG", "XG", "G1"],
@@ -13,6 +13,7 @@ const CONFIG = {
   valorUnitarioCamiseta: 45,
   adminUsuario: "admin",
   adminSenha: "umadecampi2026",
+  adminPodeEditarForaPrazo: true
 };
 
 let sessao = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
@@ -30,6 +31,13 @@ function salvarSessao() { localStorage.setItem(SESSION_KEY, JSON.stringify(sessa
 function limparSessao() { sessao = null; localStorage.removeItem(SESSION_KEY); }
 function normalizarTexto(txt) { return String(txt || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase(); }
 function moeda(v) { return Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
+function numero(v) { const n = Number(String(v ?? "").replace(",", ".")); return Number.isFinite(n) ? n : 0; }
+function dataBr(valor) { 
+  if (!valor) return "-";
+  const d = new Date(valor);
+  d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
+  return d.toLocaleDateString("pt-BR");
+}
 function formatarDataHora(valor) {
   if (!valor) return "-";
   const d = new Date(valor);
@@ -67,13 +75,15 @@ async function api(path, options = {}) {
 }
 
 async function recarregarTudo() {
-  [usuariosCache, setores, congregacoes, pedidosCache, recebimentosCache] = await Promise.all([
+  [usuariosCache, setores, congregacoes, pedidosCache, recebimentosCache, campanhaAtualArr] = await Promise.all([
     api("usuarios?select=*"),
     api("setores?select=*&order=numero.asc"),
     api("congregacoes?select=*&order=nome.asc"),
     api("pedidos?select=*&order=created_at.desc"),
-    api("recebimentos?select=*&order=id.desc")
+    api("recebimentos?select=*&order=id.desc"),
+    api("campanhas?select=*&order=id.desc&limit=1")
   ]);
+  campanhaAtual = campanhaAtualArr[0] || { nome: "Campanha 2026/27", ativo: true };
 }
 
 // --- LÓGICA DE TAMANHOS ---
@@ -83,90 +93,111 @@ function atualizarSelectTamanhos(modeloId, tamanhoId) {
   preencherSelect(tamanhoId, grade, (x) => x, (x) => x, "Escolha o tamanho");
 }
 
-// --- RENDERIZAÇÃO ---
+// --- RENDERIZAÇÃO DO PAINEL ADMIN COMPLETO ---
+function renderPainelAdmin() {
+  const totalPecas = pedidosCache.reduce((acc, p) => acc + numero(p.quantidade), 0);
+  const totalRecebido = recebimentosCache.reduce((acc, r) => acc + numero(r.valor), 0);
+
+  preencherTexto("statAdminPecas", totalPecas);
+  preencherTexto("statAdminTotal", moeda(totalPecas * CONFIG.valorUnitarioCamiseta));
+  preencherTexto("statAdminRecebido", moeda(totalRecebido));
+  preencherTexto("statAdminSetores", setores.length);
+  preencherTexto("statAdminIgrejas", congregacoes.length);
+  preencherTexto("statAdminPedidos", pedidosCache.length);
+
+  preencherSelect("pedidoAdminSetor", setores, s => s.id, s => `${s.numero} - ${s.nome}`);
+  preencherSelect("recebimentoSetor", setores, s => s.id, s => `${s.numero} - ${s.nome}`);
+  preencherSelect("filtroSetorVisualizacao", setores, s => s.id, s => `${s.numero} - ${s.nome}`, "Todos os setores");
+
+  renderResumoIgrejas();
+  renderVisualizacaoRapida();
+}
+
+function renderResumoIgrejas() {
+  const resumo = congregacoes.map(c => {
+    const peds = pedidosCache.filter(p => String(p.congregacao_id) === String(c.id));
+    const recs = recebimentosCache.filter(r => String(r.congregacao_id) === String(c.id));
+    const qtd = peds.reduce((acc, p) => acc + numero(p.quantidade), 0);
+    const pago = recs.reduce((acc, r) => acc + numero(r.valor), 0);
+    return { qtd, pago, total: qtd * CONFIG.valorUnitarioCamiseta };
+  });
+
+  preencherTexto("igPediram", resumo.filter(r => r.qtd > 0).length);
+  preencherTexto("igNaoPediram", resumo.filter(r => r.qtd === 0).length);
+  preencherTexto("igQuites", resumo.filter(r => r.qtd > 0 && r.pago >= r.total).length);
+}
+
+function renderVisualizacaoRapida() {
+  const corpo = el("tbodyVisualizacaoAdmin");
+  if (!corpo) return;
+
+  const busca = normalizarTexto(el("buscaVisualizacao")?.value || "");
+  const filtroSetor = el("filtroSetorVisualizacao")?.value || "";
+
+  let lista = congregacoes.map(c => {
+    const setor = setores.find(s => String(s.id) === String(c.setor_id));
+    const peds = pedidosCache.filter(p => String(p.congregacao_id) === String(c.id));
+    const recs = recebimentosCache.filter(r => String(r.congregacao_id) === String(c.id));
+    const qtd = peds.reduce((acc, p) => acc + numero(p.quantidade), 0);
+    const recebido = recs.reduce((acc, r) => acc + numero(r.valor), 0);
+    const total = qtd * CONFIG.valorUnitarioCamiseta;
+
+    return {
+      setorNome: setor ? `${setor.numero} - ${setor.nome}` : "-",
+      setorId: c.setor_id,
+      congregacaoNome: c.nome,
+      qtd, total, recebido, saldo: total - recebido
+    };
+  });
+
+  if (filtroSetor) lista = lista.filter(x => String(x.setorId) === String(filtroSetor));
+  if (busca) lista = lista.filter(x => normalizarTexto(x.congregacaoNome).includes(busca) || normalizarTexto(x.setorNome).includes(busca));
+
+  corpo.innerHTML = lista.map(x => `
+    <tr>
+      <td>${x.setorNome}</td>
+      <td>${x.congregacaoNome}</td>
+      <td>${x.qtd}</td>
+      <td>${moeda(x.total)}</td>
+      <td>${moeda(x.recebido)}</td>
+      <td>${moeda(x.saldo)}</td>
+    </tr>`).join("");
+}
+
+// --- INICIALIZAÇÃO E EVENTOS ---
 function renderTela() {
   mostrar("telaLogin", !sessao);
   mostrar("painelSetor", sessao?.tipo === "setor");
   mostrar("painelAdmin", sessao?.tipo === "admin");
-
-  // Estatísticas do Topo
+  
   preencherTexto("statSetores", setores.length);
   preencherTexto("statIgrejas", congregacoes.length);
   preencherTexto("statPedidos", pedidosCache.length);
 
-  if (sessao?.tipo === "setor") {
-    const setorId = sessao.setor_id;
-    preencherTexto("tituloPainelSetor", `Painel: ${sessao.setor_nome || 'Setor'}`);
-    
-    const listaCong = congregacoes.filter(c => String(c.setor_id) === String(setorId));
-    preencherSelect("pedidoCongregacao", listaCong, c => c.id, c => c.nome);
-    
-    const corpo = el("tbodyPedidosSetor");
-    const meusPedidos = pedidosCache.filter(p => String(p.setor_id) === String(setorId));
-    corpo.innerHTML = meusPedidos.map(p => `
-      <tr>
-        <td>${formatarDataHora(p.created_at)}</td>
-        <td>${congregacoes.find(c => String(c.id) === String(p.congregacao_id))?.nome || '-'}</td>
-        <td>${p.modelo}</td>
-        <td>${p.tamanho}</td>
-        <td>${p.quantidade}</td>
-      </tr>`).join("");
-  }
-
-  if (sessao?.tipo === "admin") {
-    preencherSelect("pedidoAdminSetor", setores, s => s.id, s => `${s.numero} - ${s.nome}`);
-    preencherSelect("recebimentoSetor", setores, s => s.id, s => `${s.numero} - ${s.nome}`);
-  }
+  if (sessao?.tipo === "admin") renderPainelAdmin();
 }
 
-// --- EVENTOS ---
 function bindEventos() {
-  el("formLoginSetor")?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const user = usuariosCache.find(u => u.login === el("loginSetor").value && String(u.senha) === el("senhaSetor").value);
-    if (user) {
-      sessao = { tipo: "setor", setor_id: user.setor_id, setor_nome: user.nome };
-      salvarSessao();
-      renderTela();
-    } else alert("Acesso negado.");
-  });
-
   el("formLoginAdmin")?.addEventListener("submit", (e) => {
     e.preventDefault();
     if (el("loginAdmin").value === CONFIG.adminUsuario && el("senhaAdmin").value === CONFIG.adminSenha) {
       sessao = { tipo: "admin", nome: "Administrador" };
       salvarSessao();
       renderTela();
-    } else alert("Senha admin incorreta.");
+    } else alert("Senha incorreta.");
   });
 
-  // Eventos para mudar tamanhos conforme o modelo
   el("pedidoModelo")?.addEventListener("change", () => atualizarSelectTamanhos("pedidoModelo", "pedidoTamanho"));
   el("pedidoAdminModelo")?.addEventListener("change", () => atualizarSelectTamanhos("pedidoAdminModelo", "pedidoAdminTamanho"));
-
-  // Evento para atualizar congregações no Admin quando muda o setor
+  
   el("pedidoAdminSetor")?.addEventListener("change", (e) => {
     const lista = congregacoes.filter(c => String(c.setor_id) === String(e.target.value));
     preencherSelect("pedidoAdminCongregacao", lista, c => c.id, c => c.nome);
   });
 
-  el("btnLogoutSetor")?.addEventListener("click", () => { limparSessao(); location.reload(); });
+  el("buscaVisualizacao")?.addEventListener("input", renderVisualizacaoRapida);
+  el("filtroSetorVisualizacao")?.addEventListener("change", renderVisualizacaoRapida);
   el("btnLogoutAdmin")?.addEventListener("click", () => { limparSessao(); location.reload(); });
-
-  el("formPedidoSetor")?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const payload = {
-      setor_id: sessao.setor_id,
-      congregacao_id: el("pedidoCongregacao").value,
-      modelo: el("pedidoModelo").value,
-      tamanho: el("pedidoTamanho").value,
-      quantidade: parseInt(el("pedidoQuantidade").value),
-    };
-    await api("pedidos", { method: "POST", body: payload });
-    alert("Pedido enviado!");
-    await recarregarTudo();
-    renderTela();
-  });
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
