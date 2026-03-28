@@ -3,76 +3,59 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sistema Oficial - Pedidos UMADECAMPI</title>
+  <title>Sistema Oficial - UMADECAMPI</title>
   <link rel="stylesheet" href="styles.css" />
-  <style>.hidden { display: none !important; }</style>
+  <style>.hidden { display: none !important; } .card { background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }</style>
 </head>
-<body>
-  <div class="container">
-    <div class="stats">
-      <div class="card"><span class="stat" id="statAdminPecas">0</span><p>Peças Totais</p></div>
-      <div class="card"><span class="stat" id="statAdminTotal">R$ 0,00</span><p>Valor Total</p></div>
-      <div class="card"><span class="stat" id="statAdminRecebido">R$ 0,00</span><p>Recebido</p></div>
+<body style="background: #f1f5f9; font-family: sans-serif;">
+  <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 20px;">
+    
+    <div class="stats" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+      <div class="card"><strong>Peças Totais:</strong> <span id="statAdminPecas">0</span></div>
+      <div class="card"><strong>Valor Total:</strong> <span id="statAdminTotal">R$ 0,00</span></div>
+      <div class="card"><strong>Recebido:</strong> <span id="statAdminRecebido">R$ 0,00</span></div>
     </div>
 
     <section id="telaLogin" class="card">
-      <h3>Login Administrativo</h3>
+      <h3>Acesso Administrativo</h3>
       <form id="formLoginAdmin">
-        <input id="loginAdmin" type="text" placeholder="Usuário" required style="width:100%; margin-bottom:10px; padding:10px;"/>
-        <input id="senhaAdmin" type="password" placeholder="Senha" required style="width:100%; margin-bottom:10px; padding:10px;"/>
-        <button class="primary" type="submit" style="width:100%; padding:10px; cursor:pointer;">Entrar</button>
+        <input id="loginAdmin" type="text" placeholder="Usuário" required style="display:block; width:100%; margin-bottom:10px; padding:8px;"/>
+        <input id="senhaAdmin" type="password" placeholder="Senha" required style="display:block; width:100%; margin-bottom:10px; padding:8px;"/>
+        <button type="submit" style="width:100%; padding:10px; background:#0f172a; color:#fff; border:none; cursor:pointer;">Entrar</button>
       </form>
     </section>
 
     <section id="painelAdmin" class="hidden">
-      <div class="card">
-        <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:20px;">
-          <h3 style="margin:0">Painel do Administrador</h3>
-          <button id="btnLogoutAdmin" class="danger" style="padding:5px 15px; cursor:pointer;">Sair</button>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>Painel Admin</h2>
+        <button id="btnLogoutAdmin" style="padding:5px 15px; background:#ef4444; color:#fff; border:none; cursor:pointer;">Sair</button>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+        <div class="card">
+          <h3>Lançar Pedido</h3>
+          <form id="formPedidoAdmin">
+            <label>Setor</label><select id="pedidoAdminSetor" required style="width:100%; margin-bottom:10px;"></select>
+            <label>Congregação</label><select id="pedidoAdminCongregacao" required style="width:100%; margin-bottom:10px;"></select>
+            <label>Modelo</label>
+            <select id="pedidoAdminModelo" required style="width:100%; margin-bottom:10px;">
+              <option value="">Selecione</option>
+              <option value="Masculino">Masculino</option>
+              <option value="Baby Look Feminina">Baby Look Feminina</option>
+              <option value="Infantil">Infantil</option>
+            </select>
+            <label>Tamanho</label><select id="pedidoAdminTamanho" required style="width:100%; margin-bottom:10px;"></select>
+            <label>Quantidade</label><input id="pedidoAdminQuantidade" type="number" value="1" style="width:100%; margin-bottom:10px;"/>
+            <button type="submit" style="width:100%; padding:10px; background:#16a34a; color:#fff; border:none; cursor:pointer;">Salvar Pedido</button>
+          </form>
         </div>
 
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
-          <div class="card">
-            <h3>Lançar Pedido</h3>
-            <form id="formPedidoAdmin">
-              <label>Setor</label><select id="pedidoAdminSetor" required style="width:100%; margin-bottom:10px;"></select>
-              <label>Congregação</label><select id="pedidoAdminCongregacao" required style="width:100%; margin-bottom:10px;"></select>
-              <label>Modelo</label>
-              <select id="pedidoAdminModelo" required style="width:100%; margin-bottom:10px;">
-                <option value="">Selecione</option>
-                <option value="Masculino">Masculino</option>
-                <option value="Baby Look Feminina">Baby Look Feminina</option>
-                <option value="Infantil">Infantil</option>
-              </select>
-              <label>Tamanho</label><select id="pedidoAdminTamanho" required style="width:100%; margin-bottom:10px;"></select>
-              <label>Quantidade</label><input id="pedidoAdminQuantidade" type="number" value="1" style="width:100%; margin-bottom:10px;"/>
-              <button type="submit" class="success" style="width:100%; padding:10px; cursor:pointer;">Salvar Pedido</button>
-            </form>
-          </div>
-
-          <div class="card">
-            <h3>Lançar Recebimento</h3>
-            <form id="formRecebimentoAdmin">
-              <label>Setor</label><select id="recebimentoSetor" required style="width:100%; margin-bottom:10px;"></select>
-              <label>Congregação</label><select id="recebimentoCongregacao" required style="width:100%; margin-bottom:10px;"></select>
-              <label>Valor (R$)</label><input id="recebimentoValor" type="number" step="0.01" required style="width:100%; margin-bottom:10px;"/>
-              <button type="submit" class="primary" style="width:100%; padding:10px; cursor:pointer;">Salvar Pagamento</button>
-            </form>
-          </div>
-        </div>
-
-        <div class="card" style="margin-top:20px;">
-          <h3>Resumo Geral das Igrejas</h3>
-          <div style="overflow-x:auto;">
-            <table style="width:100%; border-collapse:collapse; text-align:left;">
-              <thead>
-                <tr style="background:#f8fafc;">
-                  <th>Setor</th><th>Congregação</th><th>Qtd</th><th>Total</th><th>Pago</th><th>Saldo</th>
-                </tr>
-              </thead>
-              <tbody id="tbodyVisualizacaoAdmin"></tbody>
-            </table>
-          </div>
+        <div class="card">
+          <h3>Resumo das Igrejas</h3>
+          <table style="width:100%; border-collapse:collapse; font-size:14px;">
+            <thead><tr style="text-align:left; border-bottom:1px solid #ddd;"><th>S</th><th>Igreja</th><th>Qtd</th><th>Total</th><th>Pago</th><th>Saldo</th></tr></thead>
+            <tbody id="tbodyVisualizacaoAdmin"></tbody>
+          </table>
         </div>
       </div>
     </section>
