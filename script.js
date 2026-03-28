@@ -21,7 +21,7 @@ const CONFIG = {
   adminPodeEditarForaPrazo: true,
   valorUnitarioCamiseta: 45,
   adminUsuario: "admin",
-  adminSenha: "umadecampi2026",
+  adminSenha: "beijamar2026",
 };
 
 let sessao = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
