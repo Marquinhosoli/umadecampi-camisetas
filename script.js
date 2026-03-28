@@ -6,7 +6,7 @@ const SESSION_KEY = "umadecampi_sessao_supabase_v1";
 const GRADES = {
   "Masculino": ["PP", "P", "M", "G", "GG", "XG", "G1", "G2", "G3", "G4"],
   "Baby Look Feminina": ["PP", "P", "M", "G", "GG", "XG", "G1"],
-  "Infantil": ["2", "4", "6", "8", "10", "12", "14"]
+  "Infantil": ["2", "4", "6", "8", "10", "12", "14"] // O nome aqui deve ser igual ao do HTML
 };
 
 const CONFIG = {
