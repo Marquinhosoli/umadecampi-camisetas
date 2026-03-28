@@ -3,37 +3,44 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sistema Oficial - Pedidos UMADECAMPI</title>
+  <title>Sistema Oficial - UMADECAMPI</title>
   <link rel="stylesheet" href="styles.css" />
-  <style>.hidden { display: none !important; }</style>
 </head>
 <body>
   <div class="container">
-    <div class="stats">
-      <div class="card"><span class="stat" id="statAdminPecas">0</span><p>Peças Totais</p></div>
-      <div class="card"><span class="stat" id="statAdminTotal">R$ 0,00</span><p>Valor Total</p></div>
-      <div class="card"><span class="stat" id="statAdminRecebido">R$ 0,00</span><p>Recebido</p></div>
+    <div class="card hero-card">
+      <div class="hero-info">
+        <h1>SISTEMA OFICIAL</h1>
+        <h2 id="nomeCampanhaAtual">Pedidos UMADECAMPI</h2>
+        <p>Controle por setor, congregação e financeiro</p>
+      </div>
+      <div class="hero-actions">
+        <span class="pill pill-info" id="badgeCampanhaStatus">Campanha Ativa</span>
+        <span class="pill pill-info" id="badgeCampanhaPrazo">Prazo Aberto</span>
+      </div>
     </div>
 
-    <section id="telaLogin" class="card">
-      <h3>Login Administrativo</h3>
-      <form id="formLoginAdmin">
-        <input id="loginAdmin" type="text" placeholder="Usuário" required />
-        <input id="senhaAdmin" type="password" placeholder="Senha" required />
-        <button class="primary" type="submit">Entrar</button>
-      </form>
-    </section>
+    <div class="stats">
+      <div class="card"><span class="stat" id="statSetores">0</span><p>Setores</p></div>
+      <div class="card"><span class="stat" id="statIgrejas">0</span><p>Igrejas</p></div>
+      <div class="card"><span class="stat" id="statPedidos">0</span><p>Pedidos</p></div>
+      <div class="card"><span class="stat" id="statAdminPecas">0</span><p>Peças Totais</p></div>
+      <div class="card"><span class="stat" id="statAdminTotal">R$ 0,00</span><p>Total Geral</p></div>
+    </div>
 
     <section id="painelAdmin" class="hidden">
       <div class="card">
-        <div style="display:flex; justify-content: space-between; align-items:center;">
-          <h3>Painel do Administrador</h3>
-          <button id="btnLogoutAdmin" class="danger btn-sm">Sair</button>
+        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <h3>Painel Administrativo</h3>
+          <div style="display:flex; gap: 10px;">
+            <button id="btnExportarExcel" class="primary btn-sm">📥 Gerar Relatório</button>
+            <button id="btnLogoutAdmin" class="danger btn-sm">Sair</button>
+          </div>
         </div>
 
         <div class="grid-2">
           <div class="card">
-            <h3>Lançar Pedido</h3>
+            <h3>Lançar Pedido (Admin)</h3>
             <form id="formPedidoAdmin">
               <label>Setor</label><select id="pedidoAdminSetor" required></select>
               <label>Congregação</label><select id="pedidoAdminCongregacao" required></select>
@@ -44,7 +51,7 @@
                 <option value="Infantil">Infantil</option>
               </select>
               <label>Tamanho</label><select id="pedidoAdminTamanho" required></select>
-              <label>Qtd</label><input id="pedidoAdminQuantidade" type="number" value="1" />
+              <label>Quantidade</label><input id="pedidoAdminQuantidade" type="number" value="1" />
               <button class="success" type="submit">Salvar Pedido</button>
             </form>
           </div>
@@ -61,15 +68,23 @@
         </div>
 
         <div class="card">
-          <h3>Resumo das Igrejas</h3>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr><th>S</th><th>Igreja</th><th>Qtd</th><th>Total</th><th>Pago</th><th>Saldo</th></tr>
-              </thead>
-              <tbody id="tbodyVisualizacaoAdmin"></tbody>
-            </table>
-          </div>
+          <details>
+            <summary style="cursor:pointer; font-weight: bold; padding: 10px;">📊 Ver Relação Completa das Igrejas (Resumo)</summary>
+            <div style="margin-top: 20px;">
+              <div class="toolbar" style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <select id="filtroSetorVisualizacao"></select>
+                <input id="buscaVisualizacao" type="text" placeholder="Buscar igreja..." />
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr><th>Setor</th><th>Congregação</th><th>Qtd</th><th>Total</th><th>Pago</th><th>Saldo</th></tr>
+                  </thead>
+                  <tbody id="tbodyVisualizacaoAdmin"></tbody>
+                </table>
+              </div>
+            </div>
+          </details>
         </div>
       </div>
     </section>
