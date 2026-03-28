@@ -9,19 +9,30 @@
 <body>
   <div class="container">
     <div class="stats">
-      <div class="card"><span class="stat" id="statSetores">0</span><p>Setores</p></div>
-      <div class="card"><span class="stat" id="statIgrejas">0</span><p>Igrejas</p></div>
-      <div class="card"><span class="stat" id="statPedidos">0</span><p>Pedidos</p></div>
-      <div class="card"><span class="stat" id="statAdminPecas">0</span><p>Peças (Admin)</p></div>
-      <div class="card"><span class="stat" id="statAdminTotal">R$ 0,00</span><p>Total Geral</p></div>
+      <div class="card"><span class="stat" id="statAdminPecas">0</span><p>Peças Totais</p></div>
+      <div class="card"><span class="stat" id="statAdminTotal">R$ 0,00</span><p>Valor Total</p></div>
+      <div class="card"><span class="stat" id="statAdminRecebido">R$ 0,00</span><p>Recebido</p></div>
     </div>
+
+    <section id="telaLogin" class="card">
+      <h3>Login Administrativo</h3>
+      <form id="formLoginAdmin">
+        <input id="loginAdmin" type="text" placeholder="Usuário" required />
+        <input id="senhaAdmin" type="password" placeholder="Senha" required />
+        <button class="primary" type="submit">Entrar</button>
+      </form>
+    </section>
 
     <section id="painelAdmin" class="hidden">
       <div class="card">
-        <h3>Painel Administrativo</h3>
+        <div style="display:flex; justify-content: space-between;">
+          <h3>Painel do Administrador</h3>
+          <button id="btnLogoutAdmin" class="danger btn-sm">Sair</button>
+        </div>
+
         <div class="grid-2">
           <div class="card">
-            <h3>Lançar pedido (Admin)</h3>
+            <h3>Lançar Pedido</h3>
             <form id="formPedidoAdmin">
               <label>Setor</label><select id="pedidoAdminSetor" required></select>
               <label>Congregação</label><select id="pedidoAdminCongregacao" required></select>
@@ -32,8 +43,8 @@
                 <option value="Infantil">Infantil</option>
               </select>
               <label>Tamanho</label><select id="pedidoAdminTamanho" required></select>
-              <label>Quantidade</label><input id="pedidoAdminQuantidade" type="number" min="1" value="1" required />
-              <button class="success" type="submit">Salvar pedido</button>
+              <label>Qtd</label><input id="pedidoAdminQuantidade" type="number" value="1" />
+              <button class="success" type="submit">Salvar Pedido</button>
             </form>
           </div>
 
@@ -43,22 +54,21 @@
               <label>Setor</label><select id="recebimentoSetor" required></select>
               <label>Congregação</label><select id="recebimentoCongregacao" required></select>
               <label>Valor (R$)</label><input id="recebimentoValor" type="number" step="0.01" required />
-              <label>Observação</label><input id="recebimentoObs" type="text" />
               <button class="primary" type="submit">Salvar Pagamento</button>
             </form>
           </div>
         </div>
 
         <div class="card">
-          <h3>Visualização Rápida</h3>
-          <div class="toolbar">
+          <h3>Resumo Geral das Igrejas</h3>
+          <div class="toolbar" style="display: flex; gap: 10px; margin-bottom: 10px;">
             <select id="filtroSetorVisualizacao"></select>
-            <input id="buscaVisualizacao" type="text" placeholder="Buscar congregação..." />
+            <input id="buscaVisualizacao" type="text" placeholder="Buscar igreja..." />
           </div>
           <div class="table-wrap">
             <table>
               <thead>
-                <tr><th>Setor</th><th>Congregação</th><th>Qtd</th><th>Total</th><th>Recebido</th><th>Saldo</th></tr>
+                <tr><th>Setor</th><th>Congregação</th><th>Qtd</th><th>Total</th><th>Pago</th><th>Saldo</th></tr>
               </thead>
               <tbody id="tbodyVisualizacaoAdmin"></tbody>
             </table>
