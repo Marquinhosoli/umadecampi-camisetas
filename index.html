@@ -5,18 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sistema Oficial - UMADECAMPI</title>
   <link rel="stylesheet" href="styles.css" />
+  <style>.hidden { display: none !important; }</style>
 </head>
 <body>
   <div class="container">
     <div class="card hero-card">
       <div class="hero-info">
         <h1>SISTEMA OFICIAL</h1>
-        <h2 id="nomeCampanhaAtual">Pedidos UMADECAMPI</h2>
+        <h2>Pedidos UMADECAMPI</h2>
         <p>Controle por setor, congregação e financeiro</p>
       </div>
       <div class="hero-actions">
-        <span class="pill pill-info" id="badgeCampanhaStatus">Campanha Ativa</span>
-        <span class="pill pill-info" id="badgeCampanhaPrazo">Prazo Aberto</span>
+        <span class="pill pill-info">CAMPANHA ATIVA</span>
+        <span class="pill pill-info">PRAZO ABERTO</span>
       </div>
     </div>
 
@@ -30,62 +31,18 @@
 
     <section id="painelAdmin" class="hidden">
       <div class="card">
-        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-          <h3>Painel Administrativo</h3>
-          <div style="display:flex; gap: 10px;">
-            <button id="btnExportarExcel" class="primary btn-sm">📥 Gerar Relatório</button>
-            <button id="btnLogoutAdmin" class="danger btn-sm">Sair</button>
-          </div>
-        </div>
-
-        <div class="grid-2">
-          <div class="card">
-            <h3>Lançar Pedido (Admin)</h3>
-            <form id="formPedidoAdmin">
-              <label>Setor</label><select id="pedidoAdminSetor" required></select>
-              <label>Congregação</label><select id="pedidoAdminCongregacao" required></select>
-              <label>Modelo</label>
-              <select id="pedidoAdminModelo" required>
-                <option value="Masculino">Masculino</option>
-                <option value="Baby Look Feminina">Baby Look Feminina</option>
-                <option value="Infantil">Infantil</option>
-              </select>
-              <label>Tamanho</label><select id="pedidoAdminTamanho" required></select>
-              <label>Quantidade</label><input id="pedidoAdminQuantidade" type="number" value="1" />
-              <button class="success" type="submit">Salvar Pedido</button>
-            </form>
-          </div>
-
-          <div class="card">
-            <h3>Lançar Recebimento</h3>
-            <form id="formRecebimentoAdmin">
-              <label>Setor</label><select id="recebimentoSetor" required></select>
-              <label>Congregação</label><select id="recebimentoCongregacao" required></select>
-              <label>Valor (R$)</label><input id="recebimentoValor" type="number" step="0.01" required />
-              <button class="primary" type="submit">Salvar Pagamento</button>
-            </form>
-          </div>
-        </div>
-
-        <div class="card">
-          <details>
-            <summary style="cursor:pointer; font-weight: bold; padding: 10px;">📊 Ver Relação Completa das Igrejas (Resumo)</summary>
-            <div style="margin-top: 20px;">
-              <div class="toolbar" style="display: flex; gap: 10px; margin-bottom: 10px;">
-                <select id="filtroSetorVisualizacao"></select>
-                <input id="buscaVisualizacao" type="text" placeholder="Buscar igreja..." />
-              </div>
-              <div class="table-wrap">
-                <table>
-                  <thead>
-                    <tr><th>Setor</th><th>Congregação</th><th>Qtd</th><th>Total</th><th>Pago</th><th>Saldo</th></tr>
-                  </thead>
-                  <tbody id="tbodyVisualizacaoAdmin"></tbody>
-                </table>
-              </div>
-            </div>
-          </details>
-        </div>
+        <h3>Lançar Pedido</h3>
+        <form id="formPedidoAdmin">
+          <label>Setor</label><select id="pedidoAdminSetor" required></select>
+          <label>Modelo</label>
+          <select id="pedidoAdminModelo" required>
+            <option value="Masculino">Masculino</option>
+            <option value="Baby Look Feminina">Baby Look Feminina</option>
+            <option value="Infantil">Infantil</option>
+          </select>
+          <label>Tamanho</label><select id="pedidoAdminTamanho" required></select>
+          <button class="success" type="submit">Salvar Pedido</button>
+        </form>
       </div>
     </section>
   </div>
