@@ -631,6 +631,20 @@ async function prorrogarPrazoAdmin(diasExtras) {
   }
 }
 
+// NOVO: Função para marcar como enviado
+async function marcarComoEnviado(id, statusAtual) {
+  const novoStatus = statusAtual === 'Enviado' ? 'Novo' : 'Enviado';
+  if(!confirm(`Deseja alterar este pedido para o status '${novoStatus}'?`)) return;
+  
+  try {
+    await api(`pedidos?id=eq.${id}`, { method: "PATCH", body: { status_producao: novoStatus } });
+    await carregarPedidos();
+    renderTela();
+  } catch(e) {
+    alert("Erro ao atualizar status: " + extrairMensagemErro(e));
+  }
+}
+
 // ---------------------------------------------------------
 // MODAL E EDIÇÃO
 // ---------------------------------------------------------
@@ -858,24 +872,38 @@ function renderTabelaPedidosSetor() {
   const lista = pedidosDoSetor(sessao.setor_id);
   
   if (!lista.length) { 
-    corpo.innerHTML = `<tr><td colspan="6">Nenhum pedido lançado.</td></tr>`; 
+    corpo.innerHTML = `<tr><td colspan="7">Nenhum pedido lançado.</td></tr>`; 
     return; 
   }
 
   corpo.innerHTML = lista.map((p) => {
     const congregacao = getCongregacaoById(p.congregacao_id);
+    const isEnviado = p.status_producao === 'Enviado';
+    
+    // Etiqueta visual para o setor
+    const badgeStatus = isEnviado 
+      ? '<span class="pill pill-success" style="font-size:10px;">FÁBRICA</span>' 
+      : '<span class="pill pill-warning" style="font-size:10px;">NOVO</span>';
+
+    // Se estiver enviado, o setor não pode mais excluir
+    const btnDelete = isEnviado 
+      ? `<button type="button" class="btn-sm" disabled style="opacity:0.3; cursor:not-allowed;" title="Já enviado à fábrica">🗑️</button>` 
+      : `<button type="button" class="danger btn-sm" onclick="deletarPedidoBanco('${p.id}')">🗑️</button>`;
+
     return `<tr>
         <td>${formatarDataHora(dataPedido(p))}</td>
         <td>${escapeHtml(congregacao?.nome || "-")}</td>
         <td>${escapeHtml(modelos[p.modelo] || p.modelo || "-")}</td>
         <td>${escapeHtml(p.tamanho || "-")}</td>
         <td>${numero(p.quantidade)}</td>
+        <td>${badgeStatus}</td>
         <td class="td-actions">
-          <button type="button" class="danger btn-sm" onclick="deletarPedidoBanco('${p.id}')">🗑️</button>
+          ${btnDelete}
         </td>
       </tr>`;
   }).join("");
 }
+
 function renderTabelaCongregacoesSetor() {
   const corpo = el("tbodyCongregacoesSetor");
   if (!corpo || !sessao?.setor_id) return;
@@ -916,11 +944,18 @@ function renderTabelaRecebimentosAdmin() {
 function renderTabelaPedidosAdmin() {
   const corpo = el("tbodyGerenciarPedidosAdmin");
   if (!corpo) return;
-  if (!pedidosCache.length) { corpo.innerHTML = `<tr><td colspan="7">Nenhum pedido encontrado.</td></tr>`; return; }
+  if (!pedidosCache.length) { corpo.innerHTML = `<tr><td colspan="8">Nenhum pedido encontrado.</td></tr>`; return; }
 
   corpo.innerHTML = pedidosCache.map((p) => {
     const setor = getSetorById(p.setor_id);
     const congregacao = getCongregacaoById(p.congregacao_id);
+    const isEnviado = p.status_producao === 'Enviado';
+    
+    // Etiqueta visual para o admin
+    const badgeStatus = isEnviado 
+      ? '<span class="pill pill-success" style="font-size:10px;">ENVIADO</span>' 
+      : '<span class="pill pill-warning" style="font-size:10px;">NOVO</span>';
+
     return `<tr>
         <td>${formatarDataHora(dataPedido(p))}</td>
         <td>${escapeHtml(setor?.nome || "-")}</td>
@@ -928,14 +963,15 @@ function renderTabelaPedidosAdmin() {
         <td>${escapeHtml(modelos[p.modelo] || p.modelo || "-")}</td>
         <td>${escapeHtml(p.tamanho || "-")}</td>
         <td>${numero(p.quantidade)}</td>
+        <td>${badgeStatus}</td>
         <td class="td-actions">
+          <button type="button" class="btn-sm ${isEnviado ? 'warning' : 'success'}" onclick="marcarComoEnviado('${p.id}', '${p.status_producao}')" title="Marcar como Enviado/Novo">📦</button>
           <button type="button" class="primary btn-sm" onclick="abrirModalEdicao('pedido', '${p.id}')">✏️</button>
           <button type="button" class="danger btn-sm" onclick="deletarPedidoBanco('${p.id}')">🗑️</button>
         </td>
       </tr>`;
   }).join("");
 }
-
 
 function renderFaltantesAdmin() {
   const tbody = el("tbodyFaltantesAdmin");
